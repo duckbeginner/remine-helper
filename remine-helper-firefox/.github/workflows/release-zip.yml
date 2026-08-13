@@ -1,0 +1,28 @@
+name: Build ZIP on Release
+
+permissions:
+  contents: write
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-upload:
+    name: Create ZIP and upload to Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create extension ZIP
+        run: |
+          set -e
+          ZIPNAME="${{ github.event.repository.name }}-${{ github.event.release.tag_name }}.zip"
+          zip -r "$ZIPNAME" . -x ".git/*" ".github/*" "*.zip" "node_modules/*" "README.md"
+          ls -lh "$ZIPNAME"
+
+      - name: Upload ZIP to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ github.workspace }}/${{ github.event.repository.name }}-${{ github.event.release.tag_name }}.zip

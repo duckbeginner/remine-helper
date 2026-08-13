@@ -1,0 +1,1265 @@
+/* dashboard.css - 전체 통합 및 다크모드 허브 아이콘/로고 반전 정돈 버전 */
+body {
+  max-height: 100vh;
+  margin: 0;
+  /* padding: clamp(15px, 2.5vw, 30px); */
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #fbc2eb 0%, #a18cd1 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: background 0.3s, color 0.3s;
+  font-size: clamp(0.9rem, 1.1vw, 1rem);
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ffb6c1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &.dark-mode {
+    background: radial-gradient(circle at 20% 20%, #22152b 0%, #121214 60%, #0a0a0c 100%) !important;
+    color: #e2e8f0 !important;
+
+    &::-webkit-scrollbar-thumb {
+      background: #33293d;
+    }
+
+    & .glass-card {
+      background: rgba(22, 19, 28, 0.75) !important;
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      color: #e2e8f0 !important;
+    }
+
+    & .hub-oneline,
+    & .video-card,
+    & .calendar-cell,
+    & .calendar-detail-box,
+    & .fanpage-link-card {
+      background: rgba(28, 24, 36, 0.8) !important;
+      color: #e2e8f0 !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 다크모드 공식 채널 허브 아이콘 설정 (사진 img 반전 제거, X SVG만 반전) */
+    & .hub-icon-btn {
+      background: rgba(38, 32, 48, 0.9) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+
+      &:hover {
+        background: rgba(58, 44, 70, 0.95) !important;
+        border-color: #ff69b4 !important;
+        box-shadow: 0 0 12px rgba(255, 105, 180, 0.3);
+      }
+
+      /* 사진 이미지(img)는 반전하지 않음 */
+      & img {
+        filter: none !important;
+      }
+
+      /* X(트위터) 등 검은색 SVG 아이콘만 다크모드에서 하얗게 반전 */
+      &[href*="x.com"] svg {
+        filter: invert(100%) brightness(200%);
+      }
+    }
+
+    /* 상단 타이틀 등의 .custom-logo 다크모드 반전 */
+    & .panel-header-bar h2 img.custom-logo,
+    & h2 img.custom-logo {
+      filter: invert(100%) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.3)) !important;
+    }
+
+    & .fanpage-link-card:hover {
+      background: #ff69b4 !important;
+      color: white !important;
+      border-color: #ff69b4 !important;
+    }
+
+    & .cal-nav-btn,
+    & .maximize-btn,
+    & .theme-toggle-btn {
+      background: rgba(38, 32, 48, 0.8) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #ff9ebb !important;
+
+      &:hover {
+        background: #ff69b4 !important;
+        color: white !important;
+        border-color: #ff69b4 !important;
+      }
+    }
+
+    & .calendar-week-row {
+      .expanded {
+        background: rgba(32, 22, 38, 0.9) !important;
+        border-color: rgba(255, 105, 180, 0.4) !important;
+      }
+
+      &:hover {
+        background: rgba(32, 22, 38, 0.95) !important;
+        border-color: rgba(255, 105, 180, 0.4) !important;
+      }
+    }
+
+    & .cal-event-badge {
+      filter: invert(0.9) hue-rotate(180deg) brightness(0.8);
+    }
+
+    & .calendar-cell.today {
+      border-color: #ff69b4 !important;
+      background: rgba(50, 26, 40, 0.6) !important;
+    }
+
+    & h2 {
+      color: #ff9ebb !important;
+    }
+
+    & .card-title {
+      color: #f1f5f9 !important;
+    }
+
+    & .cell-date {
+      color: #94a3b8 !important;
+    }
+
+    & .calendar-cell.other-month {
+      background: rgba(15, 13, 18, 0.5) !important;
+      color: #475569 !important;
+    }
+  }
+}
+
+#dashboardLiveBanner {
+  display: none;
+  background: #ff3b30;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+  text-align: center;
+  margin-bottom: 14px;
+  animation: pulse 1.5s infinite;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+  width: fit-content;
+  align-self: center;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.dashboard-container {
+  /* display: flex; */
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  flex: 1;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  padding: clamp(15px, 2.5vw, 30px);
+  overflow: auto;
+  /* max-height: 100% !important; */
+
+  &.maximized-calendar {
+    grid-template-columns: 1fr !important;
+
+    & .right-panel {
+      display: none !important;
+    }
+
+    .feed-list-container {
+      grid-template-columns: 1fr 1fr 1fr !important;
+
+      &#ntTiktokFeedList {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  }
+
+  .panel {
+    max-height: calc(100vh - clamp(15px, 2.5vw, 30px) * 2);
+    border-radius: 16px;
+    /* min-height: 600px; */
+
+  }
+
+  .right-panel {
+
+    overflow: auto;
+
+    .glass-card {
+      min-height: fit-content;
+    }
+
+    .glass-card:first-child {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .glass-card:last-child {
+      position: sticky;
+      bottom: 0;
+    }
+  }
+
+  .left-panel {
+    overflow-y: auto;
+    /* max-height: 80vh; */
+    /* min-height: 600px; */
+  }
+}
+
+@media (max-width: 1024px) {
+  body {
+    max-height: unset;
+  }
+
+  .dashboard-container {
+    /* grid-template-columns: 1fr !important; */
+    display: flex;
+    flex-direction: column-reverse;
+    overflow: unset;
+    justify-content: flex-end;
+
+    .maximize-btn {
+      display: none;
+    }
+
+    .left-panel {
+
+      /* max-height: 80vh; */
+      .dashboard-col {
+        height: calc(100vh - clamp(15px, 2.5vw, 30px) * 2);
+
+        /* [통합 완료] 1단으로 떨어질 때만 캘린더 그리드 높이를 고정하여 아래 요소들 출렁임 방지 */
+        .calendar-grid {
+          /* height: 600px; */
+          /* max-height: 600px; */
+          overflow: hidden;
+        }
+      }
+    }
+
+    .right-panel {
+      max-height: unset;
+      position: fixed;
+      align-self: self-start;
+      margin-top: 5px;
+      margin-left: 80px;
+
+      .glass-card:nth-child(n+2) {
+        display: none;
+      }
+
+      .dashboard-col {
+        align-items: center;
+
+        .glass-card:first-child {
+          width: fit-content;
+          display: flex;
+          flex-direction: row;
+          justify-content: center;
+          align-items: center;
+          /* gap: 1rem; */
+          padding: 0;
+          background: transparent !important;
+          border: transparent !important;
+
+          h2 {
+            display: none;
+            margin: 0;
+          }
+
+          .hub-oneline {
+            background: transparent !important;
+            border: transparent !important;
+          }
+        }
+      }
+    }
+  }
+
+
+}
+
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  max-height: 100%;
+  height: 100%;
+  justify-content: flex-start;
+
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.glass-card.overflow-visible {
+  overflow: visible;
+}
+
+.main-content-card {
+  flex: 1;
+}
+
+.main-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.header-control-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#dashboardTabBar {
+  margin-bottom: 0;
+  overflow-x: auto;
+}
+
+.feed-loading-message {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+}
+
+.panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* margin-bottom: 6px; */
+}
+
+.custom-logo.small-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.video-placeholder {
+  font-size: 11px;
+  color: #777;
+  text-align: center;
+  grid-column: span 3;
+}
+
+.disclaimer-card {
+  border: none;
+  text-align: center;
+  /* box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); */
+  font-weight: 600;
+}
+
+.disclaimer-text {
+  font-size: 10px;
+  color: #666;
+  line-height: 1.3;
+  margin: 0;
+  word-break: keep-all;
+}
+
+h2 {
+  font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+  margin: 0 0 6px 0;
+  color: #d63384;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  & img {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+
+    &.custom-logo {
+      border-radius: 4px;
+      object-fit: contain;
+    }
+  }
+}
+
+h3 {
+  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+  margin: 8px 0 2px 0;
+  color: #d63384;
+  font-weight: bold;
+}
+
+.hub-oneline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #ffd1dc;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  text-decoration: none;
+  transition: 0.2s;
+  background: #fdfdfd;
+  border: 1px solid #eee;
+
+  &:hover {
+    background: #fff0f5;
+    transform: scale(1.15);
+    border-color: #ffb6c1;
+  }
+
+  & svg,
+  & img {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  & img.custom-logo {
+    border-radius: 4px;
+    object-fit: contain;
+  }
+}
+
+.fanpage-links-grid {
+  display: grid;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.fanpage-link-card {
+  background: white;
+  border: 1px solid #ffd1dc;
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  text-decoration: none;
+  color: #d63384;
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-weight: bold;
+  transition: 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  /* max-width: 130px; */
+  flex: 1 1 calc(25% - 8px);
+
+  &:hover {
+    background: #ff69b4;
+    color: white;
+    border-color: #ff69b4;
+    transform: translateY(-2px);
+  }
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: bold;
+  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+  color: #d63384;
+
+  & .calendar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.cal-nav-btn,
+.maximize-btn,
+.theme-toggle-btn {
+  background: #fff0f5;
+  border: 1px solid #ffb6c1;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  color: #d63384;
+  font-weight: bold;
+  transition: 0.2s;
+
+  &:hover {
+    background: #ff69b4;
+    color: white;
+  }
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-weight: bold;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+  /* height: 75vh; */
+  /* max-height: 75vh; */
+  /* overflow: hidden; */
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ffb6c1;
+    border-radius: 3px;
+  }
+}
+
+.calendar-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  flex: 1;
+  min-height: 10%;
+  transition: all 0.2s ease;
+  border-color: transparent;
+
+  &:hover {
+    flex: 4;
+    /* max-height: 220px; */
+    background: #fff5f8;
+    border: 1px solid #ffb6c1;
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 6px 15px rgba(255, 105, 180, 0.15);
+    z-index: 10;
+    /* max-height: 200px; */
+    /* min-height: 150px; */
+    /* overflow-y: auto; */
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #ffb6c1;
+      border-radius: 3px;
+    }
+
+    & .calendar-cell {
+      font-size: clamp(0.8rem, 1.1vw, 0.9rem);
+    }
+
+    /* [적용] 제안해주신 뱃지 탄력적 확장 스타일 */
+    & .cal-event-badge {
+      font-size: clamp(0.75rem, 1vw, 0.85rem);
+      padding: 4px 8px;
+      /* margin-bottom: 4px; */
+      white-space: normal;
+      /* flex: 1; */
+      min-height: fit-content;
+    }
+
+    /* 확장되었을 때 시간 표시를 블록(개별 줄)으로 처리 */
+    & .badge-time {
+      display: block !important;
+      font-weight: bold;
+      margin-bottom: 2px;
+      opacity: 0.9;
+    }
+  }
+}
+
+.calendar-cell {
+  background: white;
+  border-radius: 8px;
+  padding: 6px;
+  border: 1px solid #fce4ec;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: clamp(0.7rem, 0.9vw, 0.8rem);
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #fff0f5;
+  }
+
+  &.other-month {
+    background: #f9f9f9;
+    color: #ccc;
+  }
+
+  &.today {
+    border: 2px solid #ff69b4;
+    background: #fff8fb;
+  }
+}
+
+.cell-date {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #555;
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  pointer-events: none;
+}
+
+.cell-events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.cal-event-badge {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: clamp(0.65rem, 0.85vw, 0.75rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  /* font-weight: 600; */
+
+  &:hover {
+    opacity: 0.85;
+    filter: brightness(0.95);
+  }
+}
+
+.badge-time {
+  display: none;
+  color: inherit;
+  font-weight: normal;
+  margin-right: 4px;
+  opacity: 0.85;
+}
+
+.video-grid {
+  /* 수평 스크롤 그리드: 카드들을 가로로 배치하고 스크롤로 더 많은 항목을 확인 가능 */
+  display: block;
+  position: relative;
+}
+
+.hscroll-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  width: 100%;
+}
+
+.hscroll-viewport {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  touch-action: auto;
+}
+
+.hscroll-viewport .video-card {
+  flex: 0 0 calc((100% - 16px) / 3);
+  width: auto;
+}
+
+.hscroll-container,
+.video-grid {
+  overflow: visible;
+}
+
+.hscroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 209, 220, 0.6);
+  color: #d63384;
+  padding: 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  opacity: 0.5;
+}
+
+.hscroll-btn.left {
+  left: 8px;
+  padding: 6px 9px 6px 7px;
+}
+
+.hscroll-btn.right {
+  right: 8px;
+  padding: 6px 7px 6px 9px;
+}
+
+.hscroll-btn:hover {
+  background: rgba(255, 105, 180, 0.9);
+  color: white;
+}
+
+.video-card {
+  background: white;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid #ffd1dc;
+  text-decoration: none;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transform-origin: center center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+
+  overflow: hidden;
+
+
+  &:hover {
+    z-index: 20;
+    border-color: #ff69b4;
+    background: #fff8fb;
+    box-shadow: 2px 4px 4px 2px rgba(255, 105, 180, 0.24);
+    aspect-ratio: 16 / 9;
+
+    .video-info {
+      position: sticky;
+      bottom: 0;
+      backdrop-filter: blur(2px);
+      border-radius: 6px;
+      font-weight: bold;
+
+      .card-title,
+      .card-date {
+        color: white;
+        -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.5);
+      }
+    }
+  }
+
+  /* 카드는 폭에 따라 유연하게 높이가 결정되도록 함 (반응형) */
+  /* aspect-ratio: 16 / 9; */
+
+  & img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #eee;
+    transition: all 0.3s ease;
+    display: block;
+    min-height: 0;
+  }
+
+  &:hover img {
+    /* transform: scale(1.3) translateY(6%); */
+    min-height: 100%;
+  }
+
+  & .video-info {
+    position: static;
+    padding: 10px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    /* color: #333; */
+    background: none;
+    pointer-events: auto;
+  }
+}
+
+.card-title {
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  line-height: 1.2;
+  font-weight: bold;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+  color: #333;
+  transition: color 0.3s ease, -webkit-text-stroke 0.3s ease;
+}
+
+.card-date {
+  font-size: clamp(0.65rem, 0.85vw, 0.75rem);
+  /* color: rgba(255, 255, 255, 0.75); */
+  margin: 0;
+}
+
+/* 캘린더 툴팁 및 모달 스타일 */
+.calendar-tooltip {
+  position: fixed;
+  display: none;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.3;
+  backdrop-filter: blur(4px);
+}
+
+.calendar-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+
+  &.show {
+    display: flex;
+    opacity: 1;
+  }
+}
+
+.calendar-modal-card {
+  background: white;
+  width: 90%;
+  max-width: 420px;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  border: 1px solid #ffd1dc;
+  box-sizing: border-box;
+  transform: translateY(10px);
+  transition: transform 0.25s ease;
+
+  .show & {
+    transform: translateY(0);
+  }
+
+  body.dark-mode & {
+    background: rgba(30, 30, 30, 0.95) !important;
+    color: #e2e8f0 !important;
+    border-color: #444 !important;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ffe4ec;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  font-weight: bold;
+  font-size: 1rem;
+  color: #d63384;
+
+  body.dark-mode & {
+    border-bottom-color: #333 !important;
+    color: #ff9ebb !important;
+  }
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  color: #888;
+  transition: 0.2s;
+
+  &:hover {
+    color: #ff69b4;
+  }
+
+  body.dark-mode & {
+    color: #aaa;
+
+    &:hover {
+      color: #ff69b4;
+    }
+  }
+}
+
+.modal-body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #444;
+  max-height: 300px;
+  overflow-y: auto;
+  word-break: break-all;
+  white-space: pre-wrap;
+
+  body.dark-mode & {
+    color: #cbd5e1 !important;
+  }
+
+  & .modal-time {
+    color: #d63384;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+
+    body.dark-mode & {
+      color: #ff9ebb !important;
+    }
+  }
+
+  & a {
+    color: #ff1493;
+    text-decoration: underline;
+    font-weight: bold;
+  }
+}
+
+/* --- 새 탭 메인 뷰어 탭 네비게이션 스타일 --- */
+.panel-tab-bar {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 182, 193, 0.5);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.dark-mode & {
+    background: rgba(30, 30, 30, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+}
+
+.panel-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-weight: bold;
+  cursor: pointer;
+  color: #888;
+  transition: 0.2s;
+
+  .btn-name {
+    display: none;
+  }
+
+  &:hover {
+    color: #d63384;
+    background: rgba(255, 240, 245, 0.6);
+  }
+
+  &.active {
+    background: #ff69b4;
+    color: white;
+    box-shadow: 0 2px 6px rgba(255, 105, 180, 0.3);
+
+    & .tab-icon-wrap {
+      svg, img {
+      filter: brightness(0) invert(1) !important;
+    }
+  }
+
+    .btn-name {
+      display: inline;
+    }
+  }
+
+  body.dark-mode & {
+    color: #aaa;
+
+    &:hover {
+      color: #ff9ebb;
+      background: rgba(50, 40, 60, 0.6);
+    }
+
+    &.active {
+      background: #ff69b4;
+      color: white;
+    }
+  }
+}
+
+.tab-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+}
+
+body.dark-mode {
+
+  .panel-tab-btn[data-target="ntTabX"],
+  .panel-tab-btn[data-target="ntTabClip"] {
+    .tab-icon-wrap svg {
+      filter: invert(100%) brightness(200%);
+    }
+  }
+  .panel-tab-btn[data-target="ntTabDC"] {
+    img {
+      filter: invert(0);
+    }
+  }
+}
+
+.panel-tab-btn[data-target="ntTabClip"] {
+  svg {
+    transform: scale(2.5) translateX(30%);
+  }
+}
+
+.panel-tab-btn[data-target="ntTabDC"] {
+  img {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    object-fit: contain;
+    filter: invert(1);
+  }
+}
+
+
+/* 탭 컨텐츠 제어 */
+.panel-tab-content {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: clip;
+  padding-right: 2px;
+}
+
+.panel-tab-content#ntTabCalendar,
+.panel-tab-content#ntTabInsta,
+.panel-tab-content#ntTabX {
+  overflow-y: auto;
+}
+
+.panel-tab-content.active {
+  display: flex;
+  overflow: visible;
+}
+
+.glass-card.overflow-visible,
+.panel-tab-content.active .glass-card.overflow-visible,
+.panel-tab-content.active .hscroll-container,
+.panel-tab-content.active .hscroll-viewport {
+  overflow: visible;
+}
+
+/* 스크롤바 스타일 (panel-tab-content에 적용) */
+.panel-tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-tab-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 182, 193, 0.8);
+  border-radius: 3px;
+}
+
+.panel-tab-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.dark-mode .panel-tab-content::-webkit-scrollbar-thumb {
+  background: #444 !important;
+}
+
+@media (max-width: 1024px) {
+  .panel-tab-content {
+    .iframe-wrapper {
+      min-height: 600px;
+    }
+  }
+}
+
+/* iframe 및 피드 래퍼 스타일 (스크롤 숨김 및 높이 꽉 채우기) */
+#ntTabSceneFlix,
+#ntTabTiktok,
+#ntTabResceneLove,
+#ntTabToDo {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.iframe-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* height: 100%;
+  min-height: 100%; */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ffd1dc;
+  background: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+
+  body.dark-mode & {
+    background: #1e1e1e !important;
+    border-color: #333 !important;
+  }
+
+  & iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    display: block;
+  }
+
+  /* tiktok flex 해제 */
+  /* &#ntTiktokFeedList {
+    flex: none;
+    height: unset;
+  } */
+
+}
+
+.feed-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 20px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  &#ntTiktokFeedList {
+    grid-template-columns: 1fr;
+
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 780px;
+
+  }
+
+}
+
+.feed-iframe-wrapper {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 182, 193, 0.6);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  height: fit-content;
+
+
+
+  &:hover {
+    border-color: #ff69b4;
+    box-shadow: 0 6px 15px rgba(255, 105, 180, 0.15);
+  }
+
+  body.dark-mode & {
+    background: rgba(22, 19, 28, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+
+    &:hover {
+      border-color: #ff69b4 !important;
+      box-shadow: 0 6px 15px rgba(255, 105, 180, 0.3) !important;
+    }
+  }
+
+  & iframe {
+    width: 100%;
+    border: none;
+    display: block;
+    background: transparent;
+  }
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RESCENE Fan Hub</title>
+  <link rel="icon" href="icons/rescene-logo.png" type="image/x-icon">
+  <link rel="stylesheet" href="sidepanel.css">
+  <!-- <meta http-equiv="Content-Security-Policy" content="script-src 'self'; frame-src https://www.instagram.com;"> -->
+</head>
+<body>
+  <!-- 사이드 패널 상단 탭 네비게이션 (4개 탭) -->
+  <div class="panel-tab-bar" id="mainTabBar">
+    <button class="panel-tab-btn active" data-target="tabHome">🏠</button>
+    <button class="panel-tab-btn" data-target="tabSchedule">📅</button>
+    <button class="panel-tab-btn" data-target="tabInsta">📷 인스타</button>
+    <button class="panel-tab-btn" data-target="tabX">🐦 X(트윗)</button>
+    <!-- <button class="panel-tab-btn" data-target="tabTiktokFrame">🐦 X Embed</button> -->
+    <button class="panel-tab-btn" data-target="tabTiktok">틱톡</button>
+    <button class="panel-tab-btn" data-target="tabClip">📺 클립</button>
+    <button class="panel-tab-btn" data-target="tabSceneFlix">🎬</button>
+    <button class="panel-tab-btn" data-target="tabDC">DC</button>
+    <!-- <button class="panel-tab-btn" data-target="tabMnet">Mnet</button> -->
+  </div>
+
+
+  <!-- [탭 1] 홈 대시보드 뷰 컨테이너 -->
+  <div class="panel-tab-content active" id="tabHome">
+    <!-- ON AIR 배너 -->
+    <a href="#" id="liveBanner" target="_blank">🔴 [ON AIR] 리센느 실시간 라이브 중! 클릭 이동</a>
+  <!-- 상단 패널 헤더 (테마 변경 + 대시보드 버튼) -->
+  <div class="panel-header-bar">
+    <h2><img src="icons/rescene-logo.png" alt="icon" class="custom-logo"> 공식 채널 바로가기</h2>
+    <div class="header-controls">
+      <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기">🚀 대시보드</button>
+      <button class="theme-toggle-btn" id="themeToggleBtn">🌓 테마</button>
+    </div>
+  </div>
+
+    <div class="hub-oneline" id="hubContainer"></div>
+
+    <h2><img src="icons/rescene_official_profile.jpg" alt="icon"> RESCENE official</h2>
+    <div id="youtubeList" class="video-grid">
+      <p style="font-size: 12px; color: #777; text-align: center; grid-column: span 3;">불러오는 중...</p>
+    </div>
+    <h3 class="subsection-title">RESCENE Archive</h3>
+    <div id="playlistYoutubeList" class="video-grid">
+      <p style="font-size: 12px; color: #777; text-align: center; grid-column: span 3;">불러오는 중...</p>
+    </div>
+
+    <h2><img src="icons/hellowoni_profile.jpg" alt="icon"> 안녕하세요원이입니다잘부탁드립니다</h2>
+    <div id="woniYoutubeList" class="video-grid">
+      <p style="font-size: 12px; color: #777; text-align: center; grid-column: span 3;">불러오는 중...</p>
+    </div>
+
+    <h2>📅 스케줄</h2>
+    <div class="schedule-container" id="scheduleList">
+      <div class="schedule-item">스케줄 정보를 불러오는 중...</div>
+    </div>
+
+    <!-- 팬페이지 바로가기 그리드 -->
+    <h2>🌟 팬페이지 바로가기</h2>
+    <div class="fanpage-links-grid">
+      <a href="https://rescenefan.com/" target="_blank" class="fanpage-link-card">📝 To DO</a>
+      <a href="https://rescene.muzip.link/chart/" target="_blank" class="fanpage-link-card">📊 muzip chart</a>
+      <a href="https://rescene.love/" target="_blank" class="fanpage-link-card">💖 rescene.love</a>
+      <a href="https://rescene.fan/" target="_blank" class="fanpage-link-card">🌸 rescene.fan</a>
+    </div>
+
+    <!-- 푸터 면책 문구 -->
+    <footer>
+      본 확장 프로그램은 팬이 자발적으로 제작한 비공식 앱으로 소속사 및 아티스트와 무관합니다.<br>
+      모든 콘텐츠의 저작권은 원저작자에게 있습니다.
+    </footer>
+  </div>
+  <!-- [새로운 탭] 스케줄 캘린더 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabSchedule">
+    <div class="calendar-wrapper">
+      <div class="calendar-header">
+        <div class="calendar-header-left">
+          <button class="cal-nav-btn" id="spPrevMonthBtn">◀</button>
+          <span id="spCalendarMonthTitle">2026년 7월 스케줄</span>
+          <button class="cal-nav-btn" id="spNextMonthBtn">▶</button>
+        </div>
+      </div>
+      <div class="calendar-weekdays">
+        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+      </div>
+      <!-- 캘린더 그리드 영역 -->
+      <div class="calendar-grid" id="spCalendarGrid"></div>
+    </div>
+  </div>
+
+
+  <!-- [탭 3] 인스타그램 공식 임베드 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabInsta">
+    <div class="feed-list-container" id="instaFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">최신 인스타그램 피드를 불러오는 중...</p>
+    </div>
+  </div>
+
+  <!-- [탭 4] X(트위터) 공식 임베드 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabX">
+    <div class="feed-list-container" id="xFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">최신 X(트윗) 피드를 불러오는 중...</p>
+    </div>
+  </div>
+  <!-- [탭 5] 클립(Naver) iframe 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabClip">
+    <div class="iframe-wrapper" id="clipFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">최신 클립(Naver) 피드를 불러오는 중...</p>
+    </div>
+  </div>
+
+  <!-- [탭 6] iframe 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabTiktokFrame">
+    <div class="iframe-wrapper" id="tiktokFrameFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">틱톡을 불러오는 중...</p>
+    </div>
+  </div>
+
+  <!-- [추가] 틱톡 iframe 뷰 컨테이너 (SCENE-FLIX와 동일한 방식) -->
+  <div class="panel-tab-content" id="tabTiktok">
+    <div class="iframe-wrapper" id="tiktokFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">틱톡을 불러오는 중...</p>
+    </div>
+  </div>
+
+    <!-- [탭 2] SCENE-FLIX iframe 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabSceneFlix">
+    <div class="iframe-wrapper" id="sceneFlixFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">SCENE-FLIX를 불러오는 중...</p>
+    </div>
+  </div>
+  <!-- [탭 7] DC iframe 뷰 컨테이너 -->
+  <div class="panel-tab-content" id="tabDC">
+    <div class="iframe-wrapper" id="dcFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">DC를 불러오는 중...</p>
+    </div>
+  </div>
+  <!-- [탭 8] mnet iframe 뷰 컨테이너 -->
+   <div class="panel-tab-content" id="tabMnet">
+    <div class="iframe-wrapper" id="mnetFeedList">
+      <p style="text-align: center; color: #888; padding: 20px;">Mnet을 불러오는 중...</p>
+    </div>
+  </div>
+
+
+
+
+
+  <!-- 사이드패널 스케줄 상세 팝업 (모달) 및 툴팁 -->
+  <div class="schedule-modal-overlay" id="scheduleModalOverlay">
+    <div class="schedule-modal-card">
+      <div class="modal-header">
+        <span id="modalTitle">스케줄 상세 정보</span>
+        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body" id="modalBodyContent"></div>
+    </div>
+  </div>
+
+  <div class="schedule-tooltip" id="scheduleTooltip"></div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

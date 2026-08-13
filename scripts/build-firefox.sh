@@ -2,15 +2,15 @@
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SRC_DIR="$BASE_DIR/remine-helper-extension"
-DEST_DIR="$BASE_DIR/remine-helper-extension-firefox"
+SRC_DIR="$BASE_DIR/remine-helper"
+DEST_DIR="$BASE_DIR/remine-helper-firefox"
 
 if [[ ! -d "$SRC_DIR" ]]; then
-  SRC_DIR=$(find "$BASE_DIR" -maxdepth 1 -type d -name "*remine-helper-extension*" ! -name "*firefox*" ! -name "*복사본*" | head -n 1 || true)
+  SRC_DIR=$(find "$BASE_DIR" -maxdepth 1 -type d -name "*remine-helper*" ! -name "*firefox*" ! -name "*복사본*" | head -n 1 || true)
 fi
 
 if [[ -z "$SRC_DIR" ]] || [[ ! -d "$SRC_DIR" ]]; then
-  SRC_DIR="$BASE_DIR/remine-helper-extension"
+  SRC_DIR="$BASE_DIR/remine-helper"
 fi
 
 printf "Syncing Firefox extension files from %s to %s

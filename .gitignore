@@ -15,7 +15,7 @@ publish/
 *복사본*
 *.bak
 *.tmp
-/assets
+asssets/
 
 # IDE & Editor files
 .vscode/

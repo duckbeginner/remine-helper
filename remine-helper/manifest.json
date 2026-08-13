@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Remine Helper",
+  "version": "1.0.1",
+  "description": "For Remine",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "sidePanel",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "https://*.youtube.com/feeds/*",
+    "https://blip.kr/*",
+    "https://*.mnetplus.world/*",
+    "https://*.dcinside.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/logo16.png",
+    "32": "icons/logo32.png",
+    "48": "icons/logo48.png",
+    "128": "icons/logo128.png"
+  },
+  "action": {
+    "default_title": "Click to open sidebar",
+    "default_icon": {
+      "16": "icons/logo16.png",
+      "32": "icons/logo32.png",
+      "48": "icons/logo48.png",
+      "128": "icons/logo128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src https://*.notion.so https://notion.so https://*.notion.site https://*.mnetplus.world https://blip.kr https://rescene.love https://rescene.muzip.link https://rescenefan.com https://rescene.fan https://adam-yam.github.io https://*.instagram.com https://*.twitter.com https://www.tiktok.com https://clip.naver.com/ https://x.com/ https://*.dcinside.com/ https://*.bstage.in; "
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}

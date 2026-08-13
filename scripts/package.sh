@@ -14,9 +14,9 @@ else
 fi
 
 echo "=== [2/3] Extracting Version ==="
-CHROME_DIR="$BASE_DIR/remine-helper-extension"
+CHROME_DIR="$BASE_DIR/remine-helper"
 if [ ! -d "$CHROME_DIR" ]; then
-  CHROME_DIR=$(find "$BASE_DIR" -maxdepth 1 -type d -name "*remine-helper-extension*" ! -name "*firefox*" ! -name "*복사본*" | head -n 1 || true)
+  CHROME_DIR=$(find "$BASE_DIR" -maxdepth 1 -type d -name "*remine-helper*" ! -name "*firefox*" ! -name "*복사본*" | head -n 1 || true)
 fi
 
 MANIFEST_PATH="$CHROME_DIR/manifest.json"
@@ -44,7 +44,7 @@ mkdir -p "$PUBLISH_DIR"
 
 echo "=== [3/3] Packaging Zip Files ==="
 
-FIREFOX_DIR="$BASE_DIR/remine-helper-extension-firefox"
+FIREFOX_DIR="$BASE_DIR/remine-helper-firefox"
 
 # Chrome Packaging
 CHROME_ZIP="$PUBLISH_DIR/remine-helper-chrome-v$VERSION.zip"

@@ -28,7 +28,7 @@ jobs:
       - name: Get Version Number
         id: get_version
         run: |
-          VERSION=$(grep -o '"version": "[^"]*"' remine-helper-extension/manifest.json | head -n 1 | cut -d'"' -f4)
+          VERSION=$(grep -o '"version": "[^"]*"' remine-helper/manifest.json | head -n 1 | cut -d'"' -f4)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
