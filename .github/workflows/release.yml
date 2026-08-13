@@ -1,0 +1,97 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    name: Package Extension & Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Make Scripts Executable
+        run: chmod +x scripts/*.sh
+
+      - name: Run Packaging Script
+        run: ./scripts/package.sh
+
+      - name: Get Version Number
+        id: get_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' remine-helper-extension/manifest.json | head -n 1 | cut -d'"' -f4)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            publish/remine-helper-chrome-v${{ steps.get_version.outputs.VERSION }}.zip
+            publish/remine-helper-firefox-v${{ steps.get_version.outputs.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Chrome Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remine-helper-chrome
+          path: publish/remine-helper-chrome-v*.zip
+
+      - name: Upload Firefox Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remine-helper-firefox
+          path: publish/remine-helper-firefox-v*.zip
+
+  publish-chrome-webstore:
+    name: Publish to Chrome Web Store
+    needs: build-and-package
+    if: startsWith(github.ref, 'refs/tags/') && secrets.CHROME_EXTENSION_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Chrome Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: remine-helper-chrome
+          path: publish/
+
+      - name: Upload & Publish to Chrome Web Store
+        uses: chrome-webstore-upload-action@v2
+        with:
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          file-name: publish/*.zip
+          publish: true
+
+  publish-firefox-amo:
+    name: Publish to Firefox Add-ons (AMO)
+    needs: build-and-package
+    if: startsWith(github.ref, 'refs/tags/') && secrets.FIREFOX_ADDON_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Firefox Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: remine-helper-firefox
+          path: publish/
+
+      - name: Upload to Firefox Add-ons (AMO)
+        uses: w3c/action-autopublish-firefox-addon@v1
+        with:
+          addon-id: ${{ secrets.FIREFOX_ADDON_ID }}
+          jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
+          xpi-path: publish/*.zip

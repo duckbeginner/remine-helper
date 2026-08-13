@@ -1,0 +1,27 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build and archive outputs
+publish/
+*.zip
+
+# Backup / temporary directories
+*복사본*
+*.bak
+*.tmp
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / npm
+node_modules/
+npm-debug.log*
