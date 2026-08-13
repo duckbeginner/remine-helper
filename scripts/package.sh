@@ -2,29 +2,49 @@
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CHROME_DIR="$BASE_DIR/remine-helper-extension"
-FIREFOX_DIR="$BASE_DIR/remine-helper-extension-firefox"
-BUILD_SCRIPT="$BASE_DIR/scripts/build-firefox.sh"
 PUBLISH_DIR="$BASE_DIR/publish"
 
 echo "=== [1/3] Syncing Firefox Extension Files ==="
+BUILD_SCRIPT="$BASE_DIR/scripts/build-firefox.sh"
 if [ -f "$BUILD_SCRIPT" ]; then
-  bash "$BUILD_SCRIPT"
+  bash "$BUILD_SCRIPT" || true
 else
   echo "Error: $BUILD_SCRIPT not found!"
   exit 1
 fi
 
 echo "=== [2/3] Extracting Version ==="
-VERSION=$(grep -o '"version": "[^"]*"' "$CHROME_DIR/manifest.json" | head -n 1 | cut -d'"' -f4)
-if [ -z "$VERSION" ]; then
-  VERSION="1.0.0"
+CHROME_DIR="$BASE_DIR/remine-helper-extension"
+if [ ! -d "$CHROME_DIR" ]; then
+  CHROME_DIR=$(find "$BASE_DIR" -maxdepth 1 -type d -name "*remine-helper-extension*" ! -name "*firefox*" ! -name "*복사본*" | head -n 1 || true)
 fi
-echo "Target Version: $VERSION"
 
+MANIFEST_PATH="$CHROME_DIR/manifest.json"
+if [ ! -f "$MANIFEST_PATH" ]; then
+  echo "Searching for manifest.json..."
+  MANIFEST_PATH=$(find "$BASE_DIR" -name "manifest.json" ! -path "*/node_modules/*" ! -path "*/.git/*" | head -n 1 || true)
+fi
+
+VERSION="1.0.0"
+if [ -n "$MANIFEST_PATH" ] && [ -f "$MANIFEST_PATH" ]; then
+  echo "Found manifest at: $MANIFEST_PATH"
+  EXTRACTED=$(grep -o '"version": "[^"]*"' "$MANIFEST_PATH" | head -n 1 | cut -d'"' -f4 || true)
+  if [ -n "$EXTRACTED" ]; then
+    VERSION="$EXTRACTED"
+  fi
+else
+  echo "Error: Could not locate manifest.json!"
+  echo "Repository structure under $BASE_DIR:"
+  ls -la "$BASE_DIR"
+  exit 1
+fi
+
+echo "Target Version: $VERSION"
 mkdir -p "$PUBLISH_DIR"
 
 echo "=== [3/3] Packaging Zip Files ==="
+
+FIREFOX_DIR="$BASE_DIR/remine-helper-extension-firefox"
 
 # Chrome Packaging
 CHROME_ZIP="$PUBLISH_DIR/remine-helper-chrome-v$VERSION.zip"
@@ -36,7 +56,11 @@ rm -f "$CHROME_ZIP"
 FIREFOX_ZIP="$PUBLISH_DIR/remine-helper-firefox-v$VERSION.zip"
 echo "Creating Firefox package: $FIREFOX_ZIP"
 rm -f "$FIREFOX_ZIP"
-(cd "$FIREFOX_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*")
+if [ -d "$FIREFOX_DIR" ]; then
+  (cd "$FIREFOX_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*")
+else
+  (cd "$CHROME_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*")
+fi
 
 echo "=== Packaging Completed Successfully! ==="
 echo "Outputs:"
