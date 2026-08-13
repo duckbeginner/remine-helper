@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RESCENE Helper Common Component Library</title>
+  <link rel="stylesheet" href="common.css">
+</head>
+<body>
+
+  <!-- 1. 상단 탭 네비게이션 바 & 글래스 슬라이더 — 동적 마운트 -->
+  <div id="tabBarMount"></div>
+
+  <!-- 2. 실시간 라이브 감지 배너 레퍼런스 -->
+  <a href="#" id="liveBanner" target="_blank" style="display: none;">🔴 [ON AIR] 리센느 실시간 라이브 중! 클릭 이동</a>
+
+  <!-- 3. 공식 채널 바로가기 허브 카드 레퍼런스 -->
+  <div class="glass-card mb-12">
+    <div class="panel-header-bar">
+      <h2><img src="../icons/rescene-logo.png" alt="icon" class="custom-logo"> 공식 채널 바로가기</h2>
+      <div class="header-controls">
+        <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기">🚀 대시보드</button>
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="테마 전환">🌓 테마</button>
+      </div>
+    </div>
+    <div class="hub-oneline" id="hubContainer">
+      <!-- Hub Icon Buttons inserted dynamically -->
+    </div>
+  </div>
+
+  <!-- 4. 공식 유튜브 영상 섹션 레퍼런스 -->
+  <div class="glass-card mb-12">
+    <h2><img src="../icons/rescene_official_profile.jpg" alt="icon"> RESCENE official</h2>
+    <div id="youtubeList" class="video-grid"></div>
+    <h3 class="subsection-title">RESCENE Archive</h3>
+    <div id="playlistYoutubeList" class="video-grid"></div>
+  </div>
+
+  <!-- 5. 원이 채널 영상 섹션 레퍼런스 -->
+  <div class="glass-card mb-12">
+    <h2><img src="../icons/hellowoni_profile.jpg" alt="icon"> 안녕하세요원이입니다잘부탁드립니다</h2>
+    <div id="woniYoutubeList" class="video-grid"></div>
+  </div>
+
+  <!-- 6. 스케줄 리스트 카드 레퍼런스 (스마트 가변 뷰포트) -->
+  <div class="glass-card mb-12 schedule-card-flex">
+    <h2>📅 스케줄</h2>
+    <div class="schedule-container">
+      <div class="schedule-viewport" id="scheduleList"></div>
+    </div>
+  </div>
+
+  <!-- 7. 팬페이지 바로가기 카드 레퍼런스 -->
+  <div class="glass-card mb-12">
+    <h2>🌟 팬페이지 바로가기</h2>
+    <div class="fanpage-links-grid" id="fanpageLinksGrid"></div>
+  </div>
+
+  <!-- 8. 스케줄 캘린더 래퍼 레퍼런스 -->
+  <div class="calendar-wrapper">
+    <div class="calendar-header">
+      <div class="calendar-header-left">
+        <button class="cal-nav-btn" id="spPrevMonthBtn">◀</button>
+        <span id="spCalendarMonthTitle">스케줄 캘린더</span>
+        <button class="cal-nav-btn" id="spNextMonthBtn">▶</button>
+      </div>
+    </div>
+    <div class="calendar-weekdays">
+      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+    </div>
+    <div class="calendar-grid" id="spCalendarGrid"></div>
+  </div>
+
+  <!-- 9. 하단 고정 면책 푸터 레퍼런스 -->
+  <div class="glass-card disclaimer-card sticky-footer">
+    <footer>
+      본 확장 프로그램은 팬이 자발적으로 제작한 비공식 앱으로 소속사 및 아티스트와 무관합니다.<br>
+      모든 콘텐츠의 저작권은 원저작자에게 있습니다.
+    </footer>
+  </div>
+
+  <!-- 10. 스케줄 모달 & 툴팁 레퍼런스 -->
+  <div class="schedule-modal-overlay" id="scheduleModalOverlay">
+    <div class="schedule-modal-card">
+      <div class="modal-header">
+        <span id="modalTitle">스케줄 상세 정보</span>
+        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body" id="modalBodyContent"></div>
+    </div>
+  </div>
+  <div class="schedule-tooltip" id="scheduleTooltip"></div>
+  <script type="module">
+    import { createTabBarHTML } from '../common/templates.js';
+    import { initTabEngine } from '../common/common.js';
+
+    // 탭바 동적 렌더링
+    const tabBarMount = document.getElementById('tabBarMount');
+    if (tabBarMount) {
+      tabBarMount.innerHTML = createTabBarHTML();
+      const tabBarEl = tabBarMount.querySelector('.panel-tab-bar');
+      const sliderEl = tabBarMount.querySelector('.tab-glass-slider');
+      initTabEngine(tabBarEl, sliderEl);
+    }
+  </script>
+
+</body>
+</html>
