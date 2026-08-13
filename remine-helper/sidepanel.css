@@ -18,6 +18,21 @@ body {
   font-size: clamp(0.85rem, 1.2vw + 0.3rem, 1rem);
   transition: background 0.3s, color 0.3s;
   width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #ffb6c1 transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ffb6c1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
   &.dark-mode {
     background: radial-gradient(circle at 30% 20%, #22152b 0%, #121214 70%, #0a0a0c 100%) !important;
@@ -54,7 +69,8 @@ body {
       }
     }
 
-    .panel-tab-btn[data-target="tabX"], .panel-tab-btn[data-target="tabClip"] {
+    .panel-tab-btn[data-target="tabX"],
+    .panel-tab-btn[data-target="tabClip"] {
       .tab-icon-wrap svg {
         filter: invert(100%) brightness(200%);
       }
@@ -304,10 +320,12 @@ body {
     box-shadow: 0 2px 6px rgba(255, 105, 180, 0.3);
 
     .tab-icon-wrap {
-      svg, img {
-      filter: brightness(0) invert(1) !important;
+
+      svg,
+      img {
+        filter: brightness(0) invert(1) !important;
+      }
     }
-  }
   }
 
   &[data-target="tabClip"] {
@@ -690,8 +708,7 @@ h3 {
   border-radius: 10px;
   padding: 6px;
   /* max-height: 200px; */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   margin-bottom: 6px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 
@@ -702,6 +719,11 @@ h3 {
   &::-webkit-scrollbar-thumb {
     background: #ffb6c1;
     border-radius: 3px;
+  }
+
+  .schedule-viewport {
+    overflow-y: auto;
+    height: 100%;
   }
 }
 
@@ -1015,6 +1037,7 @@ footer {
     border-radius: 4px;
     object-fit: contain;
     filter: invert(1);
+
     body.dark-mode & {
       filter: invert(0);
     }
