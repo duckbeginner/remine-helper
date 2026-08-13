@@ -2,31 +2,6 @@ const OFFICIAL_CHANNEL_ID = "UCtKtCiaWRz-d3EZn2xd1mdA";
 const OFFICIAL_PLAYLIST_ID = "PL7zZDePsdYwPNu51o8b9MKQ_eGk520SFt";
 const WONI_CHANNEL_ID     = "UCWpY0eSJtyO-qNAPbKFRSSg";
 
-// newtab.js에서 보낸 "순정 새 탭으로 이동시켜줘" 요청 수신
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "redirectToNativeNTP" && sender.tab) {
-
-    const ua = navigator.userAgent.toLowerCase();
-
-    // [핵심] 브라우저별 '무한 루프에 빠지지 않는' 진짜 순정 새 탭 주소
-    let nativeNtpUrl = "chrome://new-tab-page/";
-
-    if (ua.includes("edg/")) {
-      // 엣지의 경우 edge://newtab은 루프에 빠지므로, 엣지 새탭의 실제 백엔드 URL 제공
-      nativeNtpUrl = "https://ntp.msn.com/edge/ntp";
-    } else if (ua.includes("firefox/")) {
-      // 파이어폭스는 about:newtab을 백그라운드 업데이트 권한으로 열 수 있음
-      nativeNtpUrl = "about:newtab";
-    }
-
-    // 백그라운드의 강력한 권한(chrome.tabs.update)을 이용해
-    // 로컬 리소스(chrome://) 보안 에러를 무시하고 해당 탭을 강제 이동!
-    chrome.tabs.update(sender.tab.id, { url: nativeNtpUrl }).catch((err) => {
-      console.log("순정 새 탭 이동 중 예외 발생:", err);
-    });
-  }
-});
-
 // Firefox/older browsers에서 DNR 대신 webRequest로 CSP를 조정하는 처리
 const FIREFOX_FRAME_ANCESTORS = "frame-ancestors https: http: moz-extension:";
 const CSP_URL_PATTERNS = [
