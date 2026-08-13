@@ -135,6 +135,48 @@ document.addEventListener("DOMContentLoaded", () => {
   let isDCLoaded = false;
   let isMnetLoaded = false;
 
+  // --- 동적 투명 글래스 호버 슬라이더 (Transparent Hover Glass Slider) ---
+  const glassSlider = document.getElementById("tabGlassSlider");
+  const mainTabBar = document.getElementById("mainTabBar");
+
+  function updateGlassSlider(targetBtn) {
+    if (!glassSlider || !targetBtn) return;
+    const parent = targetBtn.parentElement;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const btnRect = targetBtn.getBoundingClientRect();
+
+    const left = btnRect.left - parentRect.left;
+    const width = btnRect.width;
+
+    glassSlider.style.left = `${left}px`;
+    glassSlider.style.width = `${width}px`;
+  }
+
+  if (mainTabBar && glassSlider) {
+    mainTabBar.addEventListener("mouseenter", () => {
+      glassSlider.classList.add("visible");
+      const activeBtn = document.querySelector(".panel-tab-btn.active");
+      if (activeBtn) updateGlassSlider(activeBtn);
+    });
+
+    mainTabBar.addEventListener("mouseleave", () => {
+      glassSlider.classList.remove("visible");
+    });
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener("mouseenter", () => {
+        glassSlider.classList.add("visible");
+        updateGlassSlider(btn);
+      });
+    });
+  }
+
+  window.addEventListener("resize", () => {
+    const currentActive = document.querySelector(".panel-tab-btn.active");
+    if (currentActive) updateGlassSlider(currentActive);
+  });
+
   tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       const targetId = btn.getAttribute("data-target");
@@ -142,6 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // 버튼 active 클래스 정리
       tabButtons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      updateGlassSlider(btn);
 
       // 탭 컨텐츠 뷰 전환
       tabContents.forEach(content => {

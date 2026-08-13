@@ -2,19 +2,16 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;
-  padding: clamp(10px, 1.5vw, 14px);
+  padding: 8px 10px;
   background: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
   color: #333;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  /* [수정] 패널 전체 뷰포트 높이 고정 */
   min-width: 350px;
-  /* max-width: 1140px; [수정] 패널이 충분히 넓어질 수 있도록 제한 풀기 */
   margin: 0 auto;
   overflow: hidden;
-  /* [수정] 바디 자체의 스크롤을 막고 내부 탭 컨텐츠별로 스크롤/채움 처리 */
   font-size: clamp(0.85rem, 1.2vw + 0.3rem, 1rem);
   transition: background 0.3s, color 0.3s;
   width: 100%;
@@ -224,22 +221,38 @@ body {
 }
 
 .theme-toggle-btn {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 182, 193, 0.6);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 8px;
-  padding: 5px 8px;
-  font-size: clamp(0.75rem, 1vw, 0.85rem);
-  font-weight: bold;
+  padding: 5px 9px;
+  font-size: clamp(0.75rem, 1vw, 0.82rem);
+  font-weight: 600;
   cursor: pointer;
-  color: #d63384;
-  transition: 0.2s;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  color: #555;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 
   &:hover {
-    background: #ff69b4;
-    color: white;
-    border-color: #ff69b4;
+    background: rgba(255, 255, 255, 0.8);
+    color: #ff007a;
+    border-color: rgba(255, 105, 180, 0.5);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+    transform: translateY(-1px);
+  }
+
+  body.dark-mode & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      color: #ff9ebb !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 4px 12px rgba(224, 86, 253, 0.3) !important;
+    }
   }
 }
 
@@ -276,51 +289,59 @@ body {
 /* --- 상단 탭 바 스타일 --- */
 .panel-tab-bar {
   display: flex;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(8px);
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 4px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 182, 193, 0.5);
-  margin-bottom: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 6px 20px rgba(255, 105, 180, 0.08);
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
   flex-shrink: 0;
+}
 
-  body.dark-mode & {
-    background: rgba(30, 30, 30, 0.6) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-  }
+body.dark-mode .panel-tab-bar {
+  background: rgba(26, 21, 34, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
 }
 
 .panel-tab-btn {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* 로고와 텍스트 사이 간격 */
   flex: 1;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  padding: 5px 8px;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px;
+  padding: 6px 10px;
   font-size: clamp(0.75rem, 1vw, 0.85rem);
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
-  color: #888;
-  transition: 0.2s;
+  color: #666;
+  transition: all 0.2s ease;
   text-align: center;
 
   &:hover {
-    color: #d63384;
-    background: rgba(255, 240, 245, 0.6);
+    color: #ff007a;
   }
 
   &.active {
-    background: #ff69b4;
-    color: white;
-    box-shadow: 0 2px 6px rgba(255, 105, 180, 0.3);
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+    font-weight: 700;
 
     .tab-icon-wrap {
-
       svg,
       img {
         filter: brightness(0) invert(1) !important;
@@ -333,43 +354,49 @@ body {
       transform: scale(2.5) translateX(30%);
     }
   }
+}
 
-  body.dark-mode & {
-    color: #aaa;
+body.dark-mode .panel-tab-btn {
+  color: #a0aec0;
 
-    &:hover {
-      color: #ff9ebb;
-      background: rgba(50, 40, 60, 0.6);
-    }
+  &:hover {
+    color: #ff9ebb;
+  }
 
-    &.active {
-      background: #ff69b4;
-      color: white;
-    }
+  &.active {
+    background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
+    color: white !important;
+    box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
   }
 }
 
-/* 탭 컨텐츠 전환 제어 및 스크롤바 스타일링 */
+/* 탭 컨텐츠 영역 (화면을 넘어갈 경우 전체 자동 수직 스크롤 개방!) */
 .panel-tab-content {
   display: none;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
   width: 100%;
   box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 2px;
-  /* 스크롤바와 컨텐츠 사이 여백 살짝 추가 */
 
   &.active {
     display: flex;
   }
 
-  /* SCENE-FLIX 탭일 때는 내부 스크롤 막고 100% 꽉 채우기 */
+  /* iframe 탭 전용 스크롤 제한 */
   &#tabSceneFlix,
   &#tabBlip,
-  &#tabSchedule,
-  &#tabHome {
+  &#tabSchedule {
     overflow: hidden;
+    min-height: 0;
+  }
+
+  &#tabHome {
+    overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
   }
 
@@ -488,11 +515,14 @@ h3 {
   min-width: 32px;
   border-radius: 50%;
   text-decoration: none;
-  transition: 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: grab;
   user-select: none;
-  background: #fdfdfd;
-  border: 1px solid rgba(255, 182, 193, 0.4);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   box-sizing: border-box;
 
   &:active {
@@ -500,9 +530,10 @@ h3 {
   }
 
   &:hover {
-    background: #fff0f5;
-    transform: scale(1.12);
-    border-color: #ffb6c1;
+    background: rgba(255, 255, 255, 0.85);
+    transform: scale(1.14);
+    border-color: rgba(255, 105, 180, 0.6);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.25);
   }
 
   & svg,
@@ -523,6 +554,17 @@ h3 {
 
   &.dragging {
     opacity: 0.3;
+  }
+
+  body.dark-mode & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.18) !important;
+      border-color: rgba(255, 105, 180, 0.5) !important;
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.35) !important;
+    }
   }
 }
 
@@ -592,14 +634,17 @@ h3 {
   transform: translateY(-50%);
   z-index: 60;
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 209, 220, 0.6);
-  color: #d63384;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #ff007a;
   padding: 6px 8px;
   border-radius: 999px;
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  opacity: 0.6;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  opacity: 0.8;
 }
 
 .hscroll-btn.left {
@@ -611,33 +656,47 @@ h3 {
 }
 
 .hscroll-btn:hover {
-  background: rgba(255, 105, 180, 0.9);
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
   color: white;
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 14px rgba(255, 20, 147, 0.35);
+  opacity: 1;
+  transform: translateY(-50%) scale(1.08);
 }
 
 .video-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  /* padding: 6px; */
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   text-decoration: none;
   color: #333;
   display: flex;
   flex-direction: column;
   position: relative;
   transform-origin: center center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
-
-  /* overflow: hidden; */
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 
   &:hover {
     z-index: 20;
-    border-color: #ff69b4;
-    background: rgba(255, 248, 251, 0.95);
-    box-shadow: 0 4px 4px 2px rgba(255, 105, 180, 0.24);
+    border-color: rgba(255, 105, 180, 0.65);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 6px 18px rgba(255, 105, 180, 0.2);
     transform: translateY(-2px) scale(1.02);
+  }
+
+  body.dark-mode & {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 105, 180, 0.5) !important;
+      box-shadow: 0 6px 18px rgba(224, 86, 253, 0.3) !important;
+    }
   }
 
   overflow: hidden;
@@ -702,59 +761,87 @@ h3 {
 }
 
 .schedule-container {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  padding: 6px;
-  /* max-height: 200px; */
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  padding: 3px 4px;
   overflow: hidden;
   margin-bottom: 6px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  box-sizing: border-box;
 
   &::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #ffb6c1;
+    background: rgba(255, 105, 180, 0.4);
     border-radius: 3px;
   }
 
   .schedule-viewport {
     overflow-y: auto;
+    overflow-x: hidden;
     height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  body.dark-mode & {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
   }
 }
 
 .schedule-item {
-  font-size: clamp(0.75rem, 1vw, 0.85rem);
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(252, 228, 236, 0.6);
+  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
   cursor: pointer;
   display: flex;
   align-items: center;
   color: #555;
   border-radius: 6px;
-  transition: 0.15s;
+  transition: background 0.15s ease, color 0.15s ease;
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  background: transparent;
 
   &:hover {
-    background: rgba(255, 240, 245, 0.8);
-    color: #d63384;
+    background: rgba(255, 255, 255, 0.7);
+    color: #ff007a;
+    box-shadow: 0 2px 6px rgba(255, 105, 180, 0.12);
   }
 
   &.active {
-    background: rgba(255, 228, 236, 0.9);
-    color: #d63384;
+    background: rgba(255, 255, 255, 0.85);
+    color: #ff007a;
     font-weight: bold;
-    border-left: 3px solid #ff69b4;
+    border-left: 3px solid #ff007a;
   }
 
   &:last-child {
     border-bottom: none;
+  }
+
+  body.dark-mode & {
+    color: #cbd5e1;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #ff9ebb !important;
+    }
+
+    &.active {
+      background: rgba(255, 255, 255, 0.14) !important;
+      color: #ff9ebb !important;
+      border-left-color: #ff69b4 !important;
+    }
   }
 }
 
@@ -762,22 +849,24 @@ h3 {
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
 
   & .schedule-date-time {
     color: #d63384;
     font-weight: bold;
     flex-shrink: 0;
-    margin-right: 6px;
+    margin-right: 4px;
+    font-size: 11px;
   }
 
   & .schedule-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    flex: 1;
+    flex: 1 1 0%;
+    min-width: 0;
     color: #333;
   }
 }
@@ -937,37 +1026,40 @@ footer {
 }
 
 .fanpage-link-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 8px;
   padding: 8px 6px;
   text-align: center;
   text-decoration: none;
-  color: #d63384;
+  color: #ff007a;
   font-size: clamp(0.75rem, 1vw, 0.82rem);
-  font-weight: bold;
-  transition: 0.2s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  font-weight: 700;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 
   &:hover {
-    background: #ff69b4;
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
     color: white;
-    border-color: #ff69b4;
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 14px rgba(255, 20, 147, 0.35);
     transform: translateY(-2px);
   }
 
   body.dark-mode & {
-    background: rgba(28, 24, 36, 0.8) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
     color: #ff9ebb !important;
-    border-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
 
     &:hover {
-      background: #ff69b4 !important;
+      background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
       color: white !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
     }
   }
-
 }
 
 /* --- 공식 임베드 피드 컨테이너 --- */
@@ -982,28 +1074,28 @@ footer {
 
 /* 인스타/X 공식 iframe을 담는 글래스모피즘 박스 */
 .feed-iframe-wrapper {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 182, 193, 0.6);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 12px;
   overflow: clip;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  /* width: 100%; */
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   height: fit-content;
 
   &:hover {
-    border-color: #ff69b4;
-    box-shadow: 0 6px 15px rgba(255, 105, 180, 0.15);
+    border-color: rgba(255, 105, 180, 0.6);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.15);
   }
 
   body.dark-mode & {
-    background: rgba(22, 19, 28, 0.8) !important;
+    background: rgba(22, 19, 28, 0.6) !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
 
     &:hover {
-      border-color: #ff69b4 !important;
-      box-shadow: 0 6px 15px rgba(255, 105, 180, 0.3) !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 6px 20px rgba(224, 86, 253, 0.3) !important;
     }
   }
 
@@ -1017,7 +1109,6 @@ footer {
 }
 
 /* --- 탭 버튼 내 동적 로고 스타일 --- */
-
 .tab-icon-wrap {
   display: inline-flex;
   align-items: center;
@@ -1042,26 +1133,27 @@ footer {
       filter: invert(0);
     }
   }
-
 }
 
-/* --- 사이드패널 캘린더 뷰 전용 스타일 --- */
+/* --- 사이드패널 캘린더 뷰 전용 스타일 (Crystal Glassmorphism) --- */
 .calendar-wrapper {
   display: flex;
   flex-direction: column;
   flex: 1;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 12px;
   padding: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 24px rgba(255, 105, 180, 0.06);
   height: 100%;
   box-sizing: border-box;
 
   body.dark-mode & {
-    background: rgba(22, 19, 28, 0.8) !important;
+    background: rgba(22, 19, 28, 0.55) !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
   }
 }
 
@@ -1069,15 +1161,15 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 10px;
-  font-weight: bold;
+  margin-bottom: 8px;
+  font-weight: 700;
   font-size: clamp(0.9rem, 1.2vw, 1rem);
-  color: #d63384;
+  color: #ff007a;
 
   & .calendar-header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
 
   body.dark-mode & {
@@ -1086,29 +1178,36 @@ footer {
 }
 
 .cal-nav-btn {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 182, 193, 0.6);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
   cursor: pointer;
   padding: 4px 10px;
   font-size: 0.8rem;
-  color: #d63384;
+  color: #ff007a;
   font-weight: bold;
-  transition: 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 
   &:hover {
-    background: #ff69b4;
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
     color: white;
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.35);
+    transform: scale(1.08);
   }
 
   body.dark-mode & {
-    background: rgba(40, 30, 50, 0.6) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
     color: #ff9ebb !important;
 
     &:hover {
-      background: #ff69b4 !important;
+      background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
       color: white !important;
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.4) !important;
     }
   }
 }
@@ -1118,9 +1217,21 @@ footer {
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
   font-size: clamp(0.7rem, 0.9vw, 0.8rem);
-  font-weight: bold;
-  color: #888;
+  font-weight: 700;
+  color: #777;
   margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  padding: 4px 0;
+
+  body.dark-mode & {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    color: #94a3b8 !important;
+  }
 }
 
 .calendar-grid {
@@ -1132,11 +1243,11 @@ footer {
   overflow-y: auto;
 
   &::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #ffb6c1;
+    background: rgba(255, 105, 180, 0.4);
     border-radius: 3px;
   }
 }
@@ -1147,16 +1258,18 @@ footer {
   gap: 4px;
   flex: 1;
   min-height: 45px;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* CSS 호버 시 행 확대 */
+  /* 행 마우스 호버 시 글래스 확대 */
   &:hover {
     flex: 3;
-    background: #fff5f8;
-    border: 1px solid #ffb6c1;
-    border-radius: 8px;
-    padding: 4px;
-    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.15);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 105, 180, 0.4);
+    border-radius: 10px;
+    padding: 3px;
+    box-shadow: 0 6px 18px rgba(255, 105, 180, 0.15);
     z-index: 10;
     overflow-y: auto;
 
@@ -1165,15 +1278,14 @@ footer {
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #ffb6c1;
+      background: rgba(255, 105, 180, 0.5);
       border-radius: 2px;
     }
 
     & .cal-event-badge {
       font-size: clamp(0.7rem, 0.9vw, 0.8rem);
-      padding: 4px 6px;
+      padding: 3px 6px;
       white-space: normal;
-      /* flex: 1; */
       min-height: fit-content;
     }
 
@@ -1186,44 +1298,59 @@ footer {
   }
 
   body.dark-mode &:hover {
-    background: rgba(48, 38, 60, 0.9) !important;
+    background: rgba(40, 32, 52, 0.85) !important;
     border-color: rgba(255, 105, 180, 0.4) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
   }
 }
 
 .calendar-cell {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
   padding: 4px;
-  border: 1px solid #fce4ec;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-size: clamp(0.65rem, 0.8vw, 0.75rem);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
 
   &:hover {
-    background: #fff0f5;
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 105, 180, 0.6);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+    transform: translateY(-1px);
   }
 
   &.other-month {
     background: transparent;
-    color: #ccc;
+    color: #bbb;
     border-color: transparent;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
   }
 
   &.today {
-    border: 2px solid #ff69b4;
-    background: #fff8fb;
+    border: 2px solid #ff007a;
+    background: rgba(255, 240, 245, 0.65);
+    box-shadow: 0 0 10px rgba(255, 0, 122, 0.2);
   }
 
   body.dark-mode & {
-    background: rgba(30, 30, 30, 0.5);
-    border-color: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
 
     &:hover {
-      background: rgba(50, 40, 60, 0.8);
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 105, 180, 0.5);
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.3);
     }
 
     &.other-month {
@@ -1233,26 +1360,27 @@ footer {
 
     &.today {
       border-color: #ff69b4;
-      background: rgba(60, 30, 50, 0.6);
+      background: rgba(60, 30, 50, 0.5);
+      box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
     }
   }
 }
 
 .cell-date {
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-weight: 700;
+  margin-bottom: 3px;
   color: #555;
   pointer-events: none;
 
   body.dark-mode & {
-    color: #aaa;
+    color: #cbd5e1;
   }
 }
 
 .cell-events {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   overflow-y: auto;
   flex: 1;
   scrollbar-width: none;
@@ -1263,22 +1391,27 @@ footer {
 }
 
 .cal-event-badge {
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 2px 5px;
+  border-radius: 5px;
   font-size: 0.65rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   font-weight: 600;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.15s ease;
 
   &:hover {
-    opacity: 0.85;
-    filter: brightness(0.95);
+    filter: brightness(1.05);
+    transform: scale(1.03);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   }
 
   body.dark-mode & {
-    filter: invert(0.9) hue-rotate(180deg) brightness(0.8);
+    filter: brightness(0.95);
   }
 }
 
@@ -1288,4 +1421,157 @@ footer {
   font-weight: normal;
   margin-right: 4px;
   opacity: 0.85;
+}
+
+/* --- 대시보드 스타일 글래스모피즘 카드 (.glass-card) --- */
+.glass-card {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 16px rgba(255, 105, 180, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.48);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(255, 105, 180, 0.1);
+}
+
+.glass-card.mb-12 {
+  margin-bottom: 6px;
+}
+
+.glass-card h2 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-color, #ff007a);
+}
+
+.glass-card h2 img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.glass-card .subsection-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  margin: 6px 0 4px 0;
+  color: #555;
+}
+
+/* --- 스케줄 카드 (남은 공간 흡수 + 최소 120px 확보 + 초과 시 전체 스크롤) --- */
+.schedule-card-flex {
+  flex: 1 0 120px !important;
+  min-height: 120px !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+/* --- Sticky 상단 탭바 & 동적 글래스 슬라이더 (.tab-glass-slider) --- */
+
+.tab-glass-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  width: 0;
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(255, 105, 180, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+  transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.tab-glass-slider.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+body.dark-mode .tab-glass-slider {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.disclaimer-card.sticky-footer {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 90;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  margin-top: auto;
+  margin-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  padding: 6px 10px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+}
+
+.disclaimer-card footer {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #777;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+body.dark-mode .panel-tab-bar {
+  background: rgba(26, 21, 34, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode .disclaimer-card.sticky-footer {
+  background: rgba(22, 19, 28, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-mode .glass-card {
+  background: rgba(22, 19, 28, 0.55) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .glass-card:hover {
+  background: rgba(22, 19, 28, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.dark-mode .glass-card h2 {
+  color: #ff9ebb !important;
+}
+
+body.dark-mode .disclaimer-card footer {
+  color: #94a3b8 !important;
 }
