@@ -8,6 +8,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-and-package:
     name: Package Extension & Create Release
@@ -57,17 +60,31 @@ jobs:
   publish-chrome-webstore:
     name: Publish to Chrome Web Store
     needs: build-and-package
-    if: startsWith(github.ref, 'refs/tags/') && secrets.CHROME_EXTENSION_ID != ''
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    env:
+      CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
     steps:
+      - name: Check Secrets Configured
+        id: check_secrets
+        run: |
+          if [ -z "$CHROME_EXTENSION_ID" ]; then
+            echo "::notice ::Chrome Web Store secrets not set. Skipping Web Store upload."
+            echo "SKIP=true" >> $GITHUB_ENV
+          else
+            echo "SKIP=false" >> $GITHUB_ENV
+          fi
+
       - name: Download Chrome Build Artifact
+        if: env.SKIP == 'false'
         uses: actions/download-artifact@v4
         with:
           name: remine-helper-chrome
           path: publish/
 
       - name: Upload & Publish to Chrome Web Store
-        uses: chrome-webstore-upload-action@v2
+        if: env.SKIP == 'false'
+        uses: mnao305/chrome-webstore-upload-action@v2.0.1
         with:
           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
           client-id: ${{ secrets.CHROME_CLIENT_ID }}
@@ -79,17 +96,31 @@ jobs:
   publish-firefox-amo:
     name: Publish to Firefox Add-ons (AMO)
     needs: build-and-package
-    if: startsWith(github.ref, 'refs/tags/') && secrets.FIREFOX_ADDON_ID != ''
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    env:
+      FIREFOX_ADDON_ID: ${{ secrets.FIREFOX_ADDON_ID }}
     steps:
+      - name: Check Secrets Configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREFOX_ADDON_ID" ]; then
+            echo "::notice ::Firefox AMO secrets not set. Skipping AMO upload."
+            echo "SKIP=true" >> $GITHUB_ENV
+          else
+            echo "SKIP=false" >> $GITHUB_ENV
+          fi
+
       - name: Download Firefox Build Artifact
+        if: env.SKIP == 'false'
         uses: actions/download-artifact@v4
         with:
           name: remine-helper-firefox
           path: publish/
 
       - name: Upload to Firefox Add-ons (AMO)
-        uses: w3c/action-autopublish-firefox-addon@v1
+        if: env.SKIP == 'false'
+        uses: w3c/action-autostore-firefox-addon@v1
         with:
           addon-id: ${{ secrets.FIREFOX_ADDON_ID }}
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
