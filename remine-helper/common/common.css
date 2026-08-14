@@ -515,8 +515,8 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 8px;
-  padding: 3px 4px;
+  border-radius: 10px;
+  padding: 6px 8px;
   overflow: hidden;
   margin-bottom: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
@@ -536,6 +536,10 @@ body {
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 1px;
 }
 
 .schedule-viewport::-webkit-scrollbar {
@@ -548,37 +552,38 @@ body {
 }
 
 .schedule-item {
-  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
-  padding: 5px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: clamp(0.76rem, 0.95vw, 0.84rem);
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   cursor: pointer;
   display: flex;
   align-items: center;
-  color: #555;
-  border-radius: 6px;
-  transition: background 0.15s ease, color 0.15s ease;
+  color: #444;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  min-height: 36px;
 }
 
 .schedule-item:hover {
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--primary-color);
-  box-shadow: 0 2px 6px rgba(255, 105, 180, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 105, 180, 0.35);
+  color: var(--primary-color, #ff007a);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(255, 105, 180, 0.15);
 }
 
 .schedule-item.active {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.18) 0%, rgba(255, 20, 147, 0.08) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.2) 0%, rgba(255, 20, 147, 0.1) 100%) !important;
   color: #ff007a !important;
   font-weight: 700;
-  border-left: 3px solid #ff007a !important;
-  box-shadow: 0 2px 8px rgba(255, 20, 147, 0.12);
-}
-
-.schedule-item:last-child {
-  border-bottom: none;
+  border: 1px solid rgba(255, 0, 122, 0.35) !important;
+  border-left: 3.5px solid #ff007a !important;
+  box-shadow: 0 3px 10px rgba(255, 20, 147, 0.16);
 }
 
 .schedule-line {
@@ -1448,20 +1453,23 @@ body.dark-mode .schedule-container {
 
 body.dark-mode .schedule-item {
   color: #cbd5e1;
-  border-bottom-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.07);
 }
 
 body.dark-mode .schedule-item:hover {
   background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 105, 180, 0.25) !important;
   color: #ff9ebb !important;
 }
 
 body.dark-mode .schedule-item.active {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.22) 0%, rgba(224, 86, 253, 0.12) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.25) 0%, rgba(224, 86, 253, 0.15) 100%) !important;
+  border-color: rgba(255, 105, 180, 0.4) !important;
   color: #ff9ebb !important;
   font-weight: 700;
-  border-left: 3px solid #ff69b4 !important;
-  box-shadow: 0 2px 10px rgba(255, 105, 180, 0.25) !important;
+  border-left: 3.5px solid #ff69b4 !important;
+  box-shadow: 0 3px 12px rgba(255, 105, 180, 0.25) !important;
 }
 
 body.dark-mode .fanpage-link-card {

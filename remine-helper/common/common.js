@@ -807,24 +807,42 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     return;
   }
 
+  // 시작 시간 순 정렬 보장
+  schedules.sort((a, b) => {
+    const tA = parseSafeDate(a.startTime || a.date).getTime();
+    const tB = parseSafeDate(b.startTime || b.date).getTime();
+    return tA - tB;
+  });
+
   const now = new Date().getTime();
   let nextIndex = schedules.findIndex(item => parseSafeDate(item.startTime || item.date).getTime() >= now);
   if (nextIndex === -1) nextIndex = schedules.length - 1;
 
-  const startIndex = Math.max(0, nextIndex - 5);
-  const endIndex = Math.min(schedules.length, nextIndex + 6);
-  const slicedSchedules = schedules.slice(startIndex, endIndex);
+  // 기준점(오늘/가장 가까운 예정 일정) 중심: 전 10개 + 후 10개 초기 로드
+  const CHUNK_SIZE = 10;
+  let startIndex = Math.max(0, nextIndex - CHUNK_SIZE);
+  let endIndex = Math.min(schedules.length, nextIndex + CHUNK_SIZE + 1);
 
-  container.innerHTML = slicedSchedules.map((item, idx) => {
+  // 개별 일정 아이템 HTML 생성 함수
+  function createItemHTML(item, globalIdx) {
     let dateLabel = "일정";
     let timeStr = "";
     const rawDate = item.startTime || item.date;
 
     if (rawDate) {
       const d = parseSafeDate(rawDate);
+      const currentYear = new Date().getFullYear();
+      const itemYear = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      dateLabel = `${month}/${day}`;
+
+      if (itemYear !== currentYear) {
+        // 올해가 아니면 연도 표기 (예: '24.03/26)
+        const shortYear = String(itemYear).slice(2);
+        dateLabel = `'${shortYear}.${month}/${day}`;
+      } else {
+        dateLabel = `${month}/${day}`;
+      }
 
       let h = d.getHours();
       const m = String(d.getMinutes()).padStart(2, '0');
@@ -840,10 +858,9 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     const { typeText, bg, color } = getScheduleTypeInfo(item);
     let typeBadge = '';
     if (typeText) {
-      typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:1px 5px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
+      typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
     }
 
-    // 리스트에는 중복 태그([🎬] 등)를 제거한 깔끔한 제목 표시
     let cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
     let extraInfo = '';
     if (item.extField && item.extField.value) {
@@ -851,11 +868,11 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     }
 
     const titleText = escapeHtml(cleanTitle);
-    const isNext = (startIndex + idx === nextIndex);
+    const isNext = (globalIdx === nextIndex);
     const activeClass = isNext ? ' active' : '';
 
     return `
-      <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${idx}" title="${titleText}">
+      <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${globalIdx}" title="${titleText}">
         <div class="schedule-line">
           <span class="schedule-date-time">[${dateLabel}${timeStr}]</span>
           ${typeBadge}
@@ -863,43 +880,105 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
         </div>
       </div>
     `;
-  }).join('');
+  }
 
-  container.querySelectorAll('.schedule-item').forEach(el => {
-    el.addEventListener('click', () => {
-      container.querySelectorAll('.schedule-item').forEach(i => i.classList.remove('active'));
-      el.classList.add('active');
+  // 초기 렌더링
+  let initialHtml = '';
+  for (let i = startIndex; i < endIndex; i++) {
+    initialHtml += createItemHTML(schedules[i], i);
+  }
+  container.innerHTML = initialHtml;
 
-      const idx = parseInt(el.getAttribute('data-index'), 10);
-      const item = slicedSchedules[idx];
-      if (item) {
-        const d = parseSafeDate(item.startTime || item.date);
-        const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-        let h = d.getHours();
-        const m = String(d.getMinutes()).padStart(2, '0');
-        const ap = h >= 12 ? '오후' : '오전';
-        h = h % 12 || 12;
-        const timeStr = (h === 0 && m === '00' && String(item.startTime || item.date).includes('T15:00:00')) ? '종일 일정' : `${ap} ${h}:${m}`;
-        const { typeText } = getScheduleTypeInfo(item);
-
-        // 모달에는 세부 내용(item.message) 및 사전 해석된 미디어 URL 전달
-        showScheduleModal({
-          title: item.title || item.message || '스케줄 상세 정보',
-          date: dateStr,
-          time: timeStr,
-          type: typeText,
-          detail: item.message || item.description || item.detail || item.title,
-          link: item.url || item.link,
-          resolvedMediaUrls: item.resolvedMediaUrls || []
-        });
-      }
-
-      if (typeof onSelectDate === 'function') {
-        const date = el.getAttribute('data-date');
-        onSelectDate(date);
-      }
-    });
+  // 초기 포커스: 활성화된(가장 가까운 예정) 일정으로 부드럽게 스크롤 이동
+  requestAnimationFrame(() => {
+    const activeEl = container.querySelector('.schedule-item.active');
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+    }
   });
+
+  // 양방향 무한 스크롤 핸들러 (위/아래 10개씩 동적 로드)
+  let isScrollingLoading = false;
+  container.onscroll = () => {
+    if (isScrollingLoading) return;
+
+    // 1. 위로 스크롤 시 과거 일정 추가 로드 (startIndex > 0)
+    if (container.scrollTop <= 20 && startIndex > 0) {
+      isScrollingLoading = true;
+      const oldScrollHeight = container.scrollHeight;
+      const oldScrollTop = container.scrollTop;
+
+      const prevStart = startIndex;
+      startIndex = Math.max(0, startIndex - CHUNK_SIZE);
+
+      const fragment = document.createDocumentFragment();
+      for (let i = startIndex; i < prevStart; i++) {
+        const temp = document.createElement('div');
+        temp.innerHTML = createItemHTML(schedules[i], i);
+        fragment.appendChild(temp.firstElementChild);
+      }
+      container.insertBefore(fragment, container.firstElementChild);
+
+      // 스크롤 점프 방지 (사용자 시야 유지)
+      const heightDiff = container.scrollHeight - oldScrollHeight;
+      container.scrollTop = oldScrollTop + heightDiff;
+
+      setTimeout(() => { isScrollingLoading = false; }, 80);
+    }
+    // 2. 아래로 스크롤 시 미래 일정 추가 로드 (endIndex < schedules.length)
+    else if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20 && endIndex < schedules.length) {
+      isScrollingLoading = true;
+      const prevEnd = endIndex;
+      endIndex = Math.min(schedules.length, endIndex + CHUNK_SIZE);
+
+      const fragment = document.createDocumentFragment();
+      for (let i = prevEnd; i < endIndex; i++) {
+        const temp = document.createElement('div');
+        temp.innerHTML = createItemHTML(schedules[i], i);
+        fragment.appendChild(temp.firstElementChild);
+      }
+      container.appendChild(fragment);
+
+      setTimeout(() => { isScrollingLoading = false; }, 80);
+    }
+  };
+
+  // 클릭 이벤트 위임 (동적으로 추가된 일정 아이템도 안정적으로 모달 오픈)
+  container.onclick = (e) => {
+    const el = e.target.closest('.schedule-item');
+    if (!el || !container.contains(el)) return;
+
+    container.querySelectorAll('.schedule-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+
+    const idx = parseInt(el.getAttribute('data-index'), 10);
+    const item = schedules[idx];
+    if (item) {
+      const d = parseSafeDate(item.startTime || item.date);
+      const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+      let h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const ap = h >= 12 ? '오후' : '오전';
+      h = h % 12 || 12;
+      const timeStr = (h === 0 && m === '00' && String(item.startTime || item.date).includes('T15:00:00')) ? '종일 일정' : `${ap} ${h}:${m}`;
+      const { typeText } = getScheduleTypeInfo(item);
+
+      showScheduleModal({
+        title: item.title || item.message || '스케줄 상세 정보',
+        date: dateStr,
+        time: timeStr,
+        type: typeText,
+        detail: item.message || item.description || item.detail || item.title,
+        link: item.url || item.link,
+        resolvedMediaUrls: item.resolvedMediaUrls || []
+      });
+    }
+
+    if (typeof onSelectDate === 'function') {
+      const date = el.getAttribute('data-date');
+      onSelectDate(date);
+    }
+  };
 }
 
 /* =========================================================================
