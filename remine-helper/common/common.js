@@ -6,7 +6,7 @@ import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML } from './te
    0. 3단계 순환 테마 엔진 (3-State Theme Engine: System -> Dark -> Light)
    ========================================================================= */
 
-export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
+export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } = {}) {
   const bodyEl = document.body;
   const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -81,12 +81,18 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
     }
   }
 
-  // 초기 테마 로드
+  // 초기 테마 로드 (initialMode가 주어지면 즉시 적용하여 IPC 지연 제거)
+  if (initialMode) {
+    applyTheme(initialMode);
+  }
+
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get(['themeMode'], (res) => {
-      const currentMode = res.themeMode || 'system';
-      applyTheme(currentMode);
-    });
+    if (!initialMode) {
+      chrome.storage.local.get(['themeMode'], (res) => {
+        const currentMode = res.themeMode || 'system';
+        applyTheme(currentMode);
+      });
+    }
 
     // 다른 창(사이드패널 <-> 대시보드) 간 실시간 테마 변경 동기화
     if (chrome.storage.onChanged) {
@@ -127,6 +133,8 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
         }
       });
     }
+  } else if (!initialMode) {
+    applyTheme('system');
   }
 
   return { applyTheme };
@@ -1634,8 +1642,87 @@ export function initAppStorageData({
   woniListId = 'woniYoutubeList',
   scheduleListId = 'scheduleList',
   onSchedulesLoaded,
-  onDataLoaded
+  onDataLoaded,
+  cachedData = null
 } = {}) {
+  const processResult = (result) => {
+    if (!result) return;
+
+    // 1. 유튜브 비디오 렌더링 및 수평 스크롤러 적용
+    const ytEl = typeof youtubeListId === 'string' ? document.getElementById(youtubeListId) : youtubeListId;
+    const plyEl = typeof playlistId === 'string' ? document.getElementById(playlistId) : playlistId;
+    const woniEl = typeof woniListId === 'string' ? document.getElementById(woniListId) : woniListId;
+
+    if (ytEl && result.latestVideos) {
+      renderOfficialYoutubeList(ytEl, result.latestVideos);
+      setupHorizontalScroller(ytEl);
+    }
+    if (plyEl && result.officialPlaylistVideos) {
+      renderOfficialYoutubeList(plyEl, result.officialPlaylistVideos);
+      setupHorizontalScroller(plyEl);
+    }
+    if (woniEl && result.woniVideos) {
+      renderWoniYoutubeList(woniEl, result.woniVideos);
+      setupHorizontalScroller(woniEl);
+    }
+
+    // 2. 실시간 라이브 배너 연동
+    const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
+    if (liveBanner) {
+      if (result.isLive && result.latestVideos && result.latestVideos.length > 0) {
+        liveBanner.style.display = 'block';
+        liveBanner.href = result.latestVideos[0].url || '#';
+      } else {
+        liveBanner.style.display = 'none';
+      }
+    }
+
+    // 3. 채널 아이콘 순서 복원 및 드래그 정렬 엔진 바인딩
+    const hubEl = typeof hubContainerId === 'string' ? document.getElementById(hubContainerId) : hubContainerId;
+    if (hubEl) {
+      if (result.channelOrder && Array.isArray(result.channelOrder)) {
+        const currentBtns = Array.from(hubEl.querySelectorAll('.hub-icon-btn'));
+        const btnMap = {};
+        currentBtns.forEach(b => { btnMap[b.getAttribute('data-key')] = b; });
+        result.channelOrder.forEach(key => {
+          if (btnMap[key]) hubEl.appendChild(btnMap[key]);
+        });
+      }
+      setupHubIconReordering(hubEl, (newOrder) => {
+        chrome.storage.local.set({ channelOrder: newOrder });
+      });
+    }
+
+    // 4. 스케줄 리스트 렌더링 (직캠/투표 필터링 및 지능형 중복 병합)
+    const schedEl = typeof scheduleListId === 'string' ? document.getElementById(scheduleListId) : scheduleListId;
+    const rawFiltered = (result.blipSchedules || []).filter(item => {
+      const text = (item.title || "") + " " + (item.message || "");
+      return !/(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i.test(text);
+    });
+
+    const cleanSchedules = deduplicateScheduleList(rawFiltered);
+
+    if (schedEl && cleanSchedules) {
+      renderScheduleList(schedEl, cleanSchedules);
+    }
+
+    // 5. 스케줄 데이터 콜백 (캘린더 매니저 등)
+    if (typeof onSchedulesLoaded === 'function' && cleanSchedules) {
+      onSchedulesLoaded(cleanSchedules);
+    }
+
+    // 6. 전체 데이터 로드 완료 콜백
+    if (typeof onDataLoaded === 'function') {
+      onDataLoaded(result);
+    }
+  };
+
+  // 이미 메모리에 로드된 캐시 데이터가 있으면 IPC 대기 없이 즉시 렌더링
+  if (cachedData) {
+    processResult(cachedData);
+    return;
+  }
+
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
 
   chrome.storage.local.get(
@@ -1648,75 +1735,7 @@ export function initAppStorageData({
       'themeMode',
       'channelOrder'
     ],
-    (result) => {
-      // 1. 유튜브 비디오 렌더링 및 수평 스크롤러 적용
-      const ytEl = typeof youtubeListId === 'string' ? document.getElementById(youtubeListId) : youtubeListId;
-      const plyEl = typeof playlistId === 'string' ? document.getElementById(playlistId) : playlistId;
-      const woniEl = typeof woniListId === 'string' ? document.getElementById(woniListId) : woniListId;
-
-      if (ytEl && result.latestVideos) {
-        renderOfficialYoutubeList(ytEl, result.latestVideos);
-        setupHorizontalScroller(ytEl);
-      }
-      if (plyEl && result.officialPlaylistVideos) {
-        renderOfficialYoutubeList(plyEl, result.officialPlaylistVideos);
-        setupHorizontalScroller(plyEl);
-      }
-      if (woniEl && result.woniVideos) {
-        renderWoniYoutubeList(woniEl, result.woniVideos);
-        setupHorizontalScroller(woniEl);
-      }
-
-      // 2. 실시간 라이브 배너 연동
-      const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
-      if (liveBanner) {
-        if (result.isLive && result.latestVideos && result.latestVideos.length > 0) {
-          liveBanner.style.display = 'block';
-          liveBanner.href = result.latestVideos[0].url || '#';
-        } else {
-          liveBanner.style.display = 'none';
-        }
-      }
-
-      // 3. 채널 아이콘 순서 복원 및 드래그 정렬 엔진 바인딩
-      const hubEl = typeof hubContainerId === 'string' ? document.getElementById(hubContainerId) : hubContainerId;
-      if (hubEl) {
-        if (result.channelOrder && Array.isArray(result.channelOrder)) {
-          const currentBtns = Array.from(hubEl.querySelectorAll('.hub-icon-btn'));
-          const btnMap = {};
-          currentBtns.forEach(b => { btnMap[b.getAttribute('data-key')] = b; });
-          result.channelOrder.forEach(key => {
-            if (btnMap[key]) hubEl.appendChild(btnMap[key]);
-          });
-        }
-        setupHubIconReordering(hubEl, (newOrder) => {
-          chrome.storage.local.set({ channelOrder: newOrder });
-        });
-      }
-
-      // 4. 스케줄 리스트 렌더링 (직캠/투표 필터링 및 지능형 중복 병합)
-      const schedEl = typeof scheduleListId === 'string' ? document.getElementById(scheduleListId) : scheduleListId;
-      const rawFiltered = (result.blipSchedules || []).filter(item => {
-        const text = (item.title || "") + " " + (item.message || "");
-        return !/(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i.test(text);
-      });
-
-      const cleanSchedules = deduplicateScheduleList(rawFiltered);
-
-      if (schedEl && cleanSchedules) {
-        renderScheduleList(schedEl, cleanSchedules);
-      }
-
-      // 5. 스케줄 데이터 콜백 (캘린더 매니저 등)
-      if (typeof onSchedulesLoaded === 'function' && cleanSchedules) {
-        onSchedulesLoaded(cleanSchedules);
-      }
-
-      // 6. 전체 데이터 로드 완료 콜백
-      if (typeof onDataLoaded === 'function') {
-        onDataLoaded(result);
-      }
-    }
+    processResult
   );
 }
 
@@ -1724,51 +1743,51 @@ export function initAppStorageData({
    11. 통합 사용자 설정 엔진 (User Settings Management Engine)
    ========================================================================= */
 
+// 동기식 사용자 설정 파서 (기본값 및 원본 메타데이터 안전 병합)
+export function parseUserSettings(savedSettings) {
+  const baseTabMap = {};
+  TAB_CONFIG_LIST.forEach(t => { baseTabMap[t.id] = t; });
+
+  if (!savedSettings || typeof savedSettings !== 'object') {
+    return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+  }
+
+  let mergedTabs = [];
+  if (Array.isArray(savedSettings.tabList) && savedSettings.tabList.length > 0) {
+    savedSettings.tabList.forEach(savedTab => {
+      const baseTab = baseTabMap[savedTab.id];
+      if (baseTab) {
+        mergedTabs.push({
+          ...savedTab,
+          ...baseTab,
+          enabled: savedTab.enabled !== false
+        });
+      }
+    });
+    TAB_CONFIG_LIST.forEach(baseTab => {
+      if (!mergedTabs.some(t => t.id === baseTab.id)) {
+        mergedTabs.push({ ...baseTab, enabled: baseTab.enabled !== false });
+      }
+    });
+  } else {
+    mergedTabs = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS.tabList));
+  }
+
+  return {
+    navPosition: savedSettings.navPosition || DEFAULT_USER_SETTINGS.navPosition,
+    refreshInterval: savedSettings.refreshInterval || DEFAULT_USER_SETTINGS.refreshInterval,
+    notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...(savedSettings.notifications || {}) },
+    sound: { ...DEFAULT_USER_SETTINGS.sound, ...(savedSettings.sound || {}) },
+    tabList: mergedTabs,
+    fanpages: (savedSettings.fanpages && savedSettings.fanpages.length > 0) ? savedSettings.fanpages : DEFAULT_USER_SETTINGS.fanpages
+  };
+}
+
 // 1. 사용자 설정 로드 (기본값 및 원본 메타데이터 안전 병합)
 export function loadUserSettings(callback) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['userSettings'], (res) => {
-      let settings = res.userSettings;
-      
-      // TAB_CONFIG_LIST 원본 메타데이터 맵 구축 (iframeUrl, sandbox, channelKey, type 등 보존)
-      const baseTabMap = {};
-      TAB_CONFIG_LIST.forEach(t => { baseTabMap[t.id] = t; });
-
-      if (!settings || typeof settings !== 'object') {
-        settings = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
-      } else {
-        let mergedTabs = [];
-        if (Array.isArray(settings.tabList) && settings.tabList.length > 0) {
-          settings.tabList.forEach(savedTab => {
-            const baseTab = baseTabMap[savedTab.id];
-            // constants.js의 TAB_CONFIG_LIST에 존재하는 탭만 유지 (코드에서 삭제된 탭은 자동 정리)
-            if (baseTab) {
-              mergedTabs.push({
-                ...savedTab,
-                ...baseTab,
-                enabled: savedTab.enabled !== false
-              });
-            }
-          });
-          // 새로 추가되었거나 누락된 탭이 있으면 뒤에 병합
-          TAB_CONFIG_LIST.forEach(baseTab => {
-            if (!mergedTabs.some(t => t.id === baseTab.id)) {
-              mergedTabs.push({ ...baseTab, enabled: baseTab.enabled !== false });
-            }
-          });
-        } else {
-          mergedTabs = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS.tabList));
-        }
-
-        // 깊은 기본값 병합
-        settings = {
-          navPosition: settings.navPosition || DEFAULT_USER_SETTINGS.navPosition,
-          notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...(settings.notifications || {}) },
-          sound: { ...DEFAULT_USER_SETTINGS.sound, ...(settings.sound || {}) },
-          tabList: mergedTabs,
-          fanpages: (settings.fanpages && settings.fanpages.length > 0) ? settings.fanpages : DEFAULT_USER_SETTINGS.fanpages
-        };
-      }
+      const settings = parseUserSettings(res.userSettings);
       if (typeof callback === 'function') callback(settings);
     });
   } else {
