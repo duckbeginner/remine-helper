@@ -68,25 +68,51 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtnId: 'spNextMonthBtn'
   });
 
+  // 소셜 피드 메모리 캐시 (탭 전환 0ms 즉각 반응)
+  let feedCache = {
+    insta: null,
+    x: null,
+    tiktok: DEFAULT_TIKTOK_FEEDS
+  };
+
+  chrome.storage.local.get(['instaFeeds', 'xFeeds', 'tiktokFeeds'], (res) => {
+    if (res) {
+      if (res.instaFeeds) feedCache.insta = res.instaFeeds;
+      if (res.xFeeds) feedCache.x = res.xFeeds;
+      if (res.tiktokFeeds && res.tiktokFeeds.length > 0) feedCache.tiktok = res.tiktokFeeds;
+    }
+  });
+
   initTabEngine(document.getElementById('dashboardTabBar'), document.getElementById('tabGlassSlider'), dashboardTabs, {
     onTabChange: (targetId, tabConfig, loadedMap) => {
       const isDark = document.body.classList.contains('dark-mode');
       if (targetId === 'tabInsta' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['instaFeeds'], (res) => {
-          if (res.instaFeeds) renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        if (feedCache.insta) {
+          renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
+        } else {
+          chrome.storage.local.get(['instaFeeds'], (res) => {
+            if (res && res.instaFeeds) {
+              feedCache.insta = res.instaFeeds;
+              renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
+            }
+          });
+        }
       } else if (targetId === 'tabX' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['xFeeds'], (res) => {
-          if (res.xFeeds) renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        if (feedCache.x) {
+          renderXEmbeds(document.getElementById('xFeedList'), feedCache.x, isDark);
+        } else {
+          chrome.storage.local.get(['xFeeds'], (res) => {
+            if (res && res.xFeeds) {
+              feedCache.x = res.xFeeds;
+              renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
+            }
+          });
+        }
       } else if (targetId === 'tabTiktok' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['tiktokFeeds'], (res) => {
-          const feeds = (res && res.tiktokFeeds && res.tiktokFeeds.length > 0) ? res.tiktokFeeds : DEFAULT_TIKTOK_FEEDS;
-          renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feedCache.tiktok || DEFAULT_TIKTOK_FEEDS, isDark);
       }
     }
   });

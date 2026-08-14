@@ -23,10 +23,18 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
     if (isDark) bodyEl.classList.add('dark-mode');
     else bodyEl.classList.remove('dark-mode');
 
-    const xIframe = document.getElementById('xTimelineIframe');
-    if (xIframe && xIframe.contentWindow) {
-      xIframe.contentWindow.postMessage({ type: 'SET_THEME', theme: isDark ? 'dark' : 'light' }, '*');
-    }
+    // 열려있는 임베드 iframe들의 테마 파라미터 실시간 업데이트
+    const themeStr = isDark ? 'dark' : 'light';
+    const iframes = document.querySelectorAll('.feed-iframe-wrapper iframe');
+    iframes.forEach(iframe => {
+      const src = iframe.src;
+      if (src && src.includes('theme=')) {
+        const newSrc = src.replace(/theme=(dark|light)/i, `theme=${themeStr}`);
+        if (newSrc !== src) {
+          iframe.src = newSrc;
+        }
+      }
+    });
 
     if (themeToggleBtn) {
       if (mode === 'dark') {
@@ -50,7 +58,16 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
       applyTheme(currentMode);
     });
 
-    // OS 테마 실시간 변경 감지
+    // 다른 창(사이드패널 <-> 대시보드) 간 실시간 테마 변경 동기화
+    if (chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && changes.themeMode) {
+          applyTheme(changes.themeMode.newValue || 'system');
+        }
+      });
+    }
+
+    // OS 시스템 테마 실시간 변경 감지
     systemThemeQuery.addEventListener('change', () => {
       chrome.storage.local.get(['themeMode'], (res) => {
         const currentMode = res.themeMode || 'system';
@@ -60,7 +77,7 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
       });
     });
 
-    // 버튼 클릭 시 3단계 순환
+    // 버튼 클릭 시 3단계 순환 (시스템 -> 다크 -> 라이트)
     if (themeToggleBtn) {
       themeToggleBtn.addEventListener('click', () => {
         chrome.storage.local.get(['themeMode'], (res) => {
@@ -95,20 +112,24 @@ export function updateGlassSlider(targetBtn, sliderEl) {
 }
 
 // 지정된 컨테이너 또는 전체 페이지 내의 모든 미디어(iframe, video, audio) 재생 및 소리 즉시 중지
-export function stopAllIframeMedia(container = document) {
+export function stopAllIframeMedia(container = document, forceReset = false) {
   if (!container) return;
 
-  // 1. iframe 리셋을 통한 미디어 즉시 정지
+  // 1. iframe 일시정지 명령 전송 및 옵션에 따른 리셋
   const iframes = container.querySelectorAll('iframe');
   iframes.forEach(iframe => {
     try {
       if (iframe.contentWindow) {
         iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
         iframe.contentWindow.postMessage('{"method":"pause"}', '*');
+        iframe.contentWindow.postMessage({ method: 'pause' }, '*');
+        iframe.contentWindow.postMessage({ type: 'pause' }, '*');
       }
-      const currentSrc = iframe.src;
-      if (currentSrc && currentSrc !== 'about:blank') {
-        iframe.src = currentSrc;
+      if (forceReset) {
+        const currentSrc = iframe.src;
+        if (currentSrc && currentSrc !== 'about:blank') {
+          iframe.src = currentSrc;
+        }
       }
     } catch (e) {
       // ignore
@@ -120,7 +141,7 @@ export function stopAllIframeMedia(container = document) {
   html5Medias.forEach(media => {
     try {
       media.pause();
-      media.currentTime = 0;
+      if (forceReset) media.currentTime = 0;
     } catch (e) {
       // ignore
     }
@@ -774,7 +795,7 @@ export function renderXEmbeds(container, feeds = [], isDark = false) {
     if (tweetId) {
       const wrapper = document.createElement('div');
       wrapper.className = 'feed-iframe-wrapper';
-      wrapper.innerHTML = `<iframe src="https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=${themeStr}" style="width: 100%; height: 250px; transition: height 0.3s ease;" frameborder="0" scrolling="no"></iframe>`;
+      wrapper.innerHTML = `<iframe src="https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=${themeStr}" style="width: 100%; height: 250px; transition: height 0.3s ease;" frameborder="0" scrolling="no" loading="lazy"></iframe>`;
       container.appendChild(wrapper);
     }
   });
@@ -803,6 +824,7 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
                   style="width: 100%; height: 680px; min-height: 680px; border: none; border-radius: 12px; display: block;" 
                   frameborder="0" 
                   scrolling="no" 
+                  loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowfullscreen>
           </iframe>
@@ -822,6 +844,7 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
               style="width: 100%; height: 100%; min-height: 650px; border: none; border-radius: 12px; display: block;" 
               frameborder="0"
               scrolling="no"
+              loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
       </iframe>
     </div>

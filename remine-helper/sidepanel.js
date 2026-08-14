@@ -49,6 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. 엔진 초기화
   initThemeEngine(document.getElementById('themeToggleBtn'));
 
+  // 대시보드 열기 버튼 연동
+  const openDashboardBtn = document.getElementById('openDashboardBtn');
+  if (openDashboardBtn) {
+    openDashboardBtn.addEventListener('click', () => {
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+      } else {
+        window.open('dashboard.html', '_blank');
+      }
+    });
+  }
+
   // 캘린더 관리자 초기화
   const calendarManager = initCalendarManager({
     gridId: 'spCalendarGrid',
@@ -57,26 +69,52 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtnId: 'spNextMonthBtn'
   });
 
-  // 탭 전환 엔진 초기화 (인스타/X/틱톡 지연 로딩 포함)
+  // 소셜 피드 메모리 캐시 (탭 전환 0ms 즉각 반응)
+  let feedCache = {
+    insta: null,
+    x: null,
+    tiktok: DEFAULT_TIKTOK_FEEDS
+  };
+
+  chrome.storage.local.get(['instaFeeds', 'xFeeds', 'tiktokFeeds'], (res) => {
+    if (res) {
+      if (res.instaFeeds) feedCache.insta = res.instaFeeds;
+      if (res.xFeeds) feedCache.x = res.xFeeds;
+      if (res.tiktokFeeds && res.tiktokFeeds.length > 0) feedCache.tiktok = res.tiktokFeeds;
+    }
+  });
+
+  // 탭 전환 엔진 초기화 (사전 캐시 기반 0ms 즉각 렌더링)
   initTabEngine(document.getElementById('mainTabBar'), document.getElementById('tabGlassSlider'), TAB_CONFIG_LIST, {
     onTabChange: (targetId, tabConfig, loadedMap) => {
       const isDark = document.body.classList.contains('dark-mode');
       if (targetId === 'tabInsta' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['instaFeeds'], (res) => {
-          if (res.instaFeeds) renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        if (feedCache.insta) {
+          renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
+        } else {
+          chrome.storage.local.get(['instaFeeds'], (res) => {
+            if (res && res.instaFeeds) {
+              feedCache.insta = res.instaFeeds;
+              renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
+            }
+          });
+        }
       } else if (targetId === 'tabX' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['xFeeds'], (res) => {
-          if (res.xFeeds) renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        if (feedCache.x) {
+          renderXEmbeds(document.getElementById('xFeedList'), feedCache.x, isDark);
+        } else {
+          chrome.storage.local.get(['xFeeds'], (res) => {
+            if (res && res.xFeeds) {
+              feedCache.x = res.xFeeds;
+              renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
+            }
+          });
+        }
       } else if (targetId === 'tabTiktok' && !loadedMap[targetId]) {
-        chrome.storage.local.get(['tiktokFeeds'], (res) => {
-          const feeds = (res && res.tiktokFeeds && res.tiktokFeeds.length > 0) ? res.tiktokFeeds : DEFAULT_TIKTOK_FEEDS;
-          renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feeds, isDark);
-          loadedMap[targetId] = true;
-        });
+        loadedMap[targetId] = true;
+        renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feedCache.tiktok || DEFAULT_TIKTOK_FEEDS, isDark);
       }
     }
   });

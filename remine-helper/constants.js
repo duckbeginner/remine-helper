@@ -12,7 +12,7 @@ export const CHANNEL_DATA_MAP = {
     url: 'https://www.youtube.com/@helloiamwoninicetomeetyou', // [수정] 최신 핸들 주소로 변경
     img: 'icons/hellowoni_profile.jpg'
   },
-  dcinside:{
+  dcinside: {
     name: 'dcinside',
     url: 'https://m.dcinside.com/board/rescene1',
     img: 'icons/dc_logo.png'
@@ -50,7 +50,7 @@ export const CHANNEL_DATA_MAP = {
   clip: {
     name: 'Naver Clip',
     url: 'https://clip.naver.com/@themuzeent',
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="76" height="30" viewBox="0 0 76 30" fill="none" role="img" aria-hidden="true"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z" fill="black"></path><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54" fill="url(#paint0_linear_14536_15643)"></path><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z" fill="url(#paint1_linear_14536_15643)"></path><defs><linearGradient id="paint0_linear_14536_15643" x1="26.1245" y1="17.5327" x2="24.2986" y2="14.6548" gradientUnits="userSpaceOnUse"><stop stop-color="black"></stop><stop offset="0.333333" stop-color="black"></stop><stop offset="0.65625" stop-color="black"></stop><stop offset="0.932292" stop-color="black"></stop></linearGradient><linearGradient id="paint1_linear_14536_15643" x1="19.9352" y1="12.7435" x2="21.8395" y2="15.8406" gradientUnits="userSpaceOnUse"><stop stop-color="black"></stop><stop offset="0.338542" stop-color="black"></stop><stop offset="0.6875" stop-color="black"></stop><stop offset="1" stop-color="black"></stop></linearGradient></defs></svg>'
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" fill="currentColor"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z"/><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54"/><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z"/></svg>'
   }
 };
 
@@ -73,7 +73,7 @@ export const TAB_CONFIG_LIST = [
   },
   {
     id: "tabInsta",
-    label: "인스타",
+    label: "Instagram",
     channelKey: "instagram",
     type: "embed-list",
     feedSource: "instagram",
@@ -81,7 +81,7 @@ export const TAB_CONFIG_LIST = [
   },
   {
     id: "tabX",
-    label: "X(트윗)",
+    label: "X.com",
     channelKey: "x",
     type: "embed-list",
     feedSource: "x",
@@ -89,7 +89,7 @@ export const TAB_CONFIG_LIST = [
   },
   {
     id: "tabTiktok",
-    label: "틱톡",
+    label: "Tiktok",
     channelKey: "tiktok",
     type: "embed-list",
     feedSource: "tiktok",
@@ -97,7 +97,7 @@ export const TAB_CONFIG_LIST = [
   },
   {
     id: "tabClip",
-    label: "클립",
+    label: "Clip",
     channelKey: "clip",
     type: "iframe",
     iframeUrl: "https://clip.naver.com/@themuzeent?tab=all&filter=all&theme={theme}",
