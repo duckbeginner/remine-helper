@@ -233,7 +233,6 @@ body {
 
 .panel-tab-content#tabSceneFlix,
 .panel-tab-content#tabClip,
-.panel-tab-content#tabDC,
 .panel-tab-content#tabTiktok,
 .panel-tab-content#tabBlip,
 .panel-tab-content#tabSchedule {
@@ -569,10 +568,11 @@ body {
 }
 
 .schedule-item.active {
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--primary-color);
-  font-weight: bold;
-  border-left: 3px solid var(--primary-color);
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.18) 0%, rgba(255, 20, 147, 0.08) 100%) !important;
+  color: #ff007a !important;
+  font-weight: 700;
+  border-left: 3px solid #ff007a !important;
+  box-shadow: 0 2px 8px rgba(255, 20, 147, 0.12);
 }
 
 .schedule-item:last-child {
@@ -603,6 +603,22 @@ body {
   flex: 1 1 0%;
   min-width: 0;
   color: #333;
+}
+
+.schedule-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .schedule-line .schedule-title {
+  color: #e2e8f0;
+}
+
+body.dark-mode .schedule-type-badge {
+  filter: brightness(0.88) saturate(1.2);
 }
 
 /* --- 팬페이지 바로가기 그리드 --- */
@@ -854,12 +870,14 @@ body {
 
 /* --- 공식 임베드 & iframe 래퍼 --- */
 .feed-list-container {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 16px;
   padding-bottom: 20px;
   width: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
+  align-items: start;
 }
 
 .feed-iframe-wrapper {
@@ -877,6 +895,12 @@ body {
 .feed-iframe-wrapper:hover {
   border-color: rgba(255, 105, 180, 0.6);
   box-shadow: 0 6px 20px rgba(255, 105, 180, 0.15);
+}
+
+.tiktok-feed-item {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto 16px auto;
 }
 
 .feed-iframe-wrapper iframe {
@@ -962,24 +986,206 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: none;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.schedule-modal-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 920px;
+  width: 100%;
+  max-height: calc(100vh - 24px);
+  margin: auto;
+  box-sizing: border-box;
+  pointer-events: none;
 }
 
 .schedule-modal-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 12px;
-  width: 90%;
-  max-width: 320px;
-  padding: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  flex: 1 1 300px;
+  max-width: 400px;
+  min-width: 280px;
+  max-height: calc(100vh - 32px);
+  height: auto;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.schedule-embed-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  flex: 1 1 360px;
+  max-width: 460px;
+  min-width: 280px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.embed-modal-title {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.embed-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
+  padding-right: 2px;
+}
+
+.embed-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.embed-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 105, 180, 0.4);
+  border-radius: 3px;
+}
+
+.embed-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 유튜브 스마트 프리뷰 카드 호버 인터랙션 */
+.youtube-preview-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+
+.youtube-preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 0, 0, 0.35) !important;
+}
+
+.youtube-preview-card:hover img {
+  transform: scale(1.06);
+}
+
+.youtube-preview-card:hover .yt-play-btn {
+  transform: scale(1.15) !important;
+  background: #ff0000 !important;
+  box-shadow: 0 6px 22px rgba(255, 0, 0, 0.75) !important;
+}
+
+/* 틱톡 숏폼 스마트 프리뷰 카드 (Theme-Adaptive) */
+.tiktok-short-preview-card {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 14px 16px;
+  border: 1px solid rgba(254, 44, 85, 0.25);
+  box-shadow: 0 4px 14px rgba(254, 44, 85, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.tiktok-short-preview-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(254, 44, 85, 0.6);
+  box-shadow: 0 6px 20px rgba(254, 44, 85, 0.2);
+}
+
+.tiktok-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tiktok-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(254, 44, 85, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(254, 44, 85, 0.15);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.tiktok-short-preview-card:hover .tiktok-icon-box {
+  transform: scale(1.08);
+}
+
+.tiktok-card-info {
+  min-width: 0;
+}
+
+.tiktok-card-title {
+  color: #1e293b;
+  font-size: 12.5px;
+  font-weight: bold;
+}
+
+.tiktok-card-desc {
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.tiktok-card-btn {
+  background: rgba(254, 44, 85, 0.1);
+  color: #fe2c55;
+  border: 1px solid rgba(254, 44, 85, 0.35);
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.tiktok-short-preview-card:hover .tiktok-card-btn {
+  background: #fe2c55;
+  color: #ffffff;
+  border-color: #fe2c55;
 }
 
 .modal-header {
@@ -1008,12 +1214,30 @@ body {
 
 .modal-body {
   font-size: 0.85rem;
-  line-height: 1.45;
+  line-height: 1.5;
   color: #444;
-  max-height: 250px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100vh - 100px);
   overflow-y: auto;
   word-break: break-all;
   white-space: pre-wrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
+  padding-right: 2px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 105, 180, 0.4);
+  border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .modal-body .detail-time {
@@ -1108,13 +1332,23 @@ body.dark-mode .tab-icon-dc {
   filter: invert(0);
 }
 
-body.dark-mode .theme-toggle-btn {
+/* 다크모드에서 검은색인 X와 Clip 아이콘 반전 */
+body.dark-mode .panel-tab-btn:not(.active)[data-target="tabX"] svg,
+body.dark-mode .panel-tab-btn:not(.active)[data-target="tabClip"] svg,
+body.dark-mode .hub-icon-btn[data-key="x"] svg,
+body.dark-mode .hub-icon-btn[data-key="clip"] svg {
+  filter: invert(1) brightness(1.2) !important;
+}
+
+body.dark-mode .theme-toggle-btn,
+body.dark-mode .maximize-btn {
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
   color: #cbd5e1 !important;
 }
 
-body.dark-mode .theme-toggle-btn:hover {
+body.dark-mode .theme-toggle-btn:hover,
+body.dark-mode .maximize-btn:hover {
   background: rgba(255, 255, 255, 0.15) !important;
   color: #ff9ebb !important;
   border-color: rgba(255, 105, 180, 0.4) !important;
@@ -1150,16 +1384,6 @@ body.dark-mode .hub-oneline {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
-body.dark-mode .hub-icon-btn {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-body.dark-mode .hub-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-color: rgba(255, 105, 180, 0.6) !important;
-}
-
 body.dark-mode .schedule-container {
   background: rgba(255, 255, 255, 0.03) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
@@ -1176,9 +1400,11 @@ body.dark-mode .schedule-item:hover {
 }
 
 body.dark-mode .schedule-item.active {
-  background: rgba(255, 255, 255, 0.14) !important;
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.22) 0%, rgba(224, 86, 253, 0.12) 100%) !important;
   color: #ff9ebb !important;
-  border-left-color: #ff69b4 !important;
+  font-weight: 700;
+  border-left: 3px solid #ff69b4 !important;
+  box-shadow: 0 2px 10px rgba(255, 105, 180, 0.25) !important;
 }
 
 body.dark-mode .fanpage-link-card {
@@ -1282,10 +1508,15 @@ body.dark-mode .disclaimer-card footer {
   color: #94a3b8 !important;
 }
 
-body.dark-mode .schedule-modal-card {
-  background: rgba(28, 24, 36, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+body.dark-mode .schedule-modal-card,
+body.dark-mode .schedule-embed-card {
+  background: rgba(28, 24, 36, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .embed-modal-title {
+  color: #ff9ebb !important;
 }
 
 body.dark-mode .modal-header {
@@ -1303,4 +1534,41 @@ body.dark-mode .modal-body {
 body.dark-mode .modal-body .detail-time {
   color: #ff9ebb !important;
   border-bottom-color: #333 !important;
+}
+
+/* 다크 모드 틱톡 숏폼 스마트 카드 동기화 */
+body.dark-mode .tiktok-short-preview-card {
+  background: rgba(22, 19, 28, 0.85) !important;
+  border-color: rgba(254, 44, 85, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode .tiktok-short-preview-card:hover {
+  box-shadow: 0 6px 20px rgba(254, 44, 85, 0.35) !important;
+  border-color: rgba(254, 44, 85, 0.8) !important;
+}
+
+body.dark-mode .tiktok-icon-box {
+  background: rgba(10, 8, 14, 0.85) !important;
+  border-color: rgba(254, 44, 85, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark-mode .tiktok-card-title {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode .tiktok-card-desc {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .tiktok-card-btn {
+  background: rgba(254, 44, 85, 0.2) !important;
+  color: #ff6482 !important;
+  border-color: rgba(254, 44, 85, 0.5) !important;
+}
+
+body.dark-mode .tiktok-short-preview-card:hover .tiktok-card-btn {
+  background: #fe2c55 !important;
+  color: #ffffff !important;
 }

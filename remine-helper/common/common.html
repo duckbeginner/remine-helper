@@ -80,12 +80,21 @@
 
   <!-- 10. 스케줄 모달 & 툴팁 레퍼런스 -->
   <div class="schedule-modal-overlay" id="scheduleModalOverlay">
-    <div class="schedule-modal-card">
-      <div class="modal-header">
-        <span id="modalTitle">스케줄 상세 정보</span>
-        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+    <div class="schedule-modal-container" id="scheduleModalContainer">
+      <div class="schedule-modal-card">
+        <div class="modal-header">
+          <span id="modalTitle">스케줄 상세 정보</span>
+          <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+        </div>
+        <div class="modal-body" id="modalBodyContent"></div>
       </div>
-      <div class="modal-body" id="modalBodyContent"></div>
+
+      <div class="schedule-embed-card" id="modalEmbedCard" style="display: none;">
+        <div class="modal-header">
+          <span class="embed-modal-title">🎬 관련 미디어</span>
+        </div>
+        <div class="embed-modal-body" id="modalEmbedBodyContent"></div>
+      </div>
     </div>
   </div>
   <div class="schedule-tooltip" id="scheduleTooltip"></div>

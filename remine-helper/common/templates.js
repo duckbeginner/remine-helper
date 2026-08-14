@@ -92,7 +92,7 @@ export function createHubIconButtonHTML(channel, channelMap = CHANNEL_DATA_MAP) 
 export function createThemeToggleButtonsHTML() {
   return `
     <div class="header-controls">
-      <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기">🚀 대시보드</button>
+      <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>대시보드</button>
       <button class="theme-toggle-btn" id="themeToggleBtn" title="테마 전환">🌓 테마</button>
     </div>
   `;
@@ -190,7 +190,7 @@ export function createTabContainersHTML(tabs = TAB_CONFIG_LIST) {
     }
 
     if (tab.type === 'embed-list') {
-      const feedListId = tab.id === 'tabInsta' ? 'instaFeedList' : 'xFeedList';
+      const feedListId = tab.id === 'tabInsta' ? 'instaFeedList' : (tab.id === 'tabX' ? 'xFeedList' : 'tiktokFeedList');
       return `
       <div class="panel-tab-content${activeClass}" id="${tab.id}">
         <div class="feed-list-container" id="${feedListId}">
@@ -323,12 +323,23 @@ export function createStickyFooterHTML() {
 export function createScheduleModalHTML() {
   return `
     <div class="schedule-modal-overlay" id="scheduleModalOverlay">
-      <div class="schedule-modal-card">
-        <div class="modal-header">
-          <span id="modalTitle">스케줄 상세 정보</span>
-          <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+      <div class="schedule-modal-container" id="scheduleModalContainer">
+        <!-- 1. 기본 상세 모달 카드 -->
+        <div class="schedule-modal-card">
+          <div class="modal-header">
+            <span id="modalTitle">스케줄 상세 정보</span>
+            <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+          </div>
+          <div class="modal-body" id="modalBodyContent"></div>
         </div>
-        <div class="modal-body" id="modalBodyContent"></div>
+
+        <!-- 2. 임베드 미디어 전용 추가 카드 (미디어 존재 시 노출) -->
+        <div class="schedule-embed-card" id="modalEmbedCard" style="display: none;">
+          <div class="modal-header">
+            <span class="embed-modal-title">🎬 관련 미디어</span>
+          </div>
+          <div class="embed-modal-body" id="modalEmbedBodyContent"></div>
+        </div>
       </div>
     </div>
     <div class="schedule-tooltip" id="scheduleTooltip"></div>
