@@ -10,11 +10,17 @@ Thumbs.db
 # Build and archive outputs
 publish/
 *.zip
+_metadata/
 
 # Backup / temporary directories
 *복사본*
 *.bak
 *.tmp
+*_legacy.*
+x_timeline.html
+*dc_tab*
+*dcinside*
+docs/
 asssets/
 
 # IDE & Editor files
