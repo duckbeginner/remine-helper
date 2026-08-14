@@ -1300,7 +1300,7 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
 
   const themeStr = isDark ? 'dark' : 'light';
 
-  // 1. 수집된 틱톡 비디오 목록이 있으면 개별 숏폼 플레이어 카드로 렌더링
+  // 1. 수집된 틱톡 비디오 목록이 있으면 개별 숏폼 플레이어 카드로 렌더링 (325px 핏 + 동적 자동 높이)
   if (feeds && feeds.length > 0) {
     container.innerHTML = '';
     feeds.forEach(feed => {
@@ -1308,15 +1308,15 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
       if (videoId) {
         const wrapper = document.createElement('div');
         wrapper.className = 'feed-iframe-wrapper tiktok-feed-item';
-        wrapper.style.maxWidth = '380px';
-        wrapper.style.width = '100%';
+        wrapper.style.width = '325px';
+        wrapper.style.maxWidth = '100%';
         wrapper.style.margin = '0 auto 16px auto';
         wrapper.innerHTML = `
           <iframe src="https://www.tiktok.com/embed/v2/${videoId}" 
-                  style="width: 100%; height: 680px; min-height: 680px; border: none; border-radius: 12px; display: block;" 
+                  style="width: 325px; max-width: 100%; height: 740px; min-height: 580px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 
                   frameborder="0" 
                   scrolling="no" 
-                  loading="lazy"
+                  loading="lazy" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowfullscreen>
           </iframe>
@@ -1328,12 +1328,12 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
     return;
   }
 
-  // 2. 피드가 아직 없으면 공식 프로필 위젯으로 폴백 렌더링
+  // 2. 피드가 아직 없으면 공식 프로필 위젯으로 폴백 렌더링 (325px 핏 + 동적 자동 높이)
   container.innerHTML = `
-    <div class="feed-iframe-wrapper" style="width: 100%; height: calc(100vh - 120px); min-height: 650px;">
+    <div class="feed-iframe-wrapper tiktok-feed-item" style="width: 325px; max-width: 100%; height: calc(100vh - 120px); min-height: 500px; margin: 0 auto 16px auto;">
       <iframe src="https://www.tiktok.com/embed/@rescene_official?theme=${themeStr}" 
               title="TikTok" 
-              style="width: 100%; height: 100%; min-height: 650px; border: none; border-radius: 12px; display: block;" 
+              style="width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 
               frameborder="0"
               scrolling="no"
               loading="lazy"
@@ -1656,15 +1656,62 @@ export function setupIframeAutoHeight() {
       }
     } catch (e) { }
 
-    // 3. 틱톡 iframe height 감지
+    // 3. 틱톡(TikTok) 공식 임베드 자동 높이 조절 (postMessage Auto-Resize)
     try {
-      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-      if (data && data.height) {
-        const iframes = document.querySelectorAll('#tabTiktok iframe, .modal-embed-card iframe');
-        for (let iframe of iframes) {
-          if (iframe.contentWindow === event.source) {
-            iframe.style.height = `${data.height - 2}px`;
-            break;
+      let data = event.data;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch (e) { }
+      }
+
+      if (data && typeof data === 'object') {
+        let tiktokHeight = null;
+        let videoId = data.videoId || data.video_id || data.id || null;
+
+        // 다양한 TikTok 메시지 포맷 추출 (숫자, 래핑 객체, 시그널 등)
+        if (typeof data.height === 'number' && data.height > 100) {
+          tiktokHeight = data.height;
+        } else if (data['tiktok-embed-message']) {
+          const msg = data['tiktok-embed-message'];
+          if (typeof msg === 'object') {
+            if (typeof msg.height === 'number') tiktokHeight = msg.height;
+            else if (msg.value && typeof msg.value.height === 'number') tiktokHeight = msg.value.height;
+            else if (msg.params && typeof msg.params.height === 'number') tiktokHeight = msg.params.height;
+            if (msg.videoId || msg.id) videoId = msg.videoId || msg.id;
+          }
+        } else if (data.type && /tiktok|size|resize/i.test(String(data.type))) {
+          if (typeof data.height === 'number') tiktokHeight = data.height;
+          else if (data.value && typeof data.value.height === 'number') tiktokHeight = data.value.height;
+          else if (data.details && typeof data.details.height === 'number') tiktokHeight = data.details.height;
+        } else if (data.signal && /resize|height|size/i.test(String(data.signal))) {
+          if (typeof data.height === 'number') tiktokHeight = data.height;
+        }
+
+        if (tiktokHeight) {
+          const iframes = document.querySelectorAll('#tabTiktok iframe, .tiktok-feed-item iframe, .modal-embed-card iframe');
+          let matched = false;
+
+          // 1단계: event.source 직접 비교로 매칭
+          for (let iframe of iframes) {
+            if (iframe.contentWindow === event.source) {
+              const targetHeight = Math.max(300, Math.round(tiktokHeight));
+              iframe.style.height = `${targetHeight}px`;
+              iframe.style.minHeight = `${targetHeight}px`;
+              matched = true;
+              break;
+            }
+          }
+
+          // 2단계: subframe 등으로 event.source 불일치 시 videoId URL 패턴으로 매칭
+          if (!matched && videoId) {
+            for (let iframe of iframes) {
+              if (iframe.src && iframe.src.includes(String(videoId))) {
+                const targetHeight = Math.max(300, Math.round(tiktokHeight));
+                iframe.style.height = `${targetHeight}px`;
+                iframe.style.minHeight = `${targetHeight}px`;
+                matched = true;
+                break;
+              }
+            }
           }
         }
       }

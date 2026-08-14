@@ -1014,9 +1014,36 @@ body.dark-mode .cal-event-badge.span-hover-active {
 }
 
 .tiktok-feed-item {
-  width: 100%;
-  max-width: 380px;
+  width: 325px;
+  max-width: 100%;
   margin: 0 auto 16px auto;
+  box-sizing: border-box;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+.tiktok-feed-item iframe {
+  width: 325px;
+  max-width: 100%;
+  margin: 0 auto;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  display: block;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#tiktokFeedList {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+  padding: 0;
 }
 
 .feed-iframe-wrapper iframe {
