@@ -91,10 +91,8 @@ export const TAB_CONFIG_LIST = [
     id: "tabTiktok",
     label: "틱톡",
     channelKey: "tiktok",
-    type: "iframe",
-    iframeUrl: "https://www.tiktok.com/embed/@rescene_official?theme={theme}",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups",
-    height: "460px",
+    type: "embed-list",
+    feedSource: "tiktok",
     scrollable: true
   },
   {
@@ -118,16 +116,6 @@ export const TAB_CONFIG_LIST = [
     scrollable: false
   },
   {
-    id: "tabDC",
-    label: "DC",
-    channelKey: "dcinside",
-    type: "iframe",
-    iframeUrl: "https://m.dcinside.com/board/rescene1",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-same-site-none-cookies",
-    height: "100%",
-    scrollable: false
-  },
-  {
     id: "tabMnet",
     label: "Mnet",
     channelKey: "mnet",
@@ -138,6 +126,20 @@ export const TAB_CONFIG_LIST = [
     scrollable: false,
     enabled: false
   }
+];
+
+// 4. 틱톡 기본 최신 피드 목록 (테스트 및 폴백용)
+export const DEFAULT_TIKTOK_FEEDS = [
+  { id: '7672734919575047431', title: '#산 선배님과 어디서나 당당하게 걷기 🎀' },
+  { id: '7672696254983425298', title: '케리아 선수님과 어디서나 당당하게 걷기 🎀' },
+  { id: '7672356334146243860', title: '⚽ #RESCENE #리센느' },
+  { id: '7672325503038131476', title: '😉💛 #MAY #메이 #RESCENE' },
+  { id: '7672310201281678612', title: '바이바이바이올린 🎻 #WONI #LIV' },
+  { id: '7672294299714735381', title: '하지하지마 #MINAMI #ZENA' },
+  { id: '7671931837865905428', title: '최홍만 선배님과 어디서나 당당하게 걷기 🎀' },
+  { id: '7671485804371315989', title: '얼딩이 프리티걸 🎀 #ZENA' },
+  { id: '7670727195324763412', title: 'on my mind #MINAMI' },
+  { id: '7668859808736398612', title: '#영재 선배님과 어디서나 당당하게 걷기 🎀' }
 ];
 
 // 2. 공식 채널 메타데이터 목록 (기본 노출 순서)

@@ -1,177 +1,46 @@
 <!DOCTYPE html>
 <html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RESCENE Dashboard</title>
+  <link rel="icon" href="icons/rescene-logo.png" type="image/x-icon">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
 
-  <head>
-    <meta charset="UTF-8">
-    <title>RESCENE Dashboard</title>
-    <link rel="icon" href="icons/rescene-logo.png" type="image/x-icon">
-    <link rel="stylesheet" href="dashboard.css">
-  </head>
+  <!-- 실시간 라이브 감지 배너 마운트 -->
+  <div id="liveBannerMount"></div>
 
-  <body>
+  <div class="dashboard-container" id="dashboardMainGrid">
 
-    <!-- 라이브 배너 -->
-    <a href="#" id="dashboardLiveBanner" target="_blank">🔴 [ON AIR] 리센느 실시간 라이브 중! 클릭 이동</a>
-
-    <div class="dashboard-container" id="dashboardMainGrid">
-
-      <!-- 좌측 컬럼: 캘린더 -->
-      <div class="panel left-panel">
-        <div class="dashboard-col left-col">
-          <div class="glass-card main-content-card" id="mainContentCard">
-
-            <!-- 상단 헤더: 탭 네비게이션 + 우측 고정 버튼 -->
-            <div class="main-card-header"><!-- 고정 컨트롤 버튼 -->
-              <div class="header-control-group">
-                <button class="theme-toggle-btn" id="themeToggleBtn">🌓 테마</button>
-                <button class="maximize-btn" id="maximizeCalendarBtn">🔍 최대화</button>
-              </div>
-              <!-- 탭 바 -->
-              <div class="panel-tab-bar" id="dashboardTabBar">
-                <button class="panel-tab-btn active" data-target="ntTabCalendar">📅<div class="btn-name">스케쥴</div>
-                </button>
-                <button class="panel-tab-btn" data-target="ntTabInsta">📷 <div class="btn-name">인스타</div></button>
-                <button class="panel-tab-btn" data-target="ntTabX">🐦 <div class="btn-name">X.com</div></button>
-                <button class="panel-tab-btn" data-target="ntTabTiktok">
-                  <div class="btn-name">틱톡</div>
-                </button>
-                <button class="panel-tab-btn" data-target="ntTabClip">
-                  <div class="btn-name">클립</div>
-                </button>
-                <button class="panel-tab-btn" data-target="ntTabSceneFlix">🎬<div class="btn-name">SceneFlix</div>
-                </button>
-                <button class="panel-tab-btn" data-target="ntTabDC">DC<div class="btn-name">DC</div></button>
-                <!-- notion guide page 추가 -->
-              </div>
-
-            </div>
-
-            <!-- [탭 1: 캘린더] 기존 캘린더 영역 -->
-            <div class="panel-tab-content active" id="ntTabCalendar">
-              <div class="calendar-header">
-                <div class="calendar-header-left">
-                  <button class="cal-nav-btn" id="prevMonthBtn">◀</button>
-                  <span id="calendarMonthTitle">2026년 7월 스케줄</span>
-                  <button class="cal-nav-btn" id="nextMonthBtn">▶</button>
-                </div>
-              </div>
-              <div class="calendar-weekdays">
-                <div>일</div>
-                <div>월</div>
-                <div>화</div>
-                <div>수</div>
-                <div>목</div>
-                <div>금</div>
-                <div>토</div>
-              </div>
-              <div class="calendar-grid" id="calendarGrid"></div>
-            </div>
-
-            <!-- [탭 2: SCENE-FLIX] -->
-            <div class="panel-tab-content" id="ntTabSceneFlix">
-              <div class="iframe-wrapper" id="ntSceneFlixFeedList"></div>
-            </div>
-
-            <!-- [탭 3: 인스타] -->
-            <div class="panel-tab-content" id="ntTabInsta">
-              <div class="feed-list-container" id="ntInstaFeedList">
-                <p class="feed-loading-message">최신 인스타그램 피드를 불러오는 중...</p>
-              </div>
-            </div>
-
-            <!-- [탭 4: X] -->
-            <div class="panel-tab-content" id="ntTabX">
-              <div class="feed-list-container" id="ntXFeedList">
-                <p class="feed-loading-message">최신 X(트윗) 피드를 불러오는 중...</p>
-              </div>
-            </div>
-
-            <!-- [탭 5: 틱톡] -->
-            <div class="panel-tab-content" id="ntTabTiktok">
-              <div class="feed-list-container" id="ntTiktokFeedList"></div>
-            </div>
-            <!-- [탭 6: 클립] -->
-            <div class="panel-tab-content" id="ntTabClip">
-              <div class="iframe-wrapper" id="ntClipFeedList">
-                <p class="feed-loading-message">최신 클립(Naver) 피드를 불러오는 중...</p>
-              </div>
-            </div>
-            <!-- [탭 7: DC] -->
-            <div class="panel-tab-content" id="ntTabDC">
-              <div class="iframe-wrapper" id="ntDCFeedList">
-                <p class="feed-loading-message">최신 DC 피드를 불러오는 중...</p>
-              </div>
-            </div>
-            <!-- 캘린더 이벤트 상세 팝업 (모달) 및 툴팁 -->
-            <div class="calendar-modal-overlay" id="calendarModalOverlay">
-              <div class="calendar-modal-card">
-                <div class="modal-header">
-                  <span id="modalTitle">스케줄 상세 정보</span>
-                  <button class="modal-close-btn" id="modalCloseBtn">✕</button>
-                </div>
-                <div class="modal-body" id="modalBodyContent"></div>
-              </div>
-            </div>
+    <!-- 좌측 컬럼: 탭 네비게이션 + 캘린더 / 임베드 뷰 -->
+    <div class="dashboard-col left-col">
+      <div class="glass-card dashboard-main-card" id="mainContentCard">
+        
+        <!-- 상단 헤더: 탭바 + 컨트롤 버튼 -->
+        <div class="dashboard-main-header">
+          <div class="header-controls">
+            <button class="theme-toggle-btn" id="themeToggleBtn">🌓 테마</button>
+            <button class="maximize-btn" id="maximizeCalendarBtn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>최대화</button>
           </div>
+          <!-- 동적 탭 네비게이션 바 마운트 -->
+          <div id="tabBarMount"></div>
         </div>
-      </div>
 
-      <!-- 우측 컬럼: 공식 채널 허브, 유튜브 그리드, 팬페이지 링크 -->
-      <div class="panel right-panel">
-        <div class="dashboard-col">
-          <div class="glass-card">
-            <div class="panel-header-row">
+        <!-- 탭 컨텐츠 컨테이너 마운트 -->
+        <div id="tabContainersMount" class="dashboard-tab-mount"></div>
 
-              <h2><img src="icons/rescene-logo.png" alt="icon" class="custom-logo small-logo"> 공식 채널 허브</h2>
-              <div class="header-control-group">
-                <!-- <button class="theme-toggle-btn" id="themeToggleBtn">🌓 테마</button> -->
-              </div>
-            </div>
-            <div class="hub-oneline" id="dashboardHubContainer"></div>
-          </div>
-
-          <div class="glass-card overflow-visible">
-            <h2><img src="icons/rescene_official_profile.jpg" alt="icon"> RESCENE official</h2>
-            <div id="dashboardYoutubeList" class="video-grid">
-              <p class="video-placeholder">영상이 없습니다.</p>
-            </div>
-            <h3 class="subsection-title">RESCENE Archive</h3>
-            <div id="dashboardPlaylistYoutubeList" class="video-grid">
-              <p class="video-placeholder">영상이 없습니다.</p>
-            </div>
-          </div>
-
-          <div class="glass-card overflow-visible">
-            <h2><img src="icons/hellowoni_profile.jpg" alt="icon"> 안녕하세요원이입니다잘부탁드립니다</h2>
-            <div id="dashboardWoniYoutubeList" class="video-grid">
-              <p class="video-placeholder">영상이 없습니다.</p>
-            </div>
-          </div>
-
-          <div class="glass-card">
-            <h2>🌟 팬페이지 바로가기</h2>
-            <div class="fanpage-links-grid">
-              <!-- <a href="https://adam-yam.github.io/SCENE-FLIX" class="fanpage-link-card">🎬 SCENE-FLIX</a> -->
-              <a href="https://rescenefan.com/" class="fanpage-link-card">📝 To DO</a>
-              <a href="https://rescene.muzip.link/chart/" class="fanpage-link-card">📊 muzip chart</a>
-              <a href="https://rescene.love/" class="fanpage-link-card">💖 rescene.love</a>
-              <a href="https://rescene.fan/" class="fanpage-link-card">🌸 rescene.fan</a>
-            </div>
-          </div>
-          <!-- 우측 하단 팬페이지 바로가기 카드 아래에 추가 -->
-          <div class="glass-card disclaimer-card">
-            <p class="disclaimer-text">
-              본 확장 프로그램은 팬이 자발적으로 제작한 비공식 앱이며 소속사 및 아티스트와 무관합니다.<br>
-              모든 콘텐츠의 저작권은 원저작자에게 있습니다s.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
 
-    <div class="calendar-tooltip" id="calendarTooltip"></div>
+    <!-- 우측 컬럼: 공식 채널 허브 + 유튜브 그리드 + 팬페이지 링크 + 푸터 마운트 -->
+    <div class="dashboard-col right-col" id="dashboardRightColMount"></div>
 
-    <script type="module" src="dashboard.js"></script>
-  </body>
+  </div>
 
+  <!-- 스케줄 상세 모달 및 툴팁 마운트 -->
+  <div id="modalMount"></div>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
 </html>
