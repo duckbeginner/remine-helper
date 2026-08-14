@@ -32,3 +32,15 @@ asssets/
 # Node / npm
 node_modules/
 npm-debug.log*
+
+# Test sandbox & developer playground
+test-sandbox.html
+test-sandbox.js
+test.html
+test.js
+test-*.html
+test-*.js
+remine-helper/test-sandbox.html
+remine-helper/test-sandbox.js
+remine-helper/test.html
+remine-helper/test.js

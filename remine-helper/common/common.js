@@ -1819,14 +1819,30 @@ export function initNavPosition(position = 'left') {
   }
 }
 
+// 모달 열기/닫기
+export function openSettingsModal() {
+  const currentOverlay = document.getElementById('settingsModalOverlay');
+  if (!currentOverlay) return;
+  const openBtn = document.getElementById('openSettingsBtn');
+  if (openBtn) {
+    openBtn.click();
+  } else {
+    loadUserSettings(() => {
+      currentOverlay.classList.add('active');
+    });
+  }
+}
+
+export function closeSettingsModal() {
+  const currentOverlay = document.getElementById('settingsModalOverlay');
+  if (currentOverlay) currentOverlay.classList.remove('active');
+}
+
 // 4. 설정 모달 및 인터랙션 전체 초기화
 export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPositionChanged } = {}) {
   const modalOverlay = document.getElementById('settingsModalOverlay');
-  const openBtn = document.getElementById('openSettingsBtn');
-  const closeBtn = document.getElementById('settingsCloseBtn');
-  const doneBtn = document.getElementById('saveSettingsDoneBtn');
-  const resetBtn = document.getElementById('resetSettingsBtn');
   const saveNotice = document.getElementById('settingsSaveNotice');
+  const resetBtn = document.getElementById('resetSettingsBtn');
 
   if (!modalOverlay) return;
 
@@ -1841,20 +1857,17 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     }
   }
 
-  // 모달 열기/닫기
+  // 모달 열릴 때 폼 채우기
   function openModal() {
-    const currentOverlay = document.getElementById('settingsModalOverlay');
-    if (!currentOverlay) return;
     loadUserSettings((loaded) => {
       currentSettings = loaded;
       populateSettingsForm(currentSettings);
-      currentOverlay.classList.add('active');
+      modalOverlay.classList.add('active');
     });
   }
 
   function closeModal() {
-    const currentOverlay = document.getElementById('settingsModalOverlay');
-    if (currentOverlay) currentOverlay.classList.remove('active');
+    modalOverlay.classList.remove('active');
   }
 
   // 전역 이벤트 위임 (어떤 #openSettingsBtn이든 항상 열림 보장)

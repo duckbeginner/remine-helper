@@ -421,11 +421,31 @@ async function fetchAndMergeSchedules() {
         });
 
         if (todaySchedules.length > 0) {
-          const firstTitle = cleanDisplayTitle(todaySchedules[0].title);
-          const countText = todaySchedules.length > 1 ? ` 외 ${todaySchedules.length - 1}건` : '';
+          // 시작 시간 순 정렬
+          todaySchedules.sort((a, b) => {
+            const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
+            const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
+            return tA - tB;
+          });
+
+          // 각 일정 상세 목록 줄바꿈 구성 (최대 5건까지 명시 후 초과 시 외 N건)
+          const scheduleLines = todaySchedules.slice(0, 5).map(item => {
+            const cleanTitle = cleanDisplayTitle(item.title);
+            let timePrefix = '';
+            if (item.startTime && !item.isAllday && item.startTime.includes('T')) {
+              const d = parseSafeDate(item.startTime);
+              timePrefix = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}] `;
+            }
+            return `• ${timePrefix}${cleanTitle}`;
+          });
+
+          if (todaySchedules.length > 5) {
+            scheduleLines.push(`• ...외 ${todaySchedules.length - 5}건`);
+          }
+
           sendNotification(
             `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`,
-            `${firstTitle}${countText}`,
+            scheduleLines.join('\n'),
             'schedule'
           );
           chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
