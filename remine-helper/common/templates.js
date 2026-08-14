@@ -109,10 +109,20 @@ export function createHScrollButtonsHTML() {
 
 export function createCalendarNavButtonsHTML(monthTitle = '2026년 스케줄') {
   return `
-    <div class="calendar-header-left">
-      <button class="cal-nav-btn" id="spPrevMonthBtn">◀</button>
+    <div class="calendar-header-left" id="spCalendarNavControls">
+      <button class="cal-nav-btn" id="spPrevMonthBtn" title="이전 달">◀</button>
       <span id="spCalendarMonthTitle">${escapeHtml(monthTitle)}</span>
-      <button class="cal-nav-btn" id="spNextMonthBtn">▶</button>
+      <button class="cal-nav-btn" id="spNextMonthBtn" title="다음 달">▶</button>
+    </div>
+    <div class="schedule-view-switcher" id="scheduleViewSwitcher">
+      <button type="button" class="view-switch-btn active" id="spViewCalBtn" data-view="calendar" title="달력으로 보기">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>달력</span>
+      </button>
+      <button type="button" class="view-switch-btn" id="spViewListBtn" data-view="list" title="목록으로 보기">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span>목록</span>
+      </button>
     </div>
   `;
 }
@@ -366,17 +376,26 @@ export function createFanpageCardHTML(fanpages = FANPAGE_LIST) {
   `;
 }
 
-// 캘린더 래퍼 뷰
+// 캘린더 & 스케줄 목록 통합 래퍼 뷰
 export function createCalendarWrapperHTML(initialMonthTitle = '스케줄 캘린더') {
   return `
-    <div class="calendar-wrapper">
+    <div class="calendar-wrapper" id="spScheduleMainWrapper">
       <div class="calendar-header">
         ${createCalendarNavButtonsHTML(initialMonthTitle)}
       </div>
-      <div class="calendar-weekdays">
-        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+      <div class="calendar-view-container" id="spCalendarView">
+        <div class="calendar-weekdays">
+          <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+        </div>
+        <div class="calendar-grid" id="spCalendarGrid"></div>
       </div>
-      <div class="calendar-grid" id="spCalendarGrid"></div>
+      <div class="schedule-tab-list-container" id="spScheduleListView" style="display: none;">
+        <div class="schedule-container" style="height: 100%; min-height: 0; flex: 1;">
+          <div class="schedule-viewport" id="tabScheduleList">
+            <div class="schedule-item">스케줄 정보를 불러오는 중...</div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }

@@ -890,56 +890,75 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   container.innerHTML = initialHtml;
 
   // 초기 포커스: 활성화된(가장 가까운 예정) 일정으로 부드럽게 스크롤 이동
-  requestAnimationFrame(() => {
-    const activeEl = container.querySelector('.schedule-item.active');
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
-    }
-  });
+  const focusActiveItem = () => {
+    requestAnimationFrame(() => {
+      const activeEl = container.querySelector('.schedule-item.active');
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+      }
+    });
+  };
+  focusActiveItem();
 
-  // 양방향 무한 스크롤 핸들러 (위/아래 10개씩 동적 로드)
+  // 상/하단 로드 실행 함수
   let isScrollingLoading = false;
-  container.onscroll = () => {
-    if (isScrollingLoading) return;
 
-    // 1. 위로 스크롤 시 과거 일정 추가 로드 (startIndex > 0)
-    if (container.scrollTop <= 20 && startIndex > 0) {
-      isScrollingLoading = true;
-      const oldScrollHeight = container.scrollHeight;
-      const oldScrollTop = container.scrollTop;
+  function loadPastItems() {
+    if (isScrollingLoading || startIndex <= 0) return;
+    isScrollingLoading = true;
+    const oldScrollHeight = container.scrollHeight;
+    const oldScrollTop = container.scrollTop;
 
-      const prevStart = startIndex;
-      startIndex = Math.max(0, startIndex - CHUNK_SIZE);
+    const prevStart = startIndex;
+    startIndex = Math.max(0, startIndex - CHUNK_SIZE);
 
-      const fragment = document.createDocumentFragment();
-      for (let i = startIndex; i < prevStart; i++) {
-        const temp = document.createElement('div');
-        temp.innerHTML = createItemHTML(schedules[i], i);
-        fragment.appendChild(temp.firstElementChild);
-      }
-      container.insertBefore(fragment, container.firstElementChild);
-
-      // 스크롤 점프 방지 (사용자 시야 유지)
-      const heightDiff = container.scrollHeight - oldScrollHeight;
-      container.scrollTop = oldScrollTop + heightDiff;
-
-      setTimeout(() => { isScrollingLoading = false; }, 80);
+    const fragment = document.createDocumentFragment();
+    for (let i = startIndex; i < prevStart; i++) {
+      const temp = document.createElement('div');
+      temp.innerHTML = createItemHTML(schedules[i], i);
+      fragment.appendChild(temp.firstElementChild);
     }
-    // 2. 아래로 스크롤 시 미래 일정 추가 로드 (endIndex < schedules.length)
-    else if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20 && endIndex < schedules.length) {
-      isScrollingLoading = true;
-      const prevEnd = endIndex;
-      endIndex = Math.min(schedules.length, endIndex + CHUNK_SIZE);
+    container.insertBefore(fragment, container.firstElementChild);
 
-      const fragment = document.createDocumentFragment();
-      for (let i = prevEnd; i < endIndex; i++) {
-        const temp = document.createElement('div');
-        temp.innerHTML = createItemHTML(schedules[i], i);
-        fragment.appendChild(temp.firstElementChild);
-      }
-      container.appendChild(fragment);
+    // 스크롤 점프 방지 (사용자 시야 유지)
+    const heightDiff = container.scrollHeight - oldScrollHeight;
+    container.scrollTop = oldScrollTop + heightDiff;
 
-      setTimeout(() => { isScrollingLoading = false; }, 80);
+    setTimeout(() => { isScrollingLoading = false; }, 60);
+  }
+
+  function loadFutureItems() {
+    if (isScrollingLoading || endIndex >= schedules.length) return;
+    isScrollingLoading = true;
+    const prevEnd = endIndex;
+    endIndex = Math.min(schedules.length, endIndex + CHUNK_SIZE);
+
+    const fragment = document.createDocumentFragment();
+    for (let i = prevEnd; i < endIndex; i++) {
+      const temp = document.createElement('div');
+      temp.innerHTML = createItemHTML(schedules[i], i);
+      fragment.appendChild(temp.firstElementChild);
+    }
+    container.appendChild(fragment);
+
+    setTimeout(() => { isScrollingLoading = false; }, 60);
+  }
+
+  // 양방향 무한 스크롤 핸들러 (위/아래 넉넉한 80px 임계값으로 추가 로드)
+  container.onscroll = () => {
+    if (container.scrollTop <= 80 && startIndex > 0) {
+      loadPastItems();
+    } else if (container.scrollTop + container.clientHeight >= container.scrollHeight - 80 && endIndex < schedules.length) {
+      loadFutureItems();
+    }
+  };
+
+  // 휠(Wheel) 바운스 감지 (최상단/최하단 도달 시 추가 스크롤 감지)
+  container.onwheel = (e) => {
+    if (e.deltaY < 0 && container.scrollTop <= 10 && startIndex > 0) {
+      loadPastItems();
+    } else if (e.deltaY > 0 && container.scrollTop + container.clientHeight >= container.scrollHeight - 10 && endIndex < schedules.length) {
+      loadFutureItems();
     }
   };
 
@@ -1513,7 +1532,7 @@ export function showScheduleModal(scheduleData) {
     if (htmlContent) {
       embedBody.innerHTML = htmlContent;
       embedCard.style.display = 'flex';
-      embedCard.style.flexDirection = 'column';
+              embedCard.style.flexDirection = 'column';
 
       // 유튜브 프리뷰 카드 클릭 이벤트
       embedBody.querySelectorAll('.youtube-preview-card').forEach(card => {
@@ -1662,26 +1681,77 @@ if (typeof window !== 'undefined') {
    10. 고수준 통합 매니저 (High-Level Application Managers)
    ========================================================================= */
 
-// 캘린더 상태 관리 및 월 이동 네비게이션 엔진
+// 캘린더 상태 관리 및 월 이동 / 보기 전환(달력<->목록) 네비게이션 엔진
 export function initCalendarManager({
   gridId = 'spCalendarGrid',
   titleId = 'spCalendarMonthTitle',
   prevBtnId = 'spPrevMonthBtn',
   nextBtnId = 'spNextMonthBtn',
+  calViewId = 'spCalendarView',
+  listViewId = 'spScheduleListView',
+  tabListId = 'tabScheduleList',
+  viewCalBtnId = 'spViewCalBtn',
+  viewListBtnId = 'spViewListBtn',
+  navControlsId = 'spCalendarNavControls',
   initialDate = new Date()
 } = {}) {
   let currentDate = new Date(initialDate);
   let globalSchedules = [];
+  let currentMode = 'calendar'; // 'calendar' | 'list'
 
   const gridEl = typeof gridId === 'string' ? document.getElementById(gridId) : gridId;
   const titleEl = typeof titleId === 'string' ? document.getElementById(titleId) : titleId;
   const prevBtn = typeof prevBtnId === 'string' ? document.getElementById(prevBtnId) : prevBtnId;
   const nextBtn = typeof nextBtnId === 'string' ? document.getElementById(nextBtnId) : nextBtnId;
+  const calView = typeof calViewId === 'string' ? document.getElementById(calViewId) : calViewId;
+  const listView = typeof listViewId === 'string' ? document.getElementById(listViewId) : listViewId;
+  const tabListEl = typeof tabListId === 'string' ? document.getElementById(tabListId) : tabListId;
+  const viewCalBtn = typeof viewCalBtnId === 'string' ? document.getElementById(viewCalBtnId) : viewCalBtnId;
+  const viewListBtn = typeof viewListBtnId === 'string' ? document.getElementById(viewListBtnId) : viewListBtnId;
+  const navControls = typeof navControlsId === 'string' ? document.getElementById(navControlsId) : navControlsId;
 
   function update() {
-    renderCalendar(gridEl, titleEl, currentDate, globalSchedules, (eventData) => {
-      showScheduleModal(eventData);
-    });
+    if (gridEl) {
+      renderCalendar(gridEl, titleEl, currentDate, globalSchedules, (eventData) => {
+        showScheduleModal(eventData);
+      });
+    }
+    if (tabListEl && globalSchedules.length > 0) {
+      renderScheduleList(tabListEl, globalSchedules);
+    }
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    if (mode === 'calendar') {
+      if (calView) calView.style.display = '';
+      if (listView) listView.style.display = 'none';
+      if (viewCalBtn) viewCalBtn.classList.add('active');
+      if (viewListBtn) viewListBtn.classList.remove('active');
+      if (navControls) navControls.style.visibility = 'visible';
+    } else {
+      if (calView) calView.style.display = 'none';
+      if (listView) listView.style.display = '';
+      if (viewCalBtn) viewCalBtn.classList.remove('active');
+      if (viewListBtn) viewListBtn.classList.add('active');
+      if (navControls) navControls.style.visibility = 'hidden';
+      if (tabListEl && globalSchedules.length > 0) {
+        renderScheduleList(tabListEl, globalSchedules);
+        requestAnimationFrame(() => {
+          const activeEl = tabListEl.querySelector('.schedule-item.active');
+          if (activeEl) {
+            activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+          }
+        });
+      }
+    }
+  }
+
+  if (viewCalBtn) {
+    viewCalBtn.addEventListener('click', () => setMode('calendar'));
+  }
+  if (viewListBtn) {
+    viewListBtn.addEventListener('click', () => setMode('list'));
   }
 
   if (prevBtn) {
@@ -1704,6 +1774,8 @@ export function initCalendarManager({
       update();
     },
     refresh: update,
+    setMode,
+    getMode: () => currentMode,
     getCurrentDate: () => currentDate,
     setDate: (newDate) => {
       currentDate = new Date(newDate);
@@ -1774,6 +1846,7 @@ export function initAppStorageData({
 
     // 4. 스케줄 리스트 렌더링 (직캠/투표 필터링 및 지능형 중복 병합)
     const schedEl = typeof scheduleListId === 'string' ? document.getElementById(scheduleListId) : scheduleListId;
+    const tabSchedEl = document.getElementById('tabScheduleList');
     const rawFiltered = (result.blipSchedules || []).filter(item => {
       const text = (item.title || "") + " " + (item.message || "");
       return !/(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i.test(text);
@@ -1783,6 +1856,9 @@ export function initAppStorageData({
 
     if (schedEl && cleanSchedules) {
       renderScheduleList(schedEl, cleanSchedules);
+    }
+    if (tabSchedEl && cleanSchedules) {
+      renderScheduleList(tabSchedEl, cleanSchedules);
     }
 
     // 5. 스케줄 데이터 콜백 (캘린더 매니저 등)
