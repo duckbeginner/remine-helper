@@ -1,5 +1,15 @@
-// constants.js - 원이 채널 링크가 업데이트된 공통 채널 데이터 맵
 export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'instagram', 'x', 'tiktok', 'clip', 'facebook', 'mnet', 'blip'];
+
+// Mnet Plus / Bstage 스타 닉네임 -> 실제 멤버 활동명 매핑 테이블
+export const MEMBER_NICKNAME_MAP = {
+  '별이빛나는맘': '원이',
+  '올리브🫒': '리브',
+  '올리브': '리브',
+  '김깨구리제로천사': '제나',
+  '메2': '메이',
+  '𝕞𝕚𝕟𝕒𝕞𝕚': '미나미',
+  'minami': '미나미'
+};
 
 export const CHANNEL_DATA_MAP = {
   youtube: {
@@ -118,23 +128,12 @@ export const TAB_CONFIG_LIST = [
 ];
 
 // 4. 틱톡 기본 최신 피드 목록 (테스트 및 폴백용)
-export const DEFAULT_TIKTOK_FEEDS = [
-  // { id: '7672734919575047431', title: '#산 선배님과 어디서나 당당하게 걷기 🎀' },
-  // { id: '7672696254983425298', title: '케리아 선수님과 어디서나 당당하게 걷기 🎀' },
-  // { id: '7672356334146243860', title: '⚽ #RESCENE #리센느' },
-  // { id: '7672325503038131476', title: '😉💛 #MAY #메이 #RESCENE' },
-  // { id: '7672310201281678612', title: '바이바이바이올린 🎻 #WONI #LIV' },
-  // { id: '7672294299714735381', title: '하지하지마 #MINAMI #ZENA' },
-  // { id: '7671931837865905428', title: '최홍만 선배님과 어디서나 당당하게 걷기 🎀' },
-  // { id: '7671485804371315989', title: '얼딩이 프리티걸 🎀 #ZENA' },
-  // { id: '7670727195324763412', title: 'on my mind #MINAMI' },
-  // { id: '7668859808736398612', title: '#영재 선배님과 어디서나 당당하게 걷기 🎀' }
-];
+export const DEFAULT_TIKTOK_FEEDS = [];
 
 // 2. 공식 채널 메타데이터 목록 (기본 노출 순서)
 export const OFFICIAL_CHANNELS = [
   { key: "youtube", name: "YouTube", url: "https://www.youtube.com/@RESCENE_official" },
-  { key: "helloiamwoni", name: "원이", url: "https://www.youtube.com/@helloiamwoninicetomeetyou" },
+  { key: "helloiamwoni", name: "안녕하세요원이입니다잘부탁드립니다", url: "https://www.youtube.com/@helloiamwoninicetomeetyou" },
   { key: "instagram", name: "Instagram", url: "https://www.instagram.com/rescene_official" },
   { key: "x", name: "X", url: "https://x.com/resceneofficial" },
   { key: "tiktok", name: "TikTok", url: "https://www.tiktok.com/@rescene_official" },

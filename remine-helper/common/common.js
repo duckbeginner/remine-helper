@@ -1,6 +1,18 @@
 // common/common.js - 공통 UI 로직, 동적 탭 엔진, 인터랙션 및 렌더러 모듈
-import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST } from '../constants.js';
+import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST, MEMBER_NICKNAME_MAP } from '../constants.js';
 import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML } from './templates.js';
+
+export function getMemberDisplayName(rawNickname) {
+  if (!rawNickname) return '멤버';
+  const trimmed = String(rawNickname).trim();
+  if (MEMBER_NICKNAME_MAP && MEMBER_NICKNAME_MAP[trimmed]) return MEMBER_NICKNAME_MAP[trimmed];
+  if (MEMBER_NICKNAME_MAP) {
+    for (const [nick, realName] of Object.entries(MEMBER_NICKNAME_MAP)) {
+      if (trimmed.includes(nick) || nick.includes(trimmed)) return realName;
+    }
+  }
+  return trimmed;
+}
 
 /* =========================================================================
    0. 3단계 순환 테마 엔진 (3-State Theme Engine: System -> Dark -> Light)
@@ -478,11 +490,11 @@ export function setupHubIconReordering(containerEl, onOrderChanged) {
 
   function bindItem(item) {
     item.setAttribute('draggable', 'true');
-    item.addEventListener('dragstart',  handleDragStart, false);
-    item.addEventListener('dragenter',  handleDragEnter, false);
-    item.addEventListener('dragover',   handleDragOver,  false);
-    item.addEventListener('drop',       handleDrop,      false);
-    item.addEventListener('dragend',    handleDragEnd,   false);
+    item.addEventListener('dragstart', handleDragStart, false);
+    item.addEventListener('dragenter', handleDragEnter, false);
+    item.addEventListener('dragover', handleDragOver, false);
+    item.addEventListener('drop', handleDrop, false);
+    item.addEventListener('dragend', handleDragEnd, false);
   }
 
   containerEl.querySelectorAll('.hub-icon-btn').forEach(bindItem);
@@ -558,7 +570,10 @@ export function normalizeTitle(title) {
     'k world dream awards': '케이월드드림어워즈',
     'k-world dream awards': '케이월드드림어워즈',
     'kwda': '케이월드드림어워즈',
-    'dream concert': '드림콘서트'
+    'dream concert': '드림콘서트',
+    '맨시티': '맨체스터시티',
+    'man city': '맨체스터시티',
+    'mancity': '맨체스터시티'
   };
 
   for (let [en, ko] of Object.entries(synonyms)) {
@@ -570,21 +585,110 @@ export function normalizeTitle(title) {
   return clean.replace(/\s+/g, '');
 }
 
-export function areSchedulesDuplicate(item1, item2) {
-  const t1 = item1.title || item1.message || "";
-  const t2 = item2.title || item2.message || "";
+export function parseTitleStructure(title) {
+  if (!title) return { main: '', sub: '' };
+  
+  // 1. <메인> 서브 또는 [메인] 서브
+  const bracketMatch = title.match(/^[<\[](.+?)[>\]]\s*(.*)$/);
+  if (bracketMatch) {
+    return {
+      main: normalizeTitle(bracketMatch[1]),
+      sub: normalizeTitle(bracketMatch[2])
+    };
+  }
 
-  // 1단계: 정규화 텍스트 완전 일치 및 포함 관계
-  const n1 = normalizeTitle(t1);
-  const n2 = normalizeTitle(t2);
-  if (n1 && n2) {
-    if (n1 === n2) return true;
-    if ((n1.includes(n2) || n2.includes(n1)) && Math.min(n1.length, n2.length) >= 3) {
+  // 2. 메인 - 서브 또는 메인 | 서브 또는 메인 : 서브
+  const dashMatch = title.match(/^(.+?)\s*[-|:]\s*(.+)$/);
+  if (dashMatch) {
+    return {
+      main: normalizeTitle(dashMatch[1]),
+      sub: normalizeTitle(dashMatch[2])
+    };
+  }
+
+  return {
+    main: normalizeTitle(title),
+    sub: ''
+  };
+}
+
+export function areSchedulesDuplicate(item1, item2) {
+  // 0단계: 유튜브 영상 ID 대조 (서로 다른 영상 ID를 가지고 있으면 100% 다른 일정이므로 병합 거부!)
+  const extractYtId = (item) => {
+    const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
+    const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const yt1 = extractYtId(item1);
+  const yt2 = extractYtId(item2);
+  if (yt1 && yt2) {
+    if (yt1 === yt2) return true; // 동일 영상 ID면 무조건 동일 일정
+    return false; // 서로 다른 영상 ID면 절대로 중복 아님!
+  }
+
+  // 순수 제목 기준 비교 (본문 메시지에 의한 오병합 방지)
+  const t1 = item1.title || "";
+  const t2 = item2.title || "";
+  if (!t1 || !t2) return false;
+
+  // 1단계: 구조적 메인-부제(Sub-event) 분석 기반 정밀 판별 (하드코딩 0%)
+  const s1 = parseTitleStructure(t1);
+  const s2 = parseTitleStructure(t2);
+
+  if (s1.main && s2.main) {
+    const isSameMain = s1.main === s2.main || 
+      (Math.min(s1.main.length, s2.main.length) >= 4 && (s1.main.includes(s2.main) || s2.main.includes(s1.main)));
+
+    if (isSameMain) {
+      // 둘 다 서브타이틀(부제)이 존재하는 경우
+      if (s1.sub && s2.sub) {
+        // 부제가 일치하거나 포함 관계이면 같은 세부 무대/코너 (중복 병합)
+        if (s1.sub === s2.sub || s1.sub.includes(s2.sub) || s2.sub.includes(s1.sub)) {
+          return true;
+        }
+        // 부제가 서로 다르면 (예: 프리뷰쇼 vs 하프타임쇼, SHOWCASE vs CONCERT) 서로 다른 세부 행사 (분리 보존)
+        return false;
+      }
+      // 한쪽만 부제가 있고 다른 한쪽은 전체 메인 행사명인 경우 구체적 정보로 병합
+      return true;
+    }
+
+    // 구조적 교차 매칭: 한쪽의 부제(sub)가 다른 쪽의 메인(main)과 일치하거나 포함 관계인 경우
+    // (예: <대회명> 맨시티 vs AT마드리드 하프타임쇼 <-> <맨시티 vs AT마드리드 하프타임쇼>)
+    if (s1.sub && s2.main && Math.min(s1.sub.length, s2.main.length) >= 4 && (s1.sub === s2.main || s1.sub.includes(s2.main) || s2.main.includes(s1.sub))) {
+      return true;
+    }
+    if (s2.sub && s1.main && Math.min(s2.sub.length, s1.main.length) >= 4 && (s2.sub === s1.main || s2.sub.includes(s1.main) || s1.main.includes(s2.sub))) {
       return true;
     }
   }
 
-  // 2단계: 괄호 안팎 한/영 분리 매칭
+  // 2단계: 카테고리/형태가 명확히 다른 경우(방송 vs 현장 공연/행사 등) 병합 거부
+  const type1 = item1.typeId || 0;
+  const type2 = item2.typeId || 0;
+  const isBroadcasting1 = type1 === 1 || (item1.extField && item1.extField.key === '채널') || (item1.typeText === '방송');
+  const isPhysicalEvent1 = type1 === 5 || (item1.extField && item1.extField.key === '장소') || (item1.typeText === '공연' || item1.typeText === '행사');
+  const isBroadcasting2 = type2 === 1 || (item2.extField && item2.extField.key === '채널') || (item2.typeText === '방송');
+  const isPhysicalEvent2 = type2 === 5 || (item2.extField && item2.extField.key === '장소') || (item2.typeText === '공연' || item2.typeText === '행사');
+
+  // 하나는 순수 방송(온라인/중계)이고 하나는 순수 현장 공연/행사인 경우 분리 보존
+  if ((isBroadcasting1 && !isPhysicalEvent1 && isPhysicalEvent2 && !isBroadcasting2) ||
+      (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
+    return false;
+  }
+
+  // 3단계: 정규화 텍스트 완전 일치 및 포함 관계
+  const n1 = normalizeTitle(t1);
+  const n2 = normalizeTitle(t2);
+  if (n1 && n2) {
+    if (n1 === n2) return true;
+    if ((n1.includes(n2) || n2.includes(n1)) && Math.min(n1.length, n2.length) >= 4) {
+      return true;
+    }
+  }
+
+  // 4단계: 괄호 안팎 한/영 분리 매칭
   const extractParts = (str) => {
     const parts = [str];
     const match = str.match(/(.*?)\((.*?)\)/);
@@ -600,7 +704,7 @@ export function areSchedulesDuplicate(item1, item2) {
 
   for (let p1 of parts1) {
     for (let p2 of parts2) {
-      if (p1 && p2 && p1.length >= 3 && p2.length >= 3) {
+      if (p1 && p2 && p1.length >= 4 && p2.length >= 4) {
         if (p1 === p2 || p1.includes(p2) || p2.includes(p1)) {
           return true;
         }
@@ -608,12 +712,12 @@ export function areSchedulesDuplicate(item1, item2) {
     }
   }
 
-  // 3단계: 단어 교집합 유사도
+  // 3단계: 단어 교집합 유사도 (순수 제목 기반)
   const words1 = cleanScheduleText(t1).split(' ').filter(w => w.length >= 2);
   const words2 = cleanScheduleText(t2).split(' ').filter(w => w.length >= 2);
   if (words1.length > 0 && words2.length > 0) {
     const intersection = words1.filter(w => words2.includes(w));
-    if (intersection.length >= 2 || (words1.length === 1 && words2.length === 1 && words1[0] === words2[0])) {
+    if (intersection.length >= 2 && Math.max(words1.length, words2.length) <= intersection.length + 1) {
       return true;
     }
   }
@@ -632,10 +736,12 @@ export function pickBestTitle(title1, title2) {
 export function deduplicateScheduleList(schedules = []) {
   const mergedList = [];
 
-  // 직캠, 투표, 포스터/응모/증정/공지 이벤트 정밀 필터링
+  // 직캠, 투표, 쇼츠, 포스터/응모/증정/공지 이벤트 정밀 필터링
   const excludePatterns = [
     /직캠/i, /풀캠/i, /팬캠/i, /페이스캠/i, /입덕직캠/i, /최애직캠/i, /팔로우캠/i, /안방1열/i, /음중직캠/i, /음중풀캠/i, /음중팔로우캠/i,
     /fan\W*cam/i, /k\W*fancam/i, /choreo/i, /fancam/i, /\bcam\b/i,
+    // 쇼츠 제외
+    /shorts/i, /#shorts/i, /#쇼츠/i, /\/shorts\//i,
     // 투표 관련 일정 제외
     /투표/i, /사전투표/i, /실시간투표/i, /\bvote\b/i, /\bvoting\b/i, /\bpoll\b/i,
     /덕애드/i, /스타패스/i, /아이돌챔프/i, /뮤빗/i, /팬플러스/i, /포도알/i, /케이돌/i, /엠넷플러스\s*투표/i,
@@ -646,8 +752,25 @@ export function deduplicateScheduleList(schedules = []) {
   ];
 
   const filtered = schedules.filter(item => {
-    const text = (item.title || "") + " " + (item.message || "");
-    return !excludePatterns.some(p => p.test(text));
+    const text = [item.title, item.message, item.url, item.link].filter(Boolean).join(" ");
+    if (excludePatterns.some(p => p.test(text))) return false;
+
+    // 1) 쇼츠 영상 링크/ID를 포함하는 일정은 제외
+    const ytIdMatches = text.matchAll(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/g);
+    for (const m of ytIdMatches) {
+      if (text.includes('/shorts/') || /shorts|#shorts|#쇼츠/i.test(text)) return false;
+    }
+
+    // 2) 유튜브 채널 홈 URL만 있고 특정 영상 ID가 없는 유튜브 자컨/라이브 플레이스홀더 알림 일정만 선별 제외
+    const hasSpecificVideoLink = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/))([\w-]{11})/.test(text);
+    const isYoutubeChannelHome = /youtube\.com\/@/i.test(text);
+    const cleanTitle = (item.title || '').replace(/[<>]/g, '').trim();
+    const isPlaceholderChannelOnly = !hasSpecificVideoLink && (
+      (isYoutubeChannelHome && /^(?:안녕하세요\s*원이입니다.*|안원잘부.*|rescene\s*vlog.*|youtube\s*live|유튜브\s*라이브)$/i.test(cleanTitle)) ||
+      (isYoutubeChannelHome && /공개\s*예정\s*채널|유튜브에서\s*만나요/i.test(text))
+    );
+    if (isPlaceholderChannelOnly) return false;
+    return true;
   });
 
   filtered.forEach(newItem => {
@@ -695,8 +818,17 @@ export function deduplicateScheduleList(schedules = []) {
       if (!target.endTime && newItem.endTime) {
         target.endTime = newItem.endTime;
       }
+      if (!target.location && newItem.location) {
+        target.location = newItem.location;
+      }
+      if (!target.channel && newItem.channel) {
+        target.channel = newItem.channel;
+      }
       if (!target.extField && newItem.extField) {
         target.extField = newItem.extField;
+      }
+      if ((!target.starAttendees || target.starAttendees.length === 0) && (newItem.starAttendees && newItem.starAttendees.length > 0)) {
+        target.starAttendees = newItem.starAttendees;
       }
     } else {
       mergedList.push({ ...newItem });
@@ -713,16 +845,109 @@ if (typeof window !== 'undefined') {
   window.cleanScheduleText = cleanScheduleText;
   window.normalizeTitle = normalizeTitle;
   window.pickBestTitle = pickBestTitle;
+  window.isBroadcasterName = isBroadcasterName;
+  window.enrichSchedulesWithYouTubeOEmbed = enrichSchedulesWithYouTubeOEmbed;
 }
 
-export function cleanDisplayTitle(title) {
+export function isBroadcasterName(name) {
+  if (!name) return false;
+  const n = String(name).trim();
+  return /^(?:MBC|KBS|KBS2|SBS|Mnet|JTBC|tvN|ENA|EBS|TV조선|채널A|MBN|Arirang|아리랑|CJ\s*ENM|M2|SBSKPOP|MBCkpop|KBS\s*Kpop|스튜디오\s*춤|STUDIO\s*CHOOM|1theK|원더케이|it's\s*Live|잇츠라이브)/i.test(n);
+}
+
+export function isTvMainBroadcast(item, channel) {
+  const t = (item.title || '').replace(/[<>]/g, '').trim();
+  const c = String(channel || '').trim();
+  const isBroadcaster = /^(?:MBC|KBS|KBS2|SBS|Mnet|JTBC|tvN|ENA|EBS|TV조선|채널A|MBN)/i.test(c);
+  if (!isBroadcaster) return false;
+
+  if (/미방분|비하인드|선공개|직캠|fancam|풀버전|클립|behind|up코노|코없코|우쥬레코드|웹예능|아이돌부스/i.test(t + ' ' + (item.message || ''))) {
+    return false;
+  }
+
+  if (/전지적\s*참견\s*시점|전참시|놀라운\s*토요일|놀토|복면가왕|아는\s*형님|뮤직뱅크|쇼!?\s*음악중심|인기가요|m\s*countdown|엠카운트다운|쇼!?\s*챔피언|더쇼|the\s*show|심플리\s*케이팝|simply\s*k-pop|식객\s*허영만의\s*백반기행|열혈농구단|최우수산|배성재의\s*텐|아이돌\s*라디오|친한친구/i.test(t)) {
+    return true;
+  }
+  return false;
+}
+
+export async function enrichSchedulesWithYouTubeOEmbed(schedules) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return;
+  const oembedCache = new Map();
+
+  for (let item of schedules) {
+    const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
+    const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
+    if (!match) continue;
+
+    const vid = match[1];
+    let oeData = oembedCache.get(vid);
+    if (!oeData) {
+      try {
+        const oeRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`);
+        if (oeRes.ok) {
+          oeData = await oeRes.json();
+          oembedCache.set(vid, oeData);
+        }
+      } catch (e) { }
+    }
+
+    if (oeData) {
+      // 1) 썸네일 및 링크 보강
+      if (!item.thumbnail || item.thumbnail.includes('rescene-logo')) {
+        item.thumbnail = oeData.thumbnail_url || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
+      }
+      if (!item.url) item.url = `https://www.youtube.com/watch?v=${vid}`;
+      if (!item.link) item.link = item.url;
+
+      // 2) 채널명 처리 (단, 방송사인 경우는 방송사 명을 채널명으로 유지!)
+      const currentChannel = item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null);
+      if (!currentChannel || !isBroadcasterName(currentChannel)) {
+        const author = oeData.author_name;
+        if (author) {
+          item.channel = author;
+          item.extField = { key: '채널', value: author };
+        }
+      }
+
+      // 3) 제목 재구성: TV 본방이 아닌 경우 oEmbed의 정식 제목으로 전면 변환
+      const isTvShow = isTvMainBroadcast(item, currentChannel);
+      if (!isTvShow && oeData.title) {
+        item.title = oeData.title;
+      }
+
+      // 4) 카테고리(typeText) 정돈: TV 본방이 아니고 공식 채널/웹 콘텐츠면 "영상"으로 보정
+      if (!isTvShow) {
+        if (/RESCENE|안녕하세요원이|자컨|비하인드|vlog|브이로그|ep\.|유튜브|youtube/i.test((item.channel || '') + ' ' + (item.title || '') + ' ' + (item.message || ''))) {
+          item.typeText = "영상";
+        }
+      }
+    }
+  }
+}
+
+export function cleanDisplayTitle(title, maxLength = 0) {
   if (!title) return "";
-  // 앞에 붙은 모든 중복 형태의 [태그], [🎬], [방송] 등을 완전히 제거하여 깔끔한 제목 추출
-  return title.replace(/^(\[[^\]]+\]\s*)+/g, '').trim();
+  // 시스템 카테고리 접두어 제거, 끝단 해시태그/채널 접미사 정돈 및 길이 조정
+  let clean = title
+    .replace(/^(\[(?:방송|영상|공식\s*영상|행사|팬이벤트|기념일|릴리즈|일정|🎬|📺|📻|🎉|🎤|💿)\]\s*)+/gi, '')
+    .replace(/(?:\s*#[^\s#]+)+$/g, '')
+    .replace(/\s*\|\s*(?:RESCENE|리센느|안녕하세요원이입니다잘부탁드립니다|안녕하세요\s*원이입니다|helloiamwoni)\s*$/i, '')
+    .trim();
+
+  if (maxLength > 0 && clean.length > maxLength) {
+    clean = clean.slice(0, maxLength).trim() + '...';
+  }
+  return clean;
 }
 
 export function getScheduleTypeInfo(item) {
   let typeText = item.typeText || "";
+
+  // 0. 공식 유튜브 영상(source === 'youtube')은 100% 최우선 "영상" 확정
+  if (item.source === 'youtube') {
+    return { typeText: "영상", bg: "#e0f7fa", color: "#00838f" };
+  }
 
   // 1. [태그] 형식 추출 및 이모지 표준화
   const combinedText = `${item.title || ""} ${item.message || ""} ${(item.extField && item.extField.value) || ""} ${item.url || ""} ${item.link || ""}`;
@@ -734,7 +959,7 @@ export function getScheduleTypeInfo(item) {
     else if (rawTag === '🎤') typeText = "행사";
     else if (rawTag === '💿') typeText = "릴리즈";
     else if (rawTag === '📺' || rawTag === '📻') typeText = "방송";
-    else if (rawTag && !rawTag.includes('BIGC') && !rawTag.includes('빅크') && rawTag.length <= 10) {
+    else if (['방송', '영상', '공식 영상', '행사', '팬이벤트', '기념일', '릴리즈', '일정'].includes(rawTag)) {
       typeText = rawTag;
     }
   }
@@ -755,15 +980,23 @@ export function getScheduleTypeInfo(item) {
 
   const lower = combinedText.toLowerCase();
 
-  // ★ 3. 명백한 유튜브 자체 콘텐츠 / 공식 채널 영상 우선 보정 (typeId가 방송으로 잘못 등록된 경우 교정)
-  const isOfficialYoutubeContent = (
-    /안녕하세요원이입니다|안원잘부|@helloiamwoninicetomeetyou|helloiamwoni/i.test(lower) ||
-    (/자컨|비하인드|behind|vlog|브이로그|ep\.|shorts|쇼츠|릴스|reels|full ver|풀버전/i.test(lower) && !/쇼챔피언|엠카운트다운|뮤직뱅크|인기가요|더쇼|음악중심|생방송|본방/i.test(lower)) ||
-    (/youtube\.com|youtu\.be/i.test(lower) && /공개\s*예정\s*채널|보러\s*가기|아티스트\s*공식\s*채널/i.test(lower))
+  // ★ 3. 유튜브 공식 채널/자체콘텐츠/비하인드/브이로그 최우선 보정 (메라디오, 원쨩먹짱, 까엉TV 등)
+  const isOfficialYoutube = (
+    /안녕하세요원이입니다|안원잘부|@helloiamwoninicetomeetyou|helloiamwoni|@rescene_official|rescene_official/i.test(lower) ||
+    /자컨|비하인드|behind|vlog|브이로그|ep\.|먹짱|메라디오|까엉tv/i.test(lower)
   );
 
-  if (isOfficialYoutubeContent && !/kcon|케이콘|어워즈|awards|쇼케이스|showcase|페스티벌|콘서트|팬사인|팬미팅/i.test(lower)) {
+  if (isOfficialYoutube && !/kcon|케이콘|어워즈|awards|쇼케이스|showcase|페스티벌|콘서트|팬사인|팬미팅/i.test(lower)) {
     typeText = "영상";
+  }
+
+  // ★ 4. TV / 라디오 / 음악방송 / 예능 프로그램 보정 (전참시 등)
+  if (!typeText || typeText === "일정" || (!isOfficialYoutube && typeText === "영상")) {
+    const isTvBroadcast = /전참시|전지적\s*참견\s*시점|놀라운\s*토요일|놀토|아는\s*형님|아형|런닝맨|라디오스타|라스|복면가왕|주간\s*아이돌|주간아|아이돌\s*리그|쇼챔피언|쇼챔|엠카운트다운|엠카|뮤직뱅크|뮤뱅|인기가요|인가|더쇼|음악중심|음중|심플리케이팝|simply\s*k-pop|방송|tv|on air|생방송|본방|재방|mbc|kbs|sbs|mnet|jtbc|tvn|ena|ebs|정오의 희망곡|가요광장|영스트리트|키스 더 라디오|꿈꾸는 라디오|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|idol radio|fm4u|power fm/i.test(lower);
+
+    if (isTvBroadcast && !isOfficialYoutube) {
+      typeText = "방송";
+    }
   }
 
   // ★ 4. 지능형 키워드 기반 우선순위 정밀 분류
@@ -771,19 +1004,19 @@ export function getScheduleTypeInfo(item) {
     // 4-1. 오프라인 행사 / 공연 / 페스티벌 / 쇼케이스 / 시상식
     if (/kcon|케이콘|어워즈|awards|쇼케이스|showcase|페스티벌|festival|콘서트|concert|행사|공연|축제|드림콘서트|시구|시타|위촉식|풀파티|썸머소닉/i.test(lower)) {
       typeText = "행사";
-    // 4-2. 팬사인회 / 팬이벤트 / 팬미팅 (일반 단어 meet 오매칭 방지)
+      // 4-2. 팬사인회 / 팬이벤트 / 팬미팅 (일반 단어 meet 오매칭 방지)
     } else if (/팬사인회|팬사인|팬싸인회|팬싸|팬미팅|fan\s*meeting|fan\s*sign|영통\s*팬|대면\s*팬|대면\s*팬싸|대면\s*사인/i.test(lower)) {
       typeText = "팬이벤트";
-    // 4-3. TV / 라디오 / 음악방송
+      // 4-3. TV / 라디오 / 음악방송
     } else if (/쇼챔피언|쇼챔|엠카운트다운|엠카|뮤직뱅크|뮤뱅|인기가요|인가|더쇼|음악중심|음중|심플리케이팝|simply\s*k-pop|방송|라디오|예능|tv|on air|live|생방송|본방|재방|mbc|kbs|sbs|mnet|jtbc|tvn|ena|ebs|아리랑|arirang|스튜디오|studio|정오의 희망곡|가요광장|영스트리트|키스 더 라디오|꿈꾸는 라디오|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|idol radio|fm4u|power fm/i.test(lower)) {
       typeText = "방송";
-    // 4-4. 멤버 생일 / 기념일
+      // 4-4. 멤버 생일 / 기념일
     } else if (/기념일|생일|birthday|happy|day|데뷔|anniversary/i.test(lower)) {
       typeText = "기념일";
-    // 4-5. 음원 / 앨범 / 릴리즈
+      // 4-5. 음원 / 앨범 / 릴리즈
     } else if (/릴리즈|발매|release|album|mv|뮤비|음원/i.test(lower)) {
       typeText = "릴리즈";
-    // 4-6. 유튜브 공식 채널 영상 / 자체콘텐츠 / 안원잘부 / 비하인드 / 브이로그
+      // 4-6. 유튜브 공식 채널 영상 / 자체콘텐츠 / 안원잘부 / 비하인드 / 브이로그
     } else if (
       /@helloiamwoninicetomeetyou|helloiamwoni|안원잘부|안녕하세요원이|@rescene_official|rescene_official|자컨|비하인드|behind|vlog|브이로그|ep\.|shorts|쇼츠|릴스|reels|full ver|풀버전/i.test(lower) ||
       /youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|@helloiamwoninicetomeetyou|@rescene_official)/i.test(lower)
@@ -810,6 +1043,35 @@ export function getScheduleTypeInfo(item) {
   }
 
   return { typeText, bg, color };
+}
+
+// 공식 채널 / 원이 채널 영상 일정 제목 앞 미니 엠블럼 아이콘 생성
+export function getChannelIconHTML(item, { isSmall = false } = {}) {
+  if (!item) return '';
+  const text = `${item.channel || ''} ${(item.extField && item.extField.value) || ''} ${item.title || ''} ${item.url || ''} ${item.link || ''} ${item.source || ''}`.toLowerCase();
+
+  const size = isSmall ? 11 : 14;
+  const margin = isSmall ? 'margin-right:2px; vertical-align:-1px;' : 'margin-right:4px; vertical-align:-2px;';
+
+  // 1. 원이 채널 (안녕하세요원이입니다잘부탁드립니다)
+  if (text.includes('안녕하세요원이') || text.includes('helloiamwoni') || text.includes('안원잘부') || text.includes('@helloiamwoninicetomeetyou')) {
+    return `<img src="icons/hellowoni_profile.jpg" class="sched-channel-icon woni" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="원이채널" title="안녕하세요원이입니다잘부탁드립니다">`;
+  }
+
+  // 2. 공식 유튜브 채널 (RESCENE)
+  const isBroadcaster = /mbc|kbs|sbs|mnet|jtbc|tvn|ena|ebs|tv조선/i.test(item.channel || (item.extField && item.extField.value) || '');
+  if (!isBroadcaster && (
+    item.source === 'youtube' ||
+    text.includes('@rescene_official') ||
+    text.includes('base notes') ||
+    text.includes('re:creation') ||
+    text.includes('re-log') ||
+    (item.typeText === '영상' && (text.includes('rescene') || text.includes('리센느') || item.channel === 'RESCENE'))
+  )) {
+    return `<img src="icons/rescene_official_profile.jpg" class="sched-channel-icon official" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="공식채널" title="RESCENE 공식 유튜브 채널">`;
+  }
+
+  return '';
 }
 
 export function renderScheduleList(container, schedules = [], isDark = false, onSelectDate) {
@@ -877,22 +1139,33 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
       typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
     }
 
-    let cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
+    const fullTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
+    const cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄', 42);
     let extraInfo = '';
-    if (item.extField && item.extField.value) {
-      extraInfo = ` <span style="color:#888; font-size:10px;">(${escapeHtml(item.extField.value.trim())})</span>`;
+    const ext = item.extField;
+    const loc = item.location || (ext && ext.key === '장소' ? ext.value : null);
+    const ch = item.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : null);
+
+    if (loc && String(loc).trim()) {
+      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(String(loc).trim())}</span>`;
+    } else if (ch && String(ch).trim()) {
+      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>${escapeHtml(String(ch).trim())}</span>`;
+    } else if (ext && ext.value && String(ext.value).trim()) {
+      const keyLabel = ext.key ? `${ext.key}: ` : '';
+      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px;">(${escapeHtml(keyLabel)}${escapeHtml(String(ext.value).trim())})</span>`;
     }
 
+    const channelIconHtml = getChannelIconHTML(item);
     const titleText = escapeHtml(cleanTitle);
     const isNext = (globalIdx === nextIndex);
     const activeClass = isNext ? ' active' : '';
 
     return `
-      <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${globalIdx}" title="${titleText}">
+      <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${globalIdx}" title="${escapeHtml(fullTitle)}">
         <div class="schedule-line">
           <span class="schedule-date-time">[${dateLabel}${timeStr}]</span>
           ${typeBadge}
-          <span class="schedule-title">${titleText}${extraInfo}</span>
+          <span class="schedule-title">${channelIconHtml}${titleText}${extraInfo}</span>
         </div>
       </div>
     `;
@@ -998,13 +1271,18 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
       const timeStr = (h === 0 && m === '00' && String(item.startTime || item.date).includes('T15:00:00')) ? '종일 일정' : `${ap} ${h}:${m}`;
       const { typeText } = getScheduleTypeInfo(item);
 
+      const ext = item.extField;
       showScheduleModal({
         title: item.title || item.message || '스케줄 상세 정보',
         date: dateStr,
         time: timeStr,
         type: typeText,
+        location: item.location || (ext && ext.key === '장소' ? ext.value : ''),
+        channel: item.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : ''),
+        extField: ext || null,
         detail: item.message || item.description || item.detail || item.title,
         link: item.url || item.link,
+        starAttendees: item.starAttendees || [],
         resolvedMediaUrls: item.resolvedMediaUrls || []
       });
     }
@@ -1142,10 +1420,15 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
             }
           }
 
-          const rawPureTitle = cleanDisplayTitle(item.title || item.message || '일정');
-          const titleText = escapeHtml(rawPureTitle);
-          const displayTitle = typeText ? `[${typeText}] ${titleText}` : titleText;
+          const fullPureTitle = cleanDisplayTitle(item.title || item.message || '일정');
+          const titleText = escapeHtml(fullPureTitle);
+          const displayTitle = typeText ? `[${typeText}] ${fullPureTitle}` : fullPureTitle;
           const dateForModal = item.isMultiDay ? `${item.startDateStr} ~ ${item.endDateStr}` : cellInfo.dateStr;
+
+          const channelIconSmall = getChannelIconHTML(item, { isSmall: true });
+
+          const hoverTimeHtml = timeStrForModal ? `<div class="badge-hover-time">${escapeHtml(timeStrForModal)}</div>` : '';
+          const contentHtml = `<div class="badge-main-content">${channelIconSmall}<span class="badge-title-text">${titleText}</span></div>`;
 
           // 연속 일정인 경우 스타일 및 그룹 식별자 추가
           if (item.isMultiDay) {
@@ -1160,7 +1443,7 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
               badge.classList.add("span-middle");
             }
 
-            badge.innerHTML = `${timeStrForBadge}<span>${titleText}</span>`;
+            badge.innerHTML = `${hoverTimeHtml}${contentHtml}`;
             badge.title = `${displayTitle} (${item.startDateStr} ~ ${item.endDateStr})`;
 
             // 연속 일정 그룹 동시 마우스 오버 하이라이트
@@ -1174,19 +1457,26 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
               siblings.forEach(el => el.classList.remove("span-hover-active"));
             });
           } else {
-            badge.innerHTML = `${timeStrForBadge}<span>${titleText}</span>`;
-            badge.title = `${displayTitle} ${timeStrForModal ? `(${timeStrForModal})` : ''}`;
+            badge.innerHTML = `${hoverTimeHtml}${contentHtml}`;
+            badge.title = `${displayTitle}${timeStrForModal ? ` (${timeStrForModal})` : ''}`;
           }
 
           badge.addEventListener("click", (e) => {
             e.stopPropagation();
             if (typeof onSelectEvent === 'function') {
+              const ext = item.extField;
               onSelectEvent({
                 title: displayTitle,
+                pureTitle: fullPureTitle,
+                channelIconHtml: getChannelIconHTML(item),
                 date: dateForModal,
                 time: timeStrForModal,
                 type: typeText,
+                location: item.location || (ext && ext.key === '장소' ? ext.value : ''),
+                channel: item.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : ''),
+                extField: ext || null,
                 detail: item.message || item.description || '',
+                starAttendees: item.starAttendees || [],
                 url: item.url || item.link || ''
               });
             }
@@ -1262,10 +1552,10 @@ export function enableIframeScrollGuard(container = document) {
 
     // 4. 보조 휠 이벤트 포워딩 (인터랙션 중에도 마우스 휠을 굴리면 부모 스크롤 실행)
     wrapper.addEventListener('wheel', (e) => {
-      const scrollParent = wrapper.closest('.embed-modal-body') || 
-                           wrapper.closest('.feed-list-container') || 
-                           wrapper.closest('.panel-tab-content') || 
-                           document.documentElement;
+      const scrollParent = wrapper.closest('.embed-modal-body') ||
+        wrapper.closest('.feed-list-container') ||
+        wrapper.closest('.panel-tab-content') ||
+        document.documentElement;
       if (scrollParent && scrollParent !== wrapper) {
         scrollParent.scrollTop += e.deltaY;
       }
@@ -1394,9 +1684,80 @@ export function linkifyMessage(text) {
   // 1. 기존 엔티티(&lt;, &gt;, &amp;) 디코딩
   const rawText = decodeHtmlEntities(text);
   // 2. 안전하게 다시 escape
-  const safeText = escapeHtml(rawText);
-  // 3. URL 링크화
-  return safeText.replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+  let safeText = escapeHtml(rawText);
+
+  // 3. 스케줄 본문에 포함된 다양한 이모지들을 모던 심플 SVG 아이콘으로 치환
+  const svgIcons = {
+    link: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block; color:var(--primary-color, #ff007a);"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
+    twitter: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+    news: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`,
+    notice: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>`,
+    video: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
+    tv: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
+    radio: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><circle cx="16" cy="14" r="3"/><path d="M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><path d="M7 12v-2"/><path d="m17 4-5 2"/></svg>`,
+    camera: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
+    calendar: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+    clock: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+    pin: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+    music: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`,
+    sparkle: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
+    birthday: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></svg>`,
+    mail: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px; display:inline-block;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+    arrow: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px; margin-right:3px; display:inline-block;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="19 12 12 19 19 12 12 5"></polyline></svg>`
+  };
+
+  // 손가락/화살표/재생/링크 이모지와 '보러 가기' / '보러가기' / '바로 가기' / '바로가기' 패턴을 '관련 링크'로 통일 치환
+  safeText = safeText.replace(/(?:[👉👇👈👆▶️🔗📎]+\s*)?(?:[가-힣a-zA-Z0-9\s]*?)?(?:보러\s*가기|바로\s*가기)/g, `${svgIcons.link} 관련 링크`);
+  // 손가락/화살표/재생 이모지 바로 뒤에 링크가 오는 경우 링크 아이콘으로 치환
+  safeText = safeText.replace(/(?:👉|👇|👈|👆|👉🏻|👉🏼|👉🏽|👉🏾|👉🏿|👇🏻|👇🏼|👇🏽|👇🏾|👇🏿|➡️|▶️?)\s*(?=https?:\/\/)/g, `${svgIcons.link} `);
+  // 남은 단독 링크 이모지 치환 (🔗, 📎)
+  safeText = safeText.replace(/🔗|📎/g, svgIcons.link);
+  // 트위터 / 소셜
+  safeText = safeText.replace(/\[🐦\]|🐦/g, svgIcons.twitter);
+  // 기사 / 뉴스
+  safeText = safeText.replace(/\[📰\]|📰/g, svgIcons.news);
+  // 공지 / 확성기
+  safeText = safeText.replace(/\[📢\]|📢|📣/g, svgIcons.notice);
+  // 영상 / 필름
+  safeText = safeText.replace(/\[🎬\]|🎬|▶️|🎥/g, svgIcons.video);
+  // TV / 방송
+  safeText = safeText.replace(/\[📺\]|📺/g, svgIcons.tv);
+  // 라디오
+  safeText = safeText.replace(/\[📻\]|📻/g, svgIcons.radio);
+  // 사진 / 카메라
+  safeText = safeText.replace(/\[📸\]|📸|📷/g, svgIcons.camera);
+  // 달력 / 일정
+  safeText = safeText.replace(/\[📅\]|📅|📆|🗓️?/g, svgIcons.calendar);
+  // 시계 / 알림
+  safeText = safeText.replace(/\[⏰\]|⏰|⏱️|⏳/g, svgIcons.clock);
+  // 핀 / 장소
+  safeText = safeText.replace(/\[📍\]|📍|🗺️/g, svgIcons.pin);
+  // 음악 / 음원
+  safeText = safeText.replace(/\[🎵\]|\[🎶\]|🎵|🎶|🎧/g, svgIcons.music);
+  // 반짝임 / 스파클
+  safeText = safeText.replace(/\[✨\]|✨|🌟|💫/g, svgIcons.sparkle);
+  // 생일 / 파티
+  safeText = safeText.replace(/\[🎂\]|🎂|🎉|🥳/g, svgIcons.birthday);
+  // 편지 / 메일
+  safeText = safeText.replace(/\[💌\]|💌|✉️/g, svgIcons.mail);
+  // 기타 일반 화살표
+  safeText = safeText.replace(/👉|👉🏻|👉🏼|👉🏽|👉🏾|👉🏿|➡️/g, svgIcons.arrow);
+
+  // 4. 개별 URL 링크화 (링크 바로 앞에 별도의 아이콘이 없는 경우 링크 열기 아이콘 자동 추가)
+  const openLinkIcon = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px; margin-right:3px; display:inline-block; flex-shrink:0;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+
+  safeText = safeText.replace(/((?:<svg[^>]*>[\s\S]*?<\/svg>\s*)?)(https?:\/\/[^\s<]+)/g, (match, prefix, url) => {
+    if (prefix && prefix.trim().length > 0) {
+      return `${prefix}<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    } else {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; word-break:break-all;">${openLinkIcon}<span>${url}</span></a>`;
+    }
+  });
+
+  // 5. 줄바꿈 처리 (\n -> <br>)
+  safeText = safeText.replace(/\r?\n/g, '<br>');
+
+  return safeText;
 }
 
 export function parseMediaEmbeds(sources = [], isDark = false) {
@@ -1526,7 +1887,8 @@ export function showScheduleModal(scheduleData) {
 
   if (modalTitle) {
     const rawTitle = decodeHtmlEntities(scheduleData.title || '스케줄 상세 정보');
-    modalTitle.textContent = rawTitle;
+    const chIcon = scheduleData.channelIconHtml || getChannelIconHTML(scheduleData);
+    modalTitle.innerHTML = `${chIcon}<span>${escapeHtml(rawTitle)}</span>`;
   }
 
   const isDark = document.body.classList.contains('dark-mode');
@@ -1536,29 +1898,66 @@ export function showScheduleModal(scheduleData) {
     const timeStr = scheduleData.time ? ` ${scheduleData.time}` : '';
     html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>일시: ${escapeHtml(scheduleData.date)}${escapeHtml(timeStr)}</span>`;
   }
-  if (scheduleData.type) {
-    html += `<p><strong>분류:</strong> ${escapeHtml(scheduleData.type)}</p>`;
+
+  const ext = scheduleData.extField;
+  const location = scheduleData.location || (ext && ext.key === '장소' ? ext.value : (scheduleData.place || scheduleData.venue));
+  const channel = scheduleData.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : null);
+
+  if (location && String(location).trim()) {
+    html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>장소: ${escapeHtml(String(location).trim())}</span>`;
   }
+  if (channel && String(channel).trim()) {
+    html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>채널: ${escapeHtml(String(channel).trim())}</span>`;
+  }
+  if (ext && ext.key && ext.value && ext.key !== '장소' && ext.key !== '채널' && ext.key !== '방송사') {
+    html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>${escapeHtml(ext.key)}: ${escapeHtml(String(ext.value).trim())}</span>`;
+  }
+
+  // Mnet / Blip 참석 멤버 정보 렌더링 (매핑 테이블 기반 활동명 및 툴팁 렌더링)
+  const attendees = scheduleData.starAttendees || scheduleData.members || [];
+  if (Array.isArray(attendees) && attendees.length > 0) {
+    const attendeesHtml = attendees.map(a => {
+      const avatar = a.avatarImgPath ? `<img src="${escapeHtml(a.avatarImgPath)}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; vertical-align:-2px; margin-right:4px; border:1px solid rgba(255,105,180,0.4);" alt="${escapeHtml(a.nickname || '')}">` : '';
+      const realName = getMemberDisplayName(a.nickname);
+      const isCustomNick = a.nickname && a.nickname !== realName;
+      const nickTitle = isCustomNick ? ` title="닉네임: ${escapeHtml(a.nickname)}"` : '';
+      return `<span style="display:inline-flex; align-items:center; background:rgba(255,105,180,0.1); border:1px solid rgba(255,105,180,0.25); border-radius:12px; padding:1px 7px; font-size:11px; font-weight:600; color:#d63384; margin:1px 2px;"${nickTitle}>${avatar}${escapeHtml(realName)}</span>`;
+    }).join(' ');
+    html += `<div style="display:flex; flex-wrap:wrap; align-items:center; margin:3px 0;"><span class="detail-time" style="display:inline-flex; align-items:center; margin:0; margin-right:4px; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>참석 멤버:</span><div style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:2px;">${attendeesHtml}</div></div>`;
+  }
+
+  let hasRenderedLinkInBody = false;
   if (scheduleData.detail || scheduleData.description) {
     const detailContent = linkifyMessage(scheduleData.detail || scheduleData.description);
+    if (detailContent.includes('<a href=')) {
+      hasRenderedLinkInBody = true;
+    }
     html += `<div style="margin-top: 8px;">${detailContent}</div>`;
   }
-  if (scheduleData.link || scheduleData.url) {
+
+  // 본문에 이미 링크가 렌더링되었거나 공식 유튜브 항목인 경우 하단 중복 링크 버튼 생략
+  if (!hasRenderedLinkInBody && scheduleData.source !== 'youtube' && (scheduleData.link || scheduleData.url)) {
     const link = scheduleData.link || scheduleData.url;
-    html += `<p style="margin-top: 10px;"><a href="${link}" target="_blank" rel="noopener noreferrer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>관련 링크 바로가기</a></p>`;
+    html += `<p style="margin-top: 10px;"><a href="${link}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:4px; font-weight:600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span>관련 링크 바로가기</span> <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-left:1px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a></p>`;
   }
 
   bodyContent.innerHTML = html;
 
   // 유튜브, 인스타, X, 틱톡 미디어 링크 자동 추출 및 세컨더리 카드 렌더링
-  let mediaSources = [
-    scheduleData.detail,
-    scheduleData.description,
-    scheduleData.link,
-    scheduleData.url,
-    scheduleData.message,
-    ...(scheduleData.resolvedMediaUrls || [])
-  ];
+  let mediaSources = [];
+  if (scheduleData.source === 'youtube') {
+    // 공식 유튜브 영상 항목인 경우 해당 유튜브 링크만 정확하게 미디어 카드로 렌더링
+    mediaSources = [scheduleData.url, scheduleData.link].filter(Boolean);
+  } else {
+    // 일반 스케줄인 경우 상세 본문 및 링크에서 미디어 추출
+    mediaSources = [
+      scheduleData.detail,
+      scheduleData.description,
+      scheduleData.link,
+      scheduleData.url,
+      ...(scheduleData.resolvedMediaUrls || [])
+    ].filter(Boolean);
+  }
 
   let embedsHtml = parseMediaEmbeds(mediaSources, isDark);
 
@@ -1567,7 +1966,7 @@ export function showScheduleModal(scheduleData) {
     if (htmlContent) {
       embedBody.innerHTML = htmlContent;
       embedCard.style.display = 'flex';
-              embedCard.style.flexDirection = 'column';
+      embedCard.style.flexDirection = 'column';
 
       // 유튜브 프리뷰 카드 클릭 이벤트
       embedBody.querySelectorAll('.youtube-preview-card').forEach(card => {

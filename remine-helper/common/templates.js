@@ -358,7 +358,7 @@ export function createYoutubeSectionHTML() {
   `;
 }
 
-// 원이 채널 섹션 카드
+// 안녕하세요원이입니다잘부탁드립니다 섹션 카드
 export function createWoniSectionHTML() {
   return `
     <div class="glass-card mb-12">

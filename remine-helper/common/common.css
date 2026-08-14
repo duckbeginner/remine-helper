@@ -836,8 +836,8 @@ body.dark-mode .schedule-type-badge {
   height: auto !important;
   max-height: none !important;
   min-height: fit-content;
-  font-size: clamp(0.7rem, 0.9vw, 0.8rem);
-  padding: 4px 6px;
+  font-size: clamp(0.68rem, 0.85vw, 0.78rem);
+  padding: 3px 6px;
   white-space: normal;
   display: flex !important;
   flex-direction: column !important;
@@ -845,12 +845,15 @@ body.dark-mode .schedule-type-badge {
   line-height: 1.25;
 }
 
-.calendar-week-row:hover .badge-time {
+.calendar-week-row:hover .badge-hover-time {
   display: block !important;
-  font-size: 0.62rem;
-  font-weight: 700;
-  margin-bottom: 2px;
-  opacity: 0.95;
+  animation: badgeFadeIn 0.15s ease-in-out;
+}
+
+.calendar-week-row:hover .badge-title-text {
+  -webkit-line-clamp: 4 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .calendar-cell {
@@ -916,16 +919,12 @@ body.dark-mode .schedule-type-badge {
 }
 
 .cal-event-badge {
-  height: 20px;
   min-height: 20px;
-  max-height: 20px;
-  padding: 1px 5px;
+  height: auto;
+  padding: 2px 5px;
   border-radius: 5px;
   font-size: 0.65rem;
-  line-height: 16px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
   cursor: pointer;
   font-weight: 600;
   backdrop-filter: blur(4px);
@@ -933,8 +932,71 @@ body.dark-mode .schedule-type-badge {
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-sizing: border-box;
   display: flex;
-  align-items: center;
-  transition: all 0.15s ease;
+  flex-direction: column;
+  max-width: 100%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  word-break: break-word;
+  overflow: hidden;
+}
+
+.cal-event-badge .badge-hover-time {
+  display: none;
+  font-size: 0.62rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  line-height: 1.15;
+  opacity: 0.95;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.cal-event-badge .badge-main-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cal-event-badge .badge-title-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.25;
+}
+
+.cal-event-badge .sched-channel-icon {
+  margin-top: 1px;
+}
+
+.cal-event-badge:hover {
+  filter: brightness(1.05);
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  z-index: 15;
+  position: relative;
+}
+
+.cal-event-badge:hover .badge-hover-time {
+  display: block;
+  animation: badgeFadeIn 0.15s ease-in-out;
+}
+
+.cal-event-badge:hover .badge-title-text {
+  -webkit-line-clamp: 4;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@keyframes badgeFadeIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 0.95; transform: translateY(0); }
 }
 
 .cal-event-badge:hover {
@@ -2662,4 +2724,35 @@ body.dark-mode .settings-modal-footer {
 
 .setting-action-btn.danger-outline:hover {
   background: rgba(239, 68, 68, 0.1);
+}
+
+/* 스케줄 / 캘린더 채널 미니 엠블럼 아이콘 */
+.sched-channel-icon {
+  display: inline-block;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease;
+}
+.sched-channel-icon:hover {
+  transform: scale(1.15);
+}
+.cal-event-badge .sched-channel-icon {
+  width: 11px;
+  height: 11px;
+  margin-right: 2.5px;
+  vertical-align: -1px;
+}
+.schedule-item .sched-channel-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+.modal-header-title .sched-channel-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -3px;
 }

@@ -1,5 +1,15 @@
-// constants.js - 원이 채널 링크가 업데이트된 공통 채널 데이터 맵
-export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'logoChannel', 'instagram', 'x', 'facebook', 'tiktok', 'mnet', 'blip'];
+export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'instagram', 'x', 'tiktok', 'clip', 'facebook', 'mnet', 'blip'];
+
+// Mnet Plus / Bstage 스타 닉네임 -> 실제 멤버 활동명 매핑 테이블
+export const MEMBER_NICKNAME_MAP = {
+  '별이빛나는맘': '원이',
+  '올리브🫒': '리브',
+  '올리브': '리브',
+  '김깨구리제로천사': '제나',
+  '메2': '메이',
+  '𝕞𝕚𝕟𝕒𝕞𝕚': '미나미',
+  'minami': '미나미'
+};
 
 export const CHANNEL_DATA_MAP = {
   youtube: {
@@ -12,7 +22,7 @@ export const CHANNEL_DATA_MAP = {
     url: 'https://www.youtube.com/@helloiamwoninicetomeetyou', // [수정] 최신 핸들 주소로 변경
     img: 'icons/hellowoni_profile.jpg'
   },
-  dcinside:{
+  dcinside: {
     name: 'dcinside',
     url: 'https://m.dcinside.com/board/rescene1',
     img: 'icons/dc_logo.png'
@@ -50,7 +60,128 @@ export const CHANNEL_DATA_MAP = {
   clip: {
     name: 'Naver Clip',
     url: 'https://clip.naver.com/@themuzeent',
-    // svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#03C75A" d="M16 0C7.2 0 0 7.2 0 16s7.2 16 16 16c8.8 0 16-7.2 16-16S24.8 0 16 0zm6.4 17.6l-9.6 5.6c-.4.2-.8.3-1.2.3-.4 0-.8-.1-1.2-.3-.8-.5-1.2-1.4-1.2-2.3V9c0-.9.4-1.8 1.2-2.3.8-.5 1.8-.5 2.6 0l9.6 5.6c.8.5 1.2 1.4 1.2 2.3s-.4 1.8-1.2 2.3z"/></svg>'
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="76" height="30" viewBox="0 0 76 30" fill="none" role="img" aria-hidden="true"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z" fill="black"></path><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54" fill="url(#paint0_linear_14536_15643)"></path><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z" fill="url(#paint1_linear_14536_15643)"></path><defs><linearGradient id="paint0_linear_14536_15643" x1="26.1245" y1="17.5327" x2="24.2986" y2="14.6548" gradientUnits="userSpaceOnUse"><stop stop-color="black"></stop><stop offset="0.333333" stop-color="black"></stop><stop offset="0.65625" stop-color="black"></stop><stop offset="0.932292" stop-color="black"></stop></linearGradient><linearGradient id="paint1_linear_14536_15643" x1="19.9352" y1="12.7435" x2="21.8395" y2="15.8406" gradientUnits="userSpaceOnUse"><stop stop-color="black"></stop><stop offset="0.338542" stop-color="black"></stop><stop offset="0.6875" stop-color="black"></stop><stop offset="1" stop-color="black"></stop></linearGradient></defs></svg>'
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" fill="#03C75A"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z"/><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54"/><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z"/></svg>'
   }
+};
+
+// 1. 완결형 탭 네비게이션 메타데이터 목록
+export const TAB_CONFIG_LIST = [
+  {
+    id: "tabHome",
+    label: "홈",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'></path><polyline points='9 22 9 12 15 12 15 22'></polyline></svg>",
+    type: "home",
+    defaultActive: true,
+    scrollable: true
+  },
+  {
+    id: "tabSchedule",
+    label: "스케줄",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect><line x1='16' y1='2' x2='16' y2='6'></line><line x1='8' y1='2' x2='8' y2='6'></line><line x1='3' y1='10' x2='21' y2='10'></line></svg>",
+    type: "schedule",
+    scrollable: false
+  },
+  {
+    id: "tabInsta",
+    label: "Instagram",
+    channelKey: "instagram",
+    type: "embed-list",
+    feedSource: "instagram",
+    scrollable: true
+  },
+  {
+    id: "tabX",
+    label: "X.com",
+    channelKey: "x",
+    type: "embed-list",
+    feedSource: "x",
+    scrollable: true
+  },
+  {
+    id: "tabTiktok",
+    label: "Tiktok",
+    channelKey: "tiktok",
+    type: "embed-list",
+    feedSource: "tiktok",
+    scrollable: true
+  },
+  {
+    id: "tabClip",
+    label: "Clip",
+    channelKey: "clip",
+    type: "iframe",
+    iframeUrl: "https://clip.naver.com/@themuzeent?tab=all&filter=all&theme={theme}",
+    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-presentation",
+    height: "100%",
+    scrollable: false
+  },
+  {
+    id: "tabSceneFlix",
+    label: "SceneFlix",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='4' width='20' height='16' rx='2.5'></rect><polygon points='10 8.5 16 12 10 15.5 10 8.5' fill='currentColor'></polygon></svg>",
+    type: "iframe",
+    iframeUrl: "https://adam-yam.github.io/SCENE-FLIX/?tab=allvideos&theme={theme}",
+    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-presentation",
+    height: "100%",
+    scrollable: false
+  }
+];
+
+// 4. 틱톡 기본 최신 피드 목록 (테스트 및 폴백용)
+export const DEFAULT_TIKTOK_FEEDS = [];
+
+// 2. 공식 채널 메타데이터 목록 (기본 노출 순서)
+export const OFFICIAL_CHANNELS = [
+  { key: "youtube", name: "YouTube", url: "https://www.youtube.com/@RESCENE_official" },
+  { key: "helloiamwoni", name: "안녕하세요원이입니다잘부탁드립니다", url: "https://www.youtube.com/@helloiamwoninicetomeetyou" },
+  { key: "instagram", name: "Instagram", url: "https://www.instagram.com/rescene_official" },
+  { key: "x", name: "X", url: "https://x.com/resceneofficial" },
+  { key: "tiktok", name: "TikTok", url: "https://www.tiktok.com/@rescene_official" },
+  { key: "clip", name: "Naver Clip", url: "https://clip.naver.com/@themuzeent" },
+  { key: "facebook", name: "Facebook", url: "https://www.facebook.com/RESCENE.official" },
+  { key: "mnet", name: "Mnet Plus", url: "https://artist.mnetplus.world/main/stg/rescene-official" },
+  { key: "blip", name: "blip", url: "https://blip.kr/artists/RESCENE" }
+];
+
+// 3. 팬페이지 바로가기 메타데이터 목록
+export const FANPAGE_LIST = [
+  { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
+  { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
+  { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
+  { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
+];
+
+// 5. 새로고침 주기 옵션 (분 단위)
+export const REFRESH_INTERVAL_OPTIONS = [
+  { value: 5, label: "5분마다" },
+  { value: 15, label: "15분마다 (권장)" },
+  { value: 30, label: "30분마다" },
+  { value: 60, label: "1시간마다" },
+  { value: 120, label: "2시간마다" },
+  { value: 360, label: "6시간마다" }
+];
+
+// 6. 기본 사용자 설정 (User Settings Default)
+export const DEFAULT_USER_SETTINGS = {
+  navPosition: 'left', // 'left' | 'right'
+  refreshInterval: 15, // 분 단위 (기본 15분)
+  notifications: {
+    enabled: true,     // 푸시 알림 전체
+    youtube: true,     // 유튜브 새 영상
+    live: true,        // 실시간 라이브 감지
+    schedule: true     // 스케줄 알림
+  },
+  sound: {
+    muteOnLoad: false  // 임베드 로드 시 자동 음소거
+  },
+  tabList: TAB_CONFIG_LIST.map(tab => ({
+    ...tab,
+    enabled: tab.enabled !== false
+  })),
+  fanpages: [
+    { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
+    { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
+    { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
+    { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
+  ]
 };
