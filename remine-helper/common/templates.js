@@ -94,25 +94,45 @@ export function createHubIconButtonHTML(channel, channelMap = CHANNEL_DATA_MAP) 
 export function createThemeToggleButtonsHTML() {
   return `
     <div class="header-controls">
-      <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>대시보드</button>
-      <button class="theme-toggle-btn" id="themeToggleBtn" title="테마 전환">🌓 테마</button>
+      <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+        </svg>대시보드
+      </button>
+      <button class="theme-toggle-btn" id="themeToggleBtn" title="테마 전환">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+        </svg>테마
+      </button>
     </div>
   `;
 }
 
 export function createHScrollButtonsHTML() {
   return `
-    <button class="hscroll-btn left" aria-label="이전 영상">◀</button>
-    <button class="hscroll-btn right" aria-label="다음 영상">▶</button>
+    <button class="hscroll-btn left" aria-label="이전 영상">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button class="hscroll-btn right" aria-label="다음 영상">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
   `;
 }
 
 export function createCalendarNavButtonsHTML(monthTitle = '2026년 스케줄') {
   return `
     <div class="calendar-header-left" id="spCalendarNavControls">
-      <button class="cal-nav-btn" id="spPrevMonthBtn" title="이전 달">◀</button>
+      <button class="cal-nav-btn" id="spPrevMonthBtn" title="이전 달">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
       <span id="spCalendarMonthTitle">${escapeHtml(monthTitle)}</span>
-      <button class="cal-nav-btn" id="spNextMonthBtn" title="다음 달">▶</button>
+      <button class="cal-nav-btn" id="spNextMonthBtn" title="다음 달">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
     </div>
     <div class="schedule-view-switcher" id="scheduleViewSwitcher">
       <button type="button" class="view-switch-btn active" id="spViewCalBtn" data-view="calendar" title="달력으로 보기">
@@ -148,12 +168,14 @@ export function createVideoCardHTML(video) {
   const url = video.url || video.videoUrl || (video.id ? `https://www.youtube.com/watch?v=${video.id}` : '#');
   const thumbnail = video.thumbnail || 'icons/rescene_official_profile.jpg';
 
+  const calIcon = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+
   return `
     <a href="${url}" target="_blank" class="video-card">
       <img src="${thumbnail}" alt="${title}" loading="lazy">
       <div class="card-info">
         <span class="card-title" title="${title}">${title}</span>
-        ${dateStr ? `<span class="card-date">📅 ${escapeHtml(dateStr)}</span>` : ''}
+        ${dateStr ? `<span class="card-date">${calIcon}${escapeHtml(dateStr)}</span>` : ''}
       </div>
     </a>
   `;
@@ -299,7 +321,7 @@ export function createTabContainersHTML(tabs = TAB_CONFIG_LIST, activeTabId = 't
 
 // 라이브 배너
 export function createLiveBannerHTML() {
-  return `<a href="#" id="liveBanner" target="_blank" style="display: none;">🔴 [ON AIR] 리센느 실시간 라이브 중! 클릭 이동</a>`;
+  return `<a href="#" id="liveBanner" target="_blank" style="display: none;"><span class="live-pulse-dot"></span> [LIVE] 리센느 실시간 라이브 중! 클릭 이동</a>`;
 }
 
 // 공식 채널 바로가기 허브 카드 (컨트롤 버튼 기본 제거)
@@ -352,7 +374,14 @@ export function createWoniSectionHTML() {
 export function createScheduleCardHTML() {
   return `
     <div class="glass-card mb-12 schedule-card-flex">
-      <h2>📅 스케줄</h2>
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>스케줄
+      </h2>
       <div class="schedule-container">
         <div class="schedule-viewport" id="scheduleList">
           <div class="schedule-item">스케줄 정보를 불러오는 중...</div>
@@ -368,7 +397,12 @@ export function createFanpageCardHTML(fanpages = FANPAGE_LIST) {
 
   return `
     <div class="glass-card mb-12">
-      <h2>🌟 팬페이지 바로가기</h2>
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>팬페이지 바로가기
+      </h2>
       <div class="fanpage-links-grid">
         ${linksHtml}
       </div>
@@ -421,7 +455,9 @@ export function createScheduleModalHTML() {
         <div class="schedule-modal-card">
           <div class="modal-header">
             <span id="modalTitle">스케줄 상세 정보</span>
-            <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+            <button class="modal-close-btn" id="modalCloseBtn" aria-label="닫기">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
           <div class="modal-body" id="modalBodyContent"></div>
         </div>
@@ -429,7 +465,9 @@ export function createScheduleModalHTML() {
         <!-- 2. 임베드 미디어 전용 추가 카드 (미디어 존재 시 노출) -->
         <div class="schedule-embed-card" id="modalEmbedCard" style="display: none;">
           <div class="modal-header">
-            <span class="embed-modal-title">🎬 관련 미디어</span>
+            <span class="embed-modal-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>관련 미디어
+            </span>
           </div>
           <div class="embed-modal-body" id="modalEmbedBodyContent"></div>
         </div>
@@ -458,9 +496,12 @@ export function createSettingsModalHTML() {
       <div class="settings-modal-card">
         <div class="settings-modal-header">
           <div class="settings-modal-title">
-            <span>⚙️ 사용자 설정</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>사용자 설정</span>
           </div>
-          <button class="settings-close-btn" id="settingsCloseBtn">✕</button>
+          <button class="settings-close-btn" id="settingsCloseBtn" aria-label="닫기">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
 
         <!-- 설정 서브 탭 네비게이션 -->
@@ -474,7 +515,10 @@ export function createSettingsModalHTML() {
         <div class="settings-modal-body">
           <!-- 1. 일반 / 디스플레이 설정 -->
           <div class="settings-section active" id="settingGeneral">
-            <div class="setting-group-title">🧭 네비게이션 사이드바 위치</div>
+            <div class="setting-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+              <span>네비게이션 사이드바 위치</span>
+            </div>
             <div class="setting-item-row">
               <div class="setting-desc">
                 <strong>사이드바 배치</strong>
@@ -483,16 +527,19 @@ export function createSettingsModalHTML() {
               <div class="setting-radio-group">
                 <label class="setting-radio-label">
                   <input type="radio" name="navPosition" value="left" id="navPosLeft" checked>
-                  <span>좌측 (Left)</span>
+                  <span>Left</span>
                 </label>
                 <label class="setting-radio-label">
                   <input type="radio" name="navPosition" value="right" id="navPosRight">
-                  <span>우측 (Right)</span>
+                  <span>Right</span>
                 </label>
               </div>
             </div>
 
-            <div class="setting-group-title" style="margin-top: 24px;">🔄 데이터 새로고침 주기</div>
+            <div class="setting-group-title" style="margin-top: 24px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              <span>데이터 새로고침 주기</span>
+            </div>
             <div class="setting-item-row">
               <div class="setting-desc">
                 <strong>자동 백그라운드 갱신 주기</strong>
@@ -505,7 +552,10 @@ export function createSettingsModalHTML() {
               </div>
             </div>
 
-            <div class="setting-group-title" style="margin-top: 24px;">🔇 미디어 사운드</div>
+            <div class="setting-group-title" style="margin-top: 24px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+              <span>미디어 사운드</span>
+            </div>
             <div class="setting-item-row">
               <div class="setting-desc">
                 <strong>임베드 로드 시 자동 음소거</strong>
@@ -520,7 +570,10 @@ export function createSettingsModalHTML() {
 
           <!-- 2. 알림 설정 -->
           <div class="settings-section" id="settingNotifications">
-            <div class="setting-group-title">🔔 푸시 알림 수신</div>
+            <div class="setting-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span>푸시 알림 수신</span>
+            </div>
             <div class="setting-item-row">
               <div class="setting-desc">
                 <strong>전체 푸시 알림 활성화</strong>
@@ -535,7 +588,10 @@ export function createSettingsModalHTML() {
             <div class="setting-sub-options" id="notiSubOptions">
               <div class="setting-item-row sub">
                 <div class="setting-desc">
-                  <span>🎥 유튜브 공식 채널 새 영상 업로드</span>
+                  <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    유튜브 공식 채널 새 영상 업로드
+                  </span>
                 </div>
                 <label class="setting-switch small">
                   <input type="checkbox" id="settingNotiYoutube" checked>
@@ -544,7 +600,10 @@ export function createSettingsModalHTML() {
               </div>
               <div class="setting-item-row sub">
                 <div class="setting-desc">
-                  <span>🔴 유튜브 공식 실시간 라이브 감지</span>
+                  <span>
+                    <span class="live-dot-inline"></span>
+                    유튜브 공식 실시간 라이브 감지
+                  </span>
                 </div>
                 <label class="setting-switch small">
                   <input type="checkbox" id="settingNotiLive" checked>
@@ -553,7 +612,10 @@ export function createSettingsModalHTML() {
               </div>
               <div class="setting-item-row sub">
                 <div class="setting-desc">
-                  <span>📅 당일 스케줄 요약 및 방송/영상 시작 전(30분 이내) 임박 알림</span>
+                  <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    당일 스케줄 요약 및 방송/영상 시작 전(30분 이내) 임박 알림
+                  </span>
                 </div>
                 <label class="setting-switch small">
                   <input type="checkbox" id="settingNotiSchedule" checked>
@@ -565,20 +627,26 @@ export function createSettingsModalHTML() {
 
           <!-- 3. 상단 탭 목록 관리 -->
           <div class="settings-section" id="settingTabs">
-            <div class="setting-group-title">📑 탭 활성화 및 노출 순서</div>
+            <div class="setting-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>탭 활성화 및 노출 순서</span>
+            </div>
             <p class="setting-help-text">화면에 표시할 탭을 켜고 끄거나, 위/아래 화살표로 순서를 변경할 수 있습니다.</p>
             <div class="reorder-list" id="tabReorderList"></div>
           </div>
 
           <!-- 4. 팬페이지 관리 -->
           <div class="settings-section" id="settingFanpages">
-            <div class="setting-group-title">🌟 팬페이지 바로가기 링크 관리</div>
+            <div class="setting-group-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span>팬페이지 바로가기 링크 관리</span>
+            </div>
             <p class="setting-help-text">나만의 팬페이지 바로가기를 추가하거나 순서를 관리할 수 있습니다.</p>
             <div class="reorder-list" id="fanpageReorderList"></div>
             
             <div class="fanpage-add-box">
               <div class="fanpage-input-row">
-                <input type="text" id="newFpIcon" placeholder="이모지 (예: 🌸)" maxlength="4" style="width: 76px;">
+                <input type="text" id="newFpIcon" placeholder="이모지/아이콘" maxlength="4" style="width: 86px;">
                 <input type="text" id="newFpName" placeholder="팬페이지 이름 (예: 리센느 팬카페)" style="flex: 1;">
               </div>
               <div class="fanpage-input-row" style="margin-top: 8px;">

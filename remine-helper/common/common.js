@@ -1196,11 +1196,30 @@ export function renderIframeTab(container, tabConfig, isDark = false) {
 
   const themeStr = isDark ? 'dark' : 'light';
   const finalUrl = tabConfig.iframeUrl.replace('{theme}', themeStr);
-  const sandboxAttr = tabConfig.sandbox ? ` sandbox="${tabConfig.sandbox}"` : '';
+
+  // 팝업 탈출 및 외부 링크(유튜브 등) 연결을 위한 표준 권한 확보
+  let sandboxValue = tabConfig.sandbox || 'allow-scripts allow-same-origin allow-forms allow-popups';
+  if (!sandboxValue.includes('allow-popups-to-escape-sandbox')) {
+    sandboxValue += ' allow-popups-to-escape-sandbox';
+  }
+  if (!sandboxValue.includes('allow-top-navigation-by-user-activation')) {
+    sandboxValue += ' allow-top-navigation-by-user-activation';
+  }
+  if (!sandboxValue.includes('allow-presentation')) {
+    sandboxValue += ' allow-presentation';
+  }
+
   const heightStyle = tabConfig.height ? `height: ${tabConfig.height};` : 'height: 100%;';
 
   container.innerHTML = `
-    <iframe src="${finalUrl}" title="${escapeHtml(tabConfig.label)}" style="width: 100%; ${heightStyle} transition: height 0.3s ease;" frameborder="0"${sandboxAttr}></iframe>
+    <iframe src="${finalUrl}" 
+            title="${escapeHtml(tabConfig.label)}" 
+            style="width: 100%; ${heightStyle} border: none; display: block; transition: height 0.3s ease;" 
+            frameborder="0"
+            sandbox="${sandboxValue}"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+    </iframe>
   `;
 }
 
@@ -1499,7 +1518,7 @@ export function showScheduleModal(scheduleData) {
   let html = '';
   if (scheduleData.date) {
     const timeStr = scheduleData.time ? ` ${scheduleData.time}` : '';
-    html += `<span class="detail-time">📅 일시: ${escapeHtml(scheduleData.date)}${escapeHtml(timeStr)}</span>`;
+    html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>일시: ${escapeHtml(scheduleData.date)}${escapeHtml(timeStr)}</span>`;
   }
   if (scheduleData.type) {
     html += `<p><strong>분류:</strong> ${escapeHtml(scheduleData.type)}</p>`;
@@ -1510,7 +1529,7 @@ export function showScheduleModal(scheduleData) {
   }
   if (scheduleData.link || scheduleData.url) {
     const link = scheduleData.link || scheduleData.url;
-    html += `<p style="margin-top: 10px;"><a href="${link}" target="_blank" rel="noopener noreferrer">🔗 관련 링크 바로가기</a></p>`;
+    html += `<p style="margin-top: 10px;"><a href="${link}" target="_blank" rel="noopener noreferrer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>관련 링크 바로가기</a></p>`;
   }
 
   bodyContent.innerHTML = html;
@@ -2174,8 +2193,12 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
           <span class="reorder-item-label">${iconHtml}<span>${escapeHtml(tab.label || tab.id)}</span></span>
         </div>
         <div class="reorder-btn-group">
-          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>▲</button>
-          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === tabList.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </button>
+          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === tabList.length - 1 ? 'disabled' : ''}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
         </div>
       `;
       listEl.appendChild(row);
@@ -2235,9 +2258,15 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
           <span class="reorder-item-sub">${escapeHtml(fp.url)}</span>
         </div>
         <div class="reorder-btn-group">
-          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>▲</button>
-          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === fanpages.length - 1 ? 'disabled' : ''}>▼</button>
-          <button class="reorder-delete-btn" data-id="${fp.id}" title="삭제">🗑️</button>
+          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </button>
+          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === fanpages.length - 1 ? 'disabled' : ''}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <button class="reorder-delete-btn" data-id="${fp.id}" title="삭제">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
         </div>
       `;
       listEl.appendChild(row);

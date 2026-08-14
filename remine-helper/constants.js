@@ -101,7 +101,7 @@ export const TAB_CONFIG_LIST = [
     channelKey: "clip",
     type: "iframe",
     iframeUrl: "https://clip.naver.com/@themuzeent?tab=all&filter=all&theme={theme}",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups",
+    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-presentation",
     height: "100%",
     scrollable: false
   },
@@ -110,8 +110,8 @@ export const TAB_CONFIG_LIST = [
     label: "SceneFlix",
     svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='4' width='20' height='16' rx='2.5'></rect><polygon points='10 8.5 16 12 10 15.5 10 8.5' fill='currentColor'></polygon></svg>",
     type: "iframe",
-    iframeUrl: "https://adam-yam.github.io/SCENE-FLIX/?theme={theme}",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups",
+    iframeUrl: "https://adam-yam.github.io/SCENE-FLIX/?tab=allvideos&theme={theme}",
+    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-presentation",
     height: "100%",
     scrollable: false
   }
