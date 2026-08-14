@@ -16,7 +16,8 @@
     "https://*.youtube.com/feeds/*",
     "https://blip.kr/*",
     "https://*.mnetplus.world/*",
-    "https://*.dcinside.com/*"
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -41,8 +42,18 @@
     "default_path": "sidepanel.html"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src https://*.notion.so https://notion.so https://*.notion.site https://*.mnetplus.world https://blip.kr https://rescene.love https://rescene.muzip.link https://rescenefan.com https://rescene.fan https://adam-yam.github.io https://*.instagram.com https://*.twitter.com https://www.tiktok.com https://clip.naver.com/ https://x.com/ https://*.dcinside.com/ https://*.bstage.in; "
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' https://*.mnetplus.world https://blip.kr https://adam-yam.github.io https://*.instagram.com https://*.twitter.com https://platform.twitter.com https://*.x.com https://syndication.twitter.com https://www.tiktok.com https://clip.naver.com/ https://x.com/ https://*.bstage.in https://*.youtube.com; ",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' https://platform.twitter.com https://platform.x.com https://cdn.syndication.twimg.com; frame-src https://platform.twitter.com https://platform.x.com https://*.x.com https://syndication.twitter.com;"
   },
+  "sandbox": {
+    "pages": ["x_timeline.html"]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["x_timeline.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "declarative_net_request": {
     "rule_resources": [
       {

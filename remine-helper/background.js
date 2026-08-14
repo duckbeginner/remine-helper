@@ -16,13 +16,7 @@ const CSP_URL_PATTERNS = [
 
 
 // 지정 사이트를 대상으로 userAgent를 변경하는 처리
-const USER_AGENT_RULES = [
-  {
-    urlPattern: "*://m.dcinside.com/*",
-    resourceTypes: ["sub_frame"],
-    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/149.0.7827.199 Mobile/15E148 Safari/604.1"
-  }
-];
+const USER_AGENT_RULES = [];
 
 
 
@@ -405,15 +399,104 @@ function sendNotification(title, message) {
   });
 }
 
-// background.js - Mnet Plus (b.stage) API를 이용한 동적 피드 수집
+// =========================================================================
+// 인스타그램 공식 계정(rescene_official) Web Profile Info API 직접 수집 엔진
+// =========================================================================
+async function fetchInstagramDirect() {
+  try {
+    const res = await fetch("https://www.instagram.com/api/v1/users/web_profile_info/?username=rescene_official", {
+      headers: {
+        "X-IG-App-ID": "936619743392459",
+        "Referer": "https://www.instagram.com/rescene_official/",
+        "Sec-Fetch-Site": "same-origin"
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const edges = json?.data?.user?.edge_owner_to_timeline_media?.edges || [];
+    if (edges.length === 0) return null;
 
+    const feeds = edges.slice(0, 10).map(edge => {
+      const node = edge.node;
+      const shortcode = node.shortcode;
+      const isVideo = node.is_video || node.__typename === "GraphVideo";
+      const type = isVideo ? "reel" : "p";
+      const caption = node.edge_media_to_caption?.edges?.[0]?.node?.text || "내용 없음";
+      const thumb = node.display_url || (node.thumbnail_resources && node.thumbnail_resources[0]?.src) || "icons/rescene-logo.png";
+
+      return {
+        id: node.id,
+        shortcode: shortcode,
+        type: type,
+        link: `https://www.instagram.com/${type}/${shortcode}/`,
+        desc: caption,
+        thumb: thumb,
+        taken_at: node.taken_at_timestamp,
+        author: "rescene_official"
+      };
+    });
+
+    console.log("📸 인스타그램 공식 API 직접 수집 성공 (최신 게시물):", feeds.length);
+    return feeds;
+  } catch (err) {
+    console.warn("⚠️ 인스타그램 직접 수집 지연 (Mnet 백업 사용):", err.message);
+    return null;
+  }
+}
+
+// =========================================================================
+// 틱톡 공식 프로필(@rescene_official) Embed SSR 비디오 목록 직접 수집 엔진
+// =========================================================================
+async function fetchTikTokDirect() {
+  try {
+    const res = await fetch("https://www.tiktok.com/embed/@rescene_official", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    const scripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)];
+    for (let s of scripts) {
+      if (s[1].includes("videoList")) {
+        const data = JSON.parse(s[1]);
+        const videoList = data?.source?.data?.["/embed/@rescene_official"]?.videoList || [];
+        if (videoList.length > 0) {
+          const feeds = videoList.map(v => ({
+            id: v.id,
+            title: v.desc || v.title || "TikTok Video",
+            link: `https://www.tiktok.com/@rescene_official/video/${v.id}`,
+            cover: v.coverUrl || v.dynamicCoverUrl || v.originCoverUrl || "icons/rescene-logo.png",
+            playCount: v.playCount || 0,
+            author: v.authorUniqueId || "rescene_official"
+          }));
+          console.log("🎵 틱톡 공식 피드 직접 수집 성공 (최신 비디오):", feeds.length);
+          return feeds;
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn("⚠️ 틱톡 직접 수집 지연:", err.message);
+    return null;
+  }
+}
+
+// background.js - Mnet Plus (b.stage) 및 공식 API 하이브리드 피드 수집
 async function fetchFeedsFromMnet() {
   try {
+    // 0️⃣ 공식 API 직접 수집 우선 시도 (인스타그램 & 틱톡)
+    let [directInstaFeeds, directTikTokFeeds] = await Promise.all([
+      fetchInstagramDirect(),
+      fetchTikTokDirect()
+    ]);
+
     const fetchOptions = {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'accept': 'application/json',
-        'accept-language': 'ko-KR,ko;q=0.9'
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://artist.mnetplus.world/main/stg/rescene-official",
+        "Sec-Fetch-Site": "same-origin"
       }
     };
 
@@ -450,10 +533,10 @@ async function fetchFeedsFromMnet() {
     // 2️⃣ 추출된 ID가 있다면 X 피드 가져오기
     let xFeeds = [];
     if (xDatasetId) {
-      const xApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${xDatasetId}?pageSize=5&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
+      const xApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${xDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
       const xRes = await fetch(xApiUrl, fetchOptions);
       const xData = await xRes.json();
-      xFeeds = xData.items.slice(0, 4).map(item => ({
+      xFeeds = (xData.items || []).map(item => ({
         id: item.typeId,
         link: item.link,
         desc: item.description || "내용 없음",
@@ -463,13 +546,13 @@ async function fetchFeedsFromMnet() {
       }));
     }
 
-    // 3️⃣ 추출된 ID가 있다면 인스타그램 피드 가져오기
-    let instaFeeds = [];
-    if (instaDatasetId) {
-      const instaApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${instaDatasetId}?pageSize=5&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
+    // 3️⃣ 인스타그램 피드: 직접 수집 데이터 우선 사용, 실패 시 Mnet 백업 사용
+    let instaFeeds = directInstaFeeds || [];
+    if (instaFeeds.length === 0 && instaDatasetId) {
+      const instaApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${instaDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
       const instaRes = await fetch(instaApiUrl, fetchOptions);
       const instaData = await instaRes.json();
-      instaFeeds = instaData.items.slice(0, 4).map(item => ({
+      instaFeeds = (instaData.items || []).map(item => ({
         id: item.typeId,
         link: item.link,
         desc: item.description || "내용 없음",
@@ -479,12 +562,15 @@ async function fetchFeedsFromMnet() {
       }));
     }
 
-    // 4️⃣ 추출한 객체 배열을 스토리지에 저장!
-    chrome.storage.local.set({ xFeeds, instaFeeds });
-    console.log("✅ Mnet Plus 피드 완벽 연동 성공!", { xFeeds, instaFeeds });
+    // 4️⃣ 틱톡 피드
+    let tiktokFeeds = directTikTokFeeds || [];
+
+    // 5️⃣ 추출한 객체 배열을 스토리지에 통합 저장!
+    chrome.storage.local.set({ xFeeds, instaFeeds, tiktokFeeds });
+    console.log("✅ SNS 피드 최신화 완료!", { xCount: xFeeds.length, instaCount: instaFeeds.length, tiktokCount: tiktokFeeds.length });
 
   } catch (error) {
-    console.error("❌ Mnet Plus 피드 수집 실패:", error);
+    console.error("❌ 피드 수집 실패:", error);
   }
 }
 
