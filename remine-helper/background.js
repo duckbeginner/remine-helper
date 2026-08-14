@@ -639,9 +639,8 @@ function pickBestTitle(title1, title2) {
 }
 
 function sendNotification(title, message, category = 'all') {
-  if (typeof chrome !== 'undefined' && chrome.storage) {
-    const storageArea = chrome.storage.sync || chrome.storage.local;
-    storageArea.get(['userSettings'], (res) => {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['userSettings'], (res) => {
       const noti = res && res.userSettings && res.userSettings.notifications;
       if (noti) {
         if (noti.enabled === false) return; // 알림 마스터 OFF
