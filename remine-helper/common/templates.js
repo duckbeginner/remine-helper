@@ -1,5 +1,5 @@
 // common/templates.js - 원자/분자/섹션 계층형 HTML 컴포넌트 팩토리
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP } from '../constants.js';
+import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, REFRESH_INTERVAL_OPTIONS } from '../constants.js';
 
 // --- 유틸리티 ---
 export function escapeHtml(str) {
@@ -61,6 +61,8 @@ export function createTabButtonHTML(tab, channelMap = CHANNEL_DATA_MAP) {
       const isCustom = chData.img.includes('logo') || chData.img.includes('dc') ? ' tab-icon-dc' : '';
       iconHtml = `<span class="tab-icon-wrap"><img class="${isCustom}" src="${chData.img}" alt="${escapeHtml(tab.label)}"></span>`;
     }
+  } else if (tab.svg) {
+    iconHtml = `<span class="tab-icon-wrap">${tab.svg}</span>`;
   } else if (tab.icon) {
     iconHtml = `<span class="tab-icon-text">${tab.icon}</span>`;
   }
@@ -158,10 +160,81 @@ export function createFanpageLinkCardHTML(fanpage) {
    3. 섹션 및 복합 모듈 (Organisms / Section Modules)
    ========================================================================= */
 
-// 상단 탭 네비게이션 바 생성
-export function createTabBarHTML(tabs = TAB_CONFIG_LIST, { tabBarId = 'mainTabBar' } = {}) {
+// 세로형 사이드 네비게이션 바 생성 (신규 레이아웃)
+export function createVerticalSidebarHTML(tabs = TAB_CONFIG_LIST, { sidebarId = 'mainVerticalSidebar', sliderId = 'tabGlassSlider', activeTabId = 'tabHome' } = {}) {
   const enabledTabs = tabs.filter(t => t.enabled !== false);
-  const buttonsHtml = enabledTabs.map(t => createTabButtonHTML(t)).join('\n    ');
+  const buttonsHtml = enabledTabs.map((tab, idx) => {
+    const isFirstOrActive = activeTabId ? (tab.id === activeTabId) : (tab.defaultActive || idx === 0);
+    const activeClass = isFirstOrActive ? ' active' : '';
+    let iconHtml = '';
+    if (tab.channelKey && CHANNEL_DATA_MAP[tab.channelKey]) {
+      const ch = CHANNEL_DATA_MAP[tab.channelKey];
+      if (ch.svg) iconHtml = `<span class="vtab-icon">${ch.svg}</span>`;
+      else if (ch.img) iconHtml = `<span class="vtab-icon"><img src="${ch.img}" alt="${escapeHtml(tab.label)}"></span>`;
+    } else if (tab.svg) {
+      iconHtml = `<span class="vtab-icon">${tab.svg}</span>`;
+    } else if (tab.icon) {
+      iconHtml = `<span class="vtab-icon-emoji">${tab.icon}</span>`;
+    }
+    return `
+      <button class="vtab-btn${activeClass}" data-target="${tab.id}" title="${escapeHtml(tab.label)}">
+        ${iconHtml}
+        <span class="vtab-tooltip">${escapeHtml(tab.label)}</span>
+      </button>
+    `;
+  }).join('\n');
+
+  return `
+    <nav class="vertical-sidebar" id="${sidebarId}">
+      <div class="vtab-group-top">
+        <div class="vtab-slider" id="${sliderId}"></div>
+        ${buttonsHtml}
+      </div>
+      <div class="vtab-group-bottom">
+        <button class="vtab-util-btn" id="openDashboardBtn" title="대시보드 새 탭 열기">
+          <span class="vtab-icon-svg">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            </svg>
+          </span>
+          <span class="vtab-btn-label">보드</span>
+          <span class="vtab-tooltip">대시보드</span>
+        </button>
+        <button class="vtab-util-btn" id="themeToggleBtn" title="테마 전환">
+          <span class="vtab-icon-svg" id="themeIconHolder">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+            </svg>
+          </span>
+          <span class="vtab-btn-label">테마</span>
+          <span class="vtab-tooltip">테마 전환</span>
+        </button>
+        <button class="vtab-util-btn" id="openSettingsBtn" title="사용자 설정">
+          <span class="vtab-icon-svg">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </span>
+          <span class="vtab-btn-label">설정</span>
+          <span class="vtab-tooltip">설정</span>
+        </button>
+      </div>
+    </nav>
+  `;
+}
+
+// 상단 탭 네비게이션 바 생성 (기존 호환)
+export function createTabBarHTML(tabs = TAB_CONFIG_LIST, { tabBarId = 'mainTabBar', activeTabId = '' } = {}) {
+  const enabledTabs = tabs.filter(t => t.enabled !== false);
+  const buttonsHtml = enabledTabs.map((t, idx) => {
+    const isFirstOrActive = activeTabId ? (t.id === activeTabId) : (t.defaultActive || idx === 0);
+    return createTabButtonHTML({ ...t, defaultActive: isFirstOrActive });
+  }).join('\n    ');
 
   return `
   <div class="panel-tab-bar" id="${tabBarId}">
@@ -172,11 +245,12 @@ export function createTabBarHTML(tabs = TAB_CONFIG_LIST, { tabBarId = 'mainTabBa
 }
 
 // 각 탭의 컨텐츠 컨테이너 생성
-export function createTabContainersHTML(tabs = TAB_CONFIG_LIST) {
+export function createTabContainersHTML(tabs = TAB_CONFIG_LIST, activeTabId = 'tabHome') {
   const enabledTabs = tabs.filter(t => t.enabled !== false);
 
-  return enabledTabs.map(tab => {
-    const activeClass = tab.defaultActive ? ' active' : '';
+  return enabledTabs.map((tab, idx) => {
+    const isFirstOrActive = activeTabId ? (tab.id === activeTabId) : (tab.defaultActive || idx === 0);
+    const activeClass = isFirstOrActive ? ' active' : '';
 
     if (tab.type === 'home') {
       return `<div class="panel-tab-content${activeClass}" id="${tab.id}"></div>`;
@@ -218,8 +292,8 @@ export function createLiveBannerHTML() {
   return `<a href="#" id="liveBanner" target="_blank" style="display: none;">🔴 [ON AIR] 리센느 실시간 라이브 중! 클릭 이동</a>`;
 }
 
-// 공식 채널 바로가기 허브 카드
-export function createHubCardHTML(channels = OFFICIAL_CHANNELS, channelMap = CHANNEL_DATA_MAP, { showControls = true } = {}) {
+// 공식 채널 바로가기 허브 카드 (컨트롤 버튼 기본 제거)
+export function createHubCardHTML(channels = OFFICIAL_CHANNELS, channelMap = CHANNEL_DATA_MAP, { showControls = false } = {}) {
   const iconsHtml = channels.map(ch => createHubIconButtonHTML(ch, channelMap)).join('\n      ');
   const controlsHtml = showControls ? createThemeToggleButtonsHTML() : '';
 
@@ -356,4 +430,152 @@ export function createAllHomeModulesHTML({ fanpages = FANPAGE_LIST, channels = O
     createScheduleCardHTML(),
     createFanpageCardHTML(fanpages)
   ].join('\n');
+}
+
+// 사용자 설정 통합 모달
+export function createSettingsModalHTML() {
+  return `
+    <div class="settings-modal-overlay" id="settingsModalOverlay">
+      <div class="settings-modal-card">
+        <div class="settings-modal-header">
+          <div class="settings-modal-title">
+            <span>⚙️ 사용자 설정</span>
+          </div>
+          <button class="settings-close-btn" id="settingsCloseBtn">✕</button>
+        </div>
+
+        <!-- 설정 서브 탭 네비게이션 -->
+        <div class="settings-tab-nav" id="settingsTabNav">
+          <button class="settings-nav-btn active" data-tab="settingGeneral">일반 / 디스플레이</button>
+          <button class="settings-nav-btn" data-tab="settingNotifications">알림</button>
+          <button class="settings-nav-btn" data-tab="settingTabs">탭 관리</button>
+          <button class="settings-nav-btn" data-tab="settingFanpages">팬페이지 관리</button>
+        </div>
+
+        <div class="settings-modal-body">
+          <!-- 1. 일반 / 디스플레이 설정 -->
+          <div class="settings-section active" id="settingGeneral">
+            <div class="setting-group-title">🧭 네비게이션 사이드바 위치</div>
+            <div class="setting-item-row">
+              <div class="setting-desc">
+                <strong>사이드바 배치</strong>
+                <p>사이드 탭바를 화면 좌측 또는 우측에 배치합니다.</p>
+              </div>
+              <div class="setting-radio-group">
+                <label class="setting-radio-label">
+                  <input type="radio" name="navPosition" value="left" id="navPosLeft" checked>
+                  <span>좌측 (Left)</span>
+                </label>
+                <label class="setting-radio-label">
+                  <input type="radio" name="navPosition" value="right" id="navPosRight">
+                  <span>우측 (Right)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-group-title" style="margin-top: 24px;">🔄 데이터 새로고침 주기</div>
+            <div class="setting-item-row">
+              <div class="setting-desc">
+                <strong>자동 백그라운드 갱신 주기</strong>
+                <p>유튜브 새 영상, 스케줄, 소셜 피드 등의 정보를 백그라운드에서 자동으로 새로고침하는 주기를 설정합니다.</p>
+              </div>
+              <div class="setting-select-wrap">
+                <select id="settingRefreshInterval" class="setting-select">
+                  ${REFRESH_INTERVAL_OPTIONS.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`).join('\n')}
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-group-title" style="margin-top: 24px;">🔇 미디어 사운드</div>
+            <div class="setting-item-row">
+              <div class="setting-desc">
+                <strong>임베드 로드 시 자동 음소거</strong>
+                <p>인스타그램, 틱톡, 트위터 피드 진입 시 소리를 기본 음소거 상태로 시작합니다.</p>
+              </div>
+              <label class="setting-switch">
+                <input type="checkbox" id="settingMuteOnLoad">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. 알림 설정 -->
+          <div class="settings-section" id="settingNotifications">
+            <div class="setting-group-title">🔔 푸시 알림 수신</div>
+            <div class="setting-item-row">
+              <div class="setting-desc">
+                <strong>전체 푸시 알림 활성화</strong>
+                <p>새로운 소식이 있을 때 브라우저 알림을 받습니다.</p>
+              </div>
+              <label class="setting-switch">
+                <input type="checkbox" id="settingNotiMaster" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="setting-sub-options" id="notiSubOptions">
+              <div class="setting-item-row sub">
+                <div class="setting-desc">
+                  <span>🎥 유튜브 공식 채널 새 영상 업로드</span>
+                </div>
+                <label class="setting-switch small">
+                  <input type="checkbox" id="settingNotiYoutube" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="setting-item-row sub">
+                <div class="setting-desc">
+                  <span>🔴 유튜브 공식 실시간 라이브 감지</span>
+                </div>
+                <label class="setting-switch small">
+                  <input type="checkbox" id="settingNotiLive" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="setting-item-row sub">
+                <div class="setting-desc">
+                  <span>📅 당일 스케줄 요약 및 방송/영상 시작 전(30분 이내) 임박 알림</span>
+                </div>
+                <label class="setting-switch small">
+                  <input type="checkbox" id="settingNotiSchedule" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 상단 탭 목록 관리 -->
+          <div class="settings-section" id="settingTabs">
+            <div class="setting-group-title">📑 탭 활성화 및 노출 순서</div>
+            <p class="setting-help-text">화면에 표시할 탭을 켜고 끄거나, 위/아래 화살표로 순서를 변경할 수 있습니다.</p>
+            <div class="reorder-list" id="tabReorderList"></div>
+          </div>
+
+          <!-- 4. 팬페이지 관리 -->
+          <div class="settings-section" id="settingFanpages">
+            <div class="setting-group-title">🌟 팬페이지 바로가기 링크 관리</div>
+            <p class="setting-help-text">나만의 팬페이지 바로가기를 추가하거나 순서를 관리할 수 있습니다.</p>
+            <div class="reorder-list" id="fanpageReorderList"></div>
+            
+            <div class="fanpage-add-box">
+              <div class="fanpage-input-row">
+                <input type="text" id="newFpIcon" placeholder="이모지 (예: 🌸)" maxlength="4" style="width: 76px;">
+                <input type="text" id="newFpName" placeholder="팬페이지 이름 (예: 리센느 팬카페)" style="flex: 1;">
+              </div>
+              <div class="fanpage-input-row" style="margin-top: 8px;">
+                <input type="url" id="newFpUrl" placeholder="웹사이트 URL (https://...)" style="flex: 1;">
+                <button class="setting-action-btn primary" id="addNewFanpageBtn">추가</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-modal-footer">
+          <button class="setting-action-btn danger-outline" id="resetSettingsBtn">기본값 복원</button>
+          <span class="settings-save-notice" id="settingsSaveNotice"></span>
+          <button class="setting-action-btn primary" id="saveSettingsDoneBtn">완료</button>
+        </div>
+      </div>
+    </div>
+  `;
 }

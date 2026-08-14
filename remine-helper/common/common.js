@@ -1,6 +1,6 @@
 // common/common.js - 공통 UI 로직, 동적 탭 엔진, 인터랙션 및 렌더러 모듈
-import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP } from '../constants.js';
-import { escapeHtml, createVideoCardHTML } from './templates.js';
+import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST } from '../constants.js';
+import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML } from './templates.js';
 
 /* =========================================================================
    0. 3단계 순환 테마 엔진 (3-State Theme Engine: System -> Dark -> Light)
@@ -36,15 +36,45 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
       }
     });
 
-    if (themeToggleBtn) {
-      if (mode === 'dark') {
-        themeToggleBtn.innerText = '🌙 다크';
-      } else if (mode === 'light') {
-        themeToggleBtn.innerText = '☀️ 라이트';
+    // 문서 내 모든 테마 토글 버튼 상태 업데이트 (사이드바 및 대시보드)
+    const allThemeBtns = document.querySelectorAll('#themeToggleBtn');
+    allThemeBtns.forEach(btn => {
+      const svgHolder = btn.querySelector('.vtab-icon-svg');
+      const emojiEl = btn.querySelector('.vtab-icon-emoji');
+      const labelEl = btn.querySelector('.vtab-btn-label');
+
+      if (svgHolder) {
+        if (mode === 'dark') {
+          svgHolder.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+          if (labelEl) labelEl.textContent = '다크';
+        } else if (mode === 'light') {
+          svgHolder.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+          if (labelEl) labelEl.textContent = '라이트';
+        } else {
+          svgHolder.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path></svg>`;
+          if (labelEl) labelEl.textContent = '시스템';
+        }
+      } else if (emojiEl && labelEl) {
+        if (mode === 'dark') {
+          emojiEl.textContent = '🌙';
+          labelEl.textContent = '다크';
+        } else if (mode === 'light') {
+          emojiEl.textContent = '☀️';
+          labelEl.textContent = '라이트';
+        } else {
+          emojiEl.textContent = '💻';
+          labelEl.textContent = '시스템';
+        }
       } else {
-        themeToggleBtn.innerText = '💻 시스템';
+        if (mode === 'dark') {
+          btn.innerText = '🌙 다크';
+        } else if (mode === 'light') {
+          btn.innerText = '☀️ 라이트';
+        } else {
+          btn.innerText = '💻 시스템';
+        }
       }
-    }
+    });
 
     if (typeof onThemeChange === 'function') {
       onThemeChange(mode, isDark);
@@ -77,20 +107,24 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
       });
     });
 
-    // 버튼 클릭 시 3단계 순환 (시스템 -> 다크 -> 라이트)
-    if (themeToggleBtn) {
-      themeToggleBtn.addEventListener('click', () => {
-        chrome.storage.local.get(['themeMode'], (res) => {
-          let currentMode = res.themeMode || 'system';
-          let nextMode = 'system';
+    // 전역 이벤트 위임: 어떤 #themeToggleBtn이든 클릭 시 3단계 순환 (시스템 -> 다크 -> 라이트)
+    if (!window.__themeDelegationInitialized) {
+      window.__themeDelegationInitialized = true;
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#themeToggleBtn');
+        if (btn) {
+          chrome.storage.local.get(['themeMode'], (res) => {
+            let currentMode = res.themeMode || 'system';
+            let nextMode = 'system';
 
-          if (currentMode === 'system') nextMode = 'dark';
-          else if (currentMode === 'dark') nextMode = 'light';
-          else if (currentMode === 'light') nextMode = 'system';
+            if (currentMode === 'system') nextMode = 'dark';
+            else if (currentMode === 'dark') nextMode = 'light';
+            else if (currentMode === 'light') nextMode = 'system';
 
-          chrome.storage.local.set({ themeMode: nextMode });
-          applyTheme(nextMode);
-        });
+            chrome.storage.local.set({ themeMode: nextMode });
+            applyTheme(nextMode);
+          });
+        }
       });
     }
   }
@@ -105,10 +139,18 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange } = {}) {
 export function updateGlassSlider(targetBtn, sliderEl) {
   if (!sliderEl || !targetBtn) return;
 
-  // 좌우 1px inset — 버튼 테두리와 슬라이더 테두리가 겹쳐 오버되는 것을 방지
-  const inset = 1;
-  sliderEl.style.left = `${targetBtn.offsetLeft + inset}px`;
-  sliderEl.style.width = `${targetBtn.offsetWidth - inset * 2}px`;
+  const isVertical = sliderEl.classList.contains('vtab-slider') || targetBtn.classList.contains('vtab-btn');
+  const inset = 2;
+
+  if (isVertical) {
+    sliderEl.style.top = `${targetBtn.offsetTop + inset}px`;
+    sliderEl.style.height = `${targetBtn.offsetHeight - inset * 2}px`;
+    sliderEl.style.left = `${targetBtn.offsetLeft + inset}px`;
+    sliderEl.style.width = `${targetBtn.offsetWidth - inset * 2}px`;
+  } else {
+    sliderEl.style.left = `${targetBtn.offsetLeft + inset}px`;
+    sliderEl.style.width = `${targetBtn.offsetWidth - inset * 2}px`;
+  }
 }
 
 // 지정된 컨테이너 또는 전체 페이지 내의 모든 미디어(iframe, video, audio) 재생 및 소리 즉시 중지
@@ -151,7 +193,7 @@ export function stopAllIframeMedia(container = document, forceReset = false) {
 export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { onTabChange } = {}) {
   if (!tabBarEl) return;
 
-  const tabButtons = tabBarEl.querySelectorAll('.panel-tab-btn');
+  const tabButtons = tabBarEl.querySelectorAll('.panel-tab-btn, .vtab-btn');
   const tabContents = document.querySelectorAll('.panel-tab-content');
   const loadedMap = {};
 
@@ -159,7 +201,7 @@ export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { o
   if (sliderEl) {
     tabBarEl.addEventListener('mouseenter', () => {
       sliderEl.classList.add('visible');
-      const activeBtn = tabBarEl.querySelector('.panel-tab-btn.active');
+      const activeBtn = tabBarEl.querySelector('.panel-tab-btn.active, .vtab-btn.active');
       if (activeBtn) updateGlassSlider(activeBtn, sliderEl);
     });
 
@@ -175,7 +217,7 @@ export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { o
     });
 
     window.addEventListener('resize', () => {
-      const currentActive = tabBarEl.querySelector('.panel-tab-btn.active');
+      const currentActive = tabBarEl.querySelector('.panel-tab-btn.active, .vtab-btn.active');
       if (currentActive) updateGlassSlider(currentActive, sliderEl);
     });
   }
@@ -250,73 +292,89 @@ export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { o
 export function setupHorizontalScroller(target) {
   const orig = typeof target === 'string' ? document.getElementById(target) : target;
   if (!orig) return;
-  if (orig.classList.contains('hscroll-container')) return;
 
-  const leftBtn = document.createElement('button');
-  leftBtn.className = 'hscroll-btn left';
-  leftBtn.setAttribute('aria-label', '이전 영상');
-  leftBtn.innerText = '◀';
+  let viewport = orig.querySelector('.hscroll-viewport');
 
-  const rightBtn = document.createElement('button');
-  rightBtn.className = 'hscroll-btn right';
-  rightBtn.setAttribute('aria-label', '다음 영상');
-  rightBtn.innerText = '▶';
+  // viewport가 없으면 생성하여 자식들을 안전하게 이동
+  if (!viewport) {
+    // 기존 버튼들이 남아있다면 정리
+    const oldBtns = orig.querySelectorAll('.hscroll-btn');
+    oldBtns.forEach(b => b.remove());
 
-  const viewport = document.createElement('div');
-  viewport.className = 'hscroll-viewport';
-  while (orig.firstChild) viewport.appendChild(orig.firstChild);
-  orig.appendChild(viewport);
-  orig.classList.add('hscroll-container');
-  orig.insertBefore(leftBtn, viewport);
-  orig.appendChild(rightBtn);
-
-  function scrollByCards(count) {
-    const card = viewport.querySelector('.video-card');
-    const gap = parseFloat(getComputedStyle(viewport).gap) || 8;
-    const cardWidth = card ? Math.ceil(card.getBoundingClientRect().width + gap) : 180;
-    viewport.scrollBy({ left: cardWidth * count, behavior: 'smooth' });
-  }
-
-  leftBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    scrollByCards(-2);
-  });
-
-  rightBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    scrollByCards(2);
-  });
-
-  viewport.addEventListener('wheel', (e) => {
-    if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
-      e.preventDefault();
-      viewport.scrollLeft += e.deltaY;
+    viewport = document.createElement('div');
+    viewport.className = 'hscroll-viewport';
+    while (orig.firstChild) {
+      viewport.appendChild(orig.firstChild);
     }
-  }, { passive: false });
+    orig.appendChild(viewport);
+    orig.classList.add('hscroll-container');
 
-  // 마우스 드래그 스크롤 지원
-  let isDown = false;
-  let startX;
-  let scrollLeft;
+    const leftBtn = document.createElement('button');
+    leftBtn.className = 'hscroll-btn left';
+    leftBtn.setAttribute('aria-label', '이전 영상');
+    leftBtn.innerText = '◀';
 
-  viewport.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    isDown = true;
-    startX = e.pageX - viewport.offsetLeft;
-    scrollLeft = viewport.scrollLeft;
-  });
+    const rightBtn = document.createElement('button');
+    rightBtn.className = 'hscroll-btn right';
+    rightBtn.setAttribute('aria-label', '다음 영상');
+    rightBtn.innerText = '▶';
 
-  viewport.addEventListener('mouseleave', () => { isDown = false; });
-  viewport.addEventListener('mouseup', () => { isDown = false; });
+    orig.insertBefore(leftBtn, viewport);
+    orig.appendChild(rightBtn);
 
-  viewport.addEventListener('mousemove', (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - viewport.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    viewport.scrollLeft = scrollLeft - walk;
-  });
+    function scrollByCards(count) {
+      const card = viewport.querySelector('.video-card');
+      const gap = parseFloat(getComputedStyle(viewport).gap) || 8;
+      const cardWidth = card ? Math.ceil(card.getBoundingClientRect().width + gap) : 180;
+      viewport.scrollBy({ left: cardWidth * count, behavior: 'smooth' });
+    }
+
+    leftBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      scrollByCards(-2);
+    });
+
+    rightBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      scrollByCards(2);
+    });
+
+    viewport.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
+        e.preventDefault();
+        viewport.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+
+    // 마우스 드래그 스크롤 지원
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    viewport.addEventListener('mousedown', (e) => {
+      isDown = true;
+      startX = e.pageX - viewport.offsetLeft;
+      scrollLeft = viewport.scrollLeft;
+    });
+
+    viewport.addEventListener('mouseleave', () => {
+      isDown = false;
+    });
+
+    viewport.addEventListener('mouseup', () => {
+      isDown = false;
+    });
+
+    viewport.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - viewport.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      viewport.scrollLeft = scrollLeft - walk;
+    });
+  }
 }
+
 
 /* =========================================================================
    3. 공식 채널 허브 드래그 앤 드롭 정렬 엔진 (Hub Reordering Engine)
@@ -412,22 +470,30 @@ export function setupHubIconReordering(containerEl, onOrderChanged) {
 
 export function renderOfficialYoutubeList(container, videos = []) {
   if (!container) return;
-  if (!videos || videos.length === 0) {
-    container.innerHTML = '<p style="font-size: 12px; color: #777; text-align: center; width: 100%;">등록된 영상이 없습니다.</p>';
-    return;
-  }
+  const cardsHtml = (!videos || videos.length === 0)
+    ? '<p style="font-size: 12px; color: #777; text-align: center; width: 100%;">등록된 영상이 없습니다.</p>'
+    : videos.map(v => createVideoCardHTML(v)).join('');
 
-  container.innerHTML = videos.map(v => createVideoCardHTML(v)).join('');
+  const viewport = container.querySelector('.hscroll-viewport');
+  if (viewport) {
+    viewport.innerHTML = cardsHtml;
+  } else {
+    container.innerHTML = cardsHtml;
+  }
 }
 
 export function renderWoniYoutubeList(container, videos = []) {
   if (!container) return;
-  if (!videos || videos.length === 0) {
-    container.innerHTML = '<p style="font-size: 12px; color: #777; text-align: center; width: 100%;">등록된 영상이 없습니다.</p>';
-    return;
-  }
+  const cardsHtml = (!videos || videos.length === 0)
+    ? '<p style="font-size: 12px; color: #777; text-align: center; width: 100%;">등록된 영상이 없습니다.</p>'
+    : videos.map(v => createVideoCardHTML(v)).join('');
 
-  container.innerHTML = videos.map(v => createVideoCardHTML(v)).join('');
+  const viewport = container.querySelector('.hscroll-viewport');
+  if (viewport) {
+    viewport.innerHTML = cardsHtml;
+  } else {
+    container.innerHTML = cardsHtml;
+  }
 }
 
 /* =========================================================================
@@ -444,27 +510,289 @@ export function parseSafeDate(startTimeStr) {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
+export function cleanScheduleText(text) {
+  if (!text) return "";
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
+    .replace(/[<>\[\]{}()_!?,.~`'"•\-\/]/g, ' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeTitle(title) {
+  let clean = cleanScheduleText(title);
+
+  const synonyms = {
+    'show champion': '쇼챔피언',
+    'm countdown': '엠카운트다운',
+    'music bank': '뮤직뱅크',
+    'inkigayo': '인기가요',
+    'the show': '더쇼',
+    'music core': '음악중심',
+    'kcon': '케이콘',
+    'k world dream awards': '케이월드드림어워즈',
+    'k-world dream awards': '케이월드드림어워즈',
+    'kwda': '케이월드드림어워즈',
+    'dream concert': '드림콘서트'
+  };
+
+  for (let [en, ko] of Object.entries(synonyms)) {
+    if (clean.includes(en)) {
+      clean = clean.replace(new RegExp(en, 'g'), ko);
+    }
+  }
+
+  return clean.replace(/\s+/g, '');
+}
+
+export function areSchedulesDuplicate(item1, item2) {
+  const t1 = item1.title || item1.message || "";
+  const t2 = item2.title || item2.message || "";
+
+  // 1단계: 정규화 텍스트 완전 일치 및 포함 관계
+  const n1 = normalizeTitle(t1);
+  const n2 = normalizeTitle(t2);
+  if (n1 && n2) {
+    if (n1 === n2) return true;
+    if ((n1.includes(n2) || n2.includes(n1)) && Math.min(n1.length, n2.length) >= 3) {
+      return true;
+    }
+  }
+
+  // 2단계: 괄호 안팎 한/영 분리 매칭
+  const extractParts = (str) => {
+    const parts = [str];
+    const match = str.match(/(.*?)\((.*?)\)/);
+    if (match) {
+      if (match[1].trim()) parts.push(match[1].trim());
+      if (match[2].trim()) parts.push(match[2].trim());
+    }
+    return parts;
+  };
+
+  const parts1 = extractParts(t1).map(normalizeTitle);
+  const parts2 = extractParts(t2).map(normalizeTitle);
+
+  for (let p1 of parts1) {
+    for (let p2 of parts2) {
+      if (p1 && p2 && p1.length >= 3 && p2.length >= 3) {
+        if (p1 === p2 || p1.includes(p2) || p2.includes(p1)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 3단계: 단어 교집합 유사도
+  const words1 = cleanScheduleText(t1).split(' ').filter(w => w.length >= 2);
+  const words2 = cleanScheduleText(t2).split(' ').filter(w => w.length >= 2);
+  if (words1.length > 0 && words2.length > 0) {
+    const intersection = words1.filter(w => words2.includes(w));
+    if (intersection.length >= 2 || (words1.length === 1 && words2.length === 1 && words1[0] === words2[0])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function pickBestTitle(title1, title2) {
+  if (!title1) return title2 || "";
+  if (!title2) return title1 || "";
+  if (title1.includes('(') && !title2.includes('(')) return title1;
+  if (title2.includes('(') && !title1.includes('(')) return title2;
+  return title1.length >= title2.length ? title1 : title2;
+}
+
+export function deduplicateScheduleList(schedules = []) {
+  const mergedList = [];
+
+  // 직캠, 투표, 포스터/응모/증정/공지 이벤트 정밀 필터링
+  const excludePatterns = [
+    /직캠/i, /풀캠/i, /팬캠/i, /페이스캠/i, /입덕직캠/i, /최애직캠/i, /팔로우캠/i, /안방1열/i, /음중직캠/i, /음중풀캠/i, /음중팔로우캠/i,
+    /fan\W*cam/i, /k\W*fancam/i, /choreo/i, /fancam/i, /\bcam\b/i,
+    // 투표 관련 일정 제외
+    /투표/i, /사전투표/i, /실시간투표/i, /\bvote\b/i, /\bvoting\b/i, /\bpoll\b/i,
+    /덕애드/i, /스타패스/i, /아이돌챔프/i, /뮤빗/i, /팬플러스/i, /포도알/i, /케이돌/i, /엠넷플러스\s*투표/i,
+    // 포스터/응모/증정/빅크/특전 이벤트 및 단순 공지 제외
+    /포스터\s*이벤트/i, /사인\s*.*이벤트/i, /싸인\s*.*이벤트/i, /이벤트\s*안내/i, /안내\s*\(Notice\)/i,
+    /\[빅크/i, /\bBIGC\b/i, /응모\s*이벤트/i, /증정\s*이벤트/i, /특전\s*이벤트/i, /구매자\s*이벤트/i,
+    /럭키드로우/i, /\b럭드\b/i
+  ];
+
+  const filtered = schedules.filter(item => {
+    const text = (item.title || "") + " " + (item.message || "");
+    return !excludePatterns.some(p => p.test(text));
+  });
+
+  filtered.forEach(newItem => {
+    const newD = parseSafeDate(newItem.startTime || newItem.date);
+    const newDateStr = `${newD.getFullYear()}-${String(newD.getMonth() + 1).padStart(2, '0')}-${String(newD.getDate()).padStart(2, '0')}`;
+
+    let matchedIndex = -1;
+
+    for (let i = 0; i < mergedList.length; i++) {
+      const existing = mergedList[i];
+      const existD = parseSafeDate(existing.startTime || existing.date);
+      const existDateStr = `${existD.getFullYear()}-${String(existD.getMonth() + 1).padStart(2, '0')}-${String(existD.getDate()).padStart(2, '0')}`;
+
+      // ★ 반드시 같은 날짜(YYYY-MM-DD)일 때만 중복 병합! (다른 날짜의 2일차, 3일차 일정 100% 보존)
+      if (newDateStr === existDateStr && areSchedulesDuplicate(existing, newItem)) {
+        matchedIndex = i;
+        break;
+      }
+    }
+
+    if (matchedIndex !== -1) {
+      const target = mergedList[matchedIndex];
+
+      // Mnet 출처 우선순위 적용 (새로 들어온 항목이 Mnet이면 공식 정보 우선 반영)
+      if (newItem.source === 'mnet') {
+        target.source = 'mnet';
+        if (newItem.typeText) target.typeText = newItem.typeText;
+        if (newItem.startTime) target.startTime = newItem.startTime;
+        if (newItem.endTime) target.endTime = newItem.endTime;
+      }
+
+      // 제목은 더 완성도 높고 구체적인 쪽으로 보완 (예: Blip의 <KCON LA 2026> SHOWCASE 등)
+      target.title = pickBestTitle(target.title, newItem.title);
+
+      // 상세 설명(message)은 더 상세한 쪽으로 보완
+      if (newItem.message && newItem.message.length > (target.message ? target.message.length : 0)) {
+        target.message = newItem.message;
+      }
+      if (!target.typeId && newItem.typeId) {
+        target.typeId = newItem.typeId;
+      }
+      if (!target.typeText && newItem.typeText) {
+        target.typeText = newItem.typeText;
+      }
+      if (!target.endTime && newItem.endTime) {
+        target.endTime = newItem.endTime;
+      }
+      if (!target.extField && newItem.extField) {
+        target.extField = newItem.extField;
+      }
+    } else {
+      mergedList.push({ ...newItem });
+    }
+  });
+
+  return mergedList;
+}
+
+// 브라우저 윈도우 환경 안전 바인딩
+if (typeof window !== 'undefined') {
+  window.deduplicateScheduleList = deduplicateScheduleList;
+  window.areSchedulesDuplicate = areSchedulesDuplicate;
+  window.cleanScheduleText = cleanScheduleText;
+  window.normalizeTitle = normalizeTitle;
+  window.pickBestTitle = pickBestTitle;
+}
+
+export function cleanDisplayTitle(title) {
+  if (!title) return "";
+  // 앞에 붙은 모든 중복 형태의 [태그], [🎬], [방송] 등을 완전히 제거하여 깔끔한 제목 추출
+  return title.replace(/^(\[[^\]]+\]\s*)+/g, '').trim();
+}
+
 export function getScheduleTypeInfo(item) {
-  let typeText = "";
-  if (item.message && item.message.startsWith("[")) {
-    const match = item.message.match(/^\[(.*?)\]/);
-    if (match) typeText = match[1];
-  } else if (item.typeId) {
-    const typeMap = { 1: "방송", 2: "릴리즈", 4: "기념일", 5: "행사" };
+  let typeText = item.typeText || "";
+
+  // 1. [태그] 형식 추출 및 이모지 표준화
+  const combinedText = `${item.title || ""} ${item.message || ""} ${(item.extField && item.extField.value) || ""} ${item.url || ""} ${item.link || ""}`;
+  const bracketMatch = combinedText.match(/\[(.*?)\]/);
+  if (!typeText && bracketMatch) {
+    const rawTag = bracketMatch[1].trim();
+    if (rawTag === '🎬') typeText = "영상";
+    else if (rawTag === '🎉') typeText = "기념일";
+    else if (rawTag === '🎤') typeText = "행사";
+    else if (rawTag === '💿') typeText = "릴리즈";
+    else if (rawTag === '📺' || rawTag === '📻') typeText = "방송";
+    else if (rawTag && !rawTag.includes('BIGC') && !rawTag.includes('빅크') && rawTag.length <= 10) {
+      typeText = rawTag;
+    }
+  }
+
+  // 2. typeId 기반 매핑 (Blip 표준 코드: 5=행사, 1=방송, 4=기념일 등)
+  if (!typeText && item.typeId) {
+    const typeMap = {
+      1: "방송",
+      2: "릴리즈",
+      3: "영상",
+      4: "기념일",
+      5: "행사",
+      6: "팬이벤트",
+      7: "일정"
+    };
     typeText = typeMap[item.typeId] || "";
   }
 
+  const lower = combinedText.toLowerCase();
+
+  // ★ 3. 명백한 유튜브 자체 콘텐츠 / 공식 채널 영상 우선 보정 (typeId가 방송으로 잘못 등록된 경우 교정)
+  const isOfficialYoutubeContent = (
+    /안녕하세요원이입니다|안원잘부|@helloiamwoninicetomeetyou|helloiamwoni/i.test(lower) ||
+    (/자컨|비하인드|behind|vlog|브이로그|ep\.|shorts|쇼츠|릴스|reels|full ver|풀버전/i.test(lower) && !/쇼챔피언|엠카운트다운|뮤직뱅크|인기가요|더쇼|음악중심|생방송|본방/i.test(lower)) ||
+    (/youtube\.com|youtu\.be/i.test(lower) && /공개\s*예정\s*채널|보러\s*가기|아티스트\s*공식\s*채널/i.test(lower))
+  );
+
+  if (isOfficialYoutubeContent && !/kcon|케이콘|어워즈|awards|쇼케이스|showcase|페스티벌|콘서트|팬사인|팬미팅/i.test(lower)) {
+    typeText = "영상";
+  }
+
+  // ★ 4. 지능형 키워드 기반 우선순위 정밀 분류
+  if (!typeText || typeText === "일정") {
+    // 4-1. 오프라인 행사 / 공연 / 페스티벌 / 쇼케이스 / 시상식
+    if (/kcon|케이콘|어워즈|awards|쇼케이스|showcase|페스티벌|festival|콘서트|concert|행사|공연|축제|드림콘서트|시구|시타|위촉식|풀파티|썸머소닉/i.test(lower)) {
+      typeText = "행사";
+    // 4-2. 팬사인회 / 팬이벤트 / 팬미팅 (일반 단어 meet 오매칭 방지)
+    } else if (/팬사인회|팬사인|팬싸인회|팬싸|팬미팅|fan\s*meeting|fan\s*sign|영통\s*팬|대면\s*팬|대면\s*팬싸|대면\s*사인/i.test(lower)) {
+      typeText = "팬이벤트";
+    // 4-3. TV / 라디오 / 음악방송
+    } else if (/쇼챔피언|쇼챔|엠카운트다운|엠카|뮤직뱅크|뮤뱅|인기가요|인가|더쇼|음악중심|음중|심플리케이팝|simply\s*k-pop|방송|라디오|예능|tv|on air|live|생방송|본방|재방|mbc|kbs|sbs|mnet|jtbc|tvn|ena|ebs|아리랑|arirang|스튜디오|studio|정오의 희망곡|가요광장|영스트리트|키스 더 라디오|꿈꾸는 라디오|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|idol radio|fm4u|power fm/i.test(lower)) {
+      typeText = "방송";
+    // 4-4. 멤버 생일 / 기념일
+    } else if (/기념일|생일|birthday|happy|day|데뷔|anniversary/i.test(lower)) {
+      typeText = "기념일";
+    // 4-5. 음원 / 앨범 / 릴리즈
+    } else if (/릴리즈|발매|release|album|mv|뮤비|음원/i.test(lower)) {
+      typeText = "릴리즈";
+    // 4-6. 유튜브 공식 채널 영상 / 자체콘텐츠 / 안원잘부 / 비하인드 / 브이로그
+    } else if (
+      /@helloiamwoninicetomeetyou|helloiamwoni|안원잘부|안녕하세요원이|@rescene_official|rescene_official|자컨|비하인드|behind|vlog|브이로그|ep\.|shorts|쇼츠|릴스|reels|full ver|풀버전/i.test(lower) ||
+      /youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|@helloiamwoninicetomeetyou|@rescene_official)/i.test(lower)
+    ) {
+      typeText = "영상";
+    } else {
+      typeText = typeText || "일정";
+    }
+  }
+
   let bg = "#e3f2fd", color = "#1976d2";
-  if (typeText.includes("방송")) { bg = "#ffe4ec"; color = "#d63384"; }
-  else if (typeText.includes("행사") || typeText.includes("공연")) { bg = "#e2f0d9"; color = "#388e3c"; }
-  else if (typeText.includes("팬사인") || typeText.includes("팬싸")) { bg = "#f3e5f5"; color = "#8e24aa"; }
-  else if (typeText.includes("기념일") || typeText.includes("생일")) { bg = "#fff9c4"; color = "#f57f17"; }
+  if (typeText.includes("영상") || typeText.includes("콘텐츠") || typeText.includes("미디어")) {
+    bg = "#e0f7fa"; color = "#00838f"; // 산뜻한 청록/시안 (유튜브/영상)
+  } else if (typeText.includes("방송") || typeText.includes("라디오")) {
+    bg = "#ffe4ec"; color = "#d63384"; // 화사한 핑크 (TV/라디오 방송)
+  } else if (typeText.includes("행사") || typeText.includes("공연") || typeText.includes("쇼케이스")) {
+    bg = "#e2f0d9"; color = "#2e7d32"; // 싱그러운 초록 (행사/공연)
+  } else if (typeText.includes("팬사인") || typeText.includes("팬싸") || typeText.includes("팬이벤트") || typeText.includes("팬미팅")) {
+    bg = "#f3e5f5"; color = "#7b1fa2"; // 세련된 보라 (팬이벤트)
+  } else if (typeText.includes("기념일") || typeText.includes("생일")) {
+    bg = "#fff9c4"; color = "#e65100"; // 밝은 골드/오렌지 (기념일)
+  } else if (typeText.includes("릴리즈") || typeText.includes("발매")) {
+    bg = "#ffe0b2"; color = "#bf360c"; // 코랄/오렌지 (릴리즈)
+  }
 
   return { typeText, bg, color };
 }
 
 export function renderScheduleList(container, schedules = [], isDark = false, onSelectDate) {
   if (!container) return;
+
+  // 지능형 중복 병합 및 제외 필터 적용
+  schedules = deduplicateScheduleList(schedules);
 
   if (!schedules || schedules.length === 0) {
     container.innerHTML = '<div class="schedule-item">예정된 스케줄이 없습니다.</div>';
@@ -507,11 +835,8 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
       typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:1px 5px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
     }
 
-    // 리스트에는 짧은 제목(item.title)만 표시
-    let cleanTitle = item.title || item.message || '스케줄';
-    if (typeText && cleanTitle.startsWith(`[${typeText}]`)) {
-      cleanTitle = cleanTitle.replace(`[${typeText}]`, '').trim();
-    }
+    // 리스트에는 중복 태그([🎬] 등)를 제거한 깔끔한 제목 표시
+    let cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
     let extraInfo = '';
     if (item.extField && item.extField.value) {
       extraInfo = ` <span style="color:#888; font-size:10px;">(${escapeHtml(item.extField.value.trim())})</span>`;
@@ -576,6 +901,9 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
 export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onSelectEvent) {
   if (!gridEl) return;
 
+  // 지능형 중복 병합 및 제외 필터 적용
+  schedules = deduplicateScheduleList(schedules);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -611,6 +939,36 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
     weeksArr.push(daysArr.slice(i, i + 7));
   }
 
+  // 1. 각 스케줄 항목 정규화 (시작일/종료일 및 multi-day 여부 판단)
+  const normalizedSchedules = schedules.map((item, idx) => {
+    const startRaw = item.startTime || item.date;
+    const endRaw = item.endTime || item.startTime || item.date;
+    const startD = parseSafeDate(startRaw);
+    const endD = parseSafeDate(endRaw);
+
+    const startY = startD.getFullYear();
+    const startM = String(startD.getMonth() + 1).padStart(2, '0');
+    const startDay = String(startD.getDate()).padStart(2, '0');
+    const startStr = `${startY}-${startM}-${startDay}`;
+
+    const endY = endD.getFullYear();
+    const endM = String(endD.getMonth() + 1).padStart(2, '0');
+    const endDay = String(endD.getDate()).padStart(2, '0');
+    const endStr = `${endY}-${endM}-${endDay}`;
+
+    const isMulti = (startStr !== endStr) && (endD.getTime() > startD.getTime());
+
+    return {
+      ...item,
+      id: item.id || `sched-${idx}`,
+      startDateStr: startStr,
+      endDateStr: endStr,
+      isMultiDay: isMulti,
+      spanGroupId: isMulti ? `span-grp-${idx}-${startStr.replace(/\D/g, '')}` : null
+    };
+  });
+
+  // 2. 주(Week)별 행 렌더링
   weeksArr.forEach((weekDays) => {
     const weekRow = document.createElement("div");
     weekRow.className = "calendar-week-row";
@@ -629,14 +987,12 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
       const eventsContainer = cell.querySelector(".cell-events");
 
       if (cellInfo.isCurrentMonth && cellInfo.dateStr) {
-        const daySchedules = schedules.filter(item => {
-          const rawDate = item.startTime || item.date;
-          if (!rawDate) return false;
-          const d = parseSafeDate(rawDate);
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          return `${y}-${m}-${day}` === cellInfo.dateStr;
+        // 해당 날짜에 해당하는 모든 스케줄 조회 (단일일 일치 또는 연속 일정 기간 내 포함)
+        const daySchedules = normalizedSchedules.filter(item => {
+          if (item.isMultiDay) {
+            return cellInfo.dateStr >= item.startDateStr && cellInfo.dateStr <= item.endDateStr;
+          }
+          return item.startDateStr === cellInfo.dateStr;
         });
 
         daySchedules.forEach(item => {
@@ -660,22 +1016,52 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
               timeStrForBadge = `<span class="badge-time">${ap} ${h}:${m}</span>`;
               timeStrForModal = `${ap} ${h}:${m}`;
             } else {
-              timeStrForModal = "종일 일정";
+              timeStrForModal = item.isMultiDay ? "연속 일정" : "종일 일정";
             }
           }
 
-          const titleText = escapeHtml(item.title || item.message || '일정');
+          const rawPureTitle = cleanDisplayTitle(item.title || item.message || '일정');
+          const titleText = escapeHtml(rawPureTitle);
           const displayTitle = typeText ? `[${typeText}] ${titleText}` : titleText;
+          const dateForModal = item.isMultiDay ? `${item.startDateStr} ~ ${item.endDateStr}` : cellInfo.dateStr;
 
-          badge.innerHTML = `${timeStrForBadge}${titleText}`;
-          badge.title = `${displayTitle} ${timeStrForModal ? `(${timeStrForModal})` : ''}`;
+          // 연속 일정인 경우 스타일 및 그룹 식별자 추가
+          if (item.isMultiDay) {
+            badge.classList.add("multi-day-badge");
+            badge.setAttribute('data-span-group', item.spanGroupId);
+
+            if (cellInfo.dateStr === item.startDateStr) {
+              badge.classList.add("span-start");
+            } else if (cellInfo.dateStr === item.endDateStr) {
+              badge.classList.add("span-end");
+            } else {
+              badge.classList.add("span-middle");
+            }
+
+            badge.innerHTML = `${timeStrForBadge}<span>${titleText}</span>`;
+            badge.title = `${displayTitle} (${item.startDateStr} ~ ${item.endDateStr})`;
+
+            // 연속 일정 그룹 동시 마우스 오버 하이라이트
+            badge.addEventListener("mouseenter", () => {
+              const siblings = gridEl.querySelectorAll(`[data-span-group="${item.spanGroupId}"]`);
+              siblings.forEach(el => el.classList.add("span-hover-active"));
+            });
+
+            badge.addEventListener("mouseleave", () => {
+              const siblings = gridEl.querySelectorAll(`[data-span-group="${item.spanGroupId}"]`);
+              siblings.forEach(el => el.classList.remove("span-hover-active"));
+            });
+          } else {
+            badge.innerHTML = `${timeStrForBadge}<span>${titleText}</span>`;
+            badge.title = `${displayTitle} ${timeStrForModal ? `(${timeStrForModal})` : ''}`;
+          }
 
           badge.addEventListener("click", (e) => {
             e.stopPropagation();
             if (typeof onSelectEvent === 'function') {
               onSelectEvent({
                 title: displayTitle,
-                date: cellInfo.dateStr,
+                date: dateForModal,
                 time: timeStrForModal,
                 type: typeText,
                 detail: item.message || item.description || '',
@@ -1308,15 +1694,22 @@ export function initAppStorageData({
         });
       }
 
-      // 4. 스케줄 리스트 렌더링 (사이드패널 홈 탭용)
+      // 4. 스케줄 리스트 렌더링 (직캠/투표 필터링 및 지능형 중복 병합)
       const schedEl = typeof scheduleListId === 'string' ? document.getElementById(scheduleListId) : scheduleListId;
-      if (schedEl && result.blipSchedules) {
-        renderScheduleList(schedEl, result.blipSchedules);
+      const rawFiltered = (result.blipSchedules || []).filter(item => {
+        const text = (item.title || "") + " " + (item.message || "");
+        return !/(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i.test(text);
+      });
+
+      const cleanSchedules = deduplicateScheduleList(rawFiltered);
+
+      if (schedEl && cleanSchedules) {
+        renderScheduleList(schedEl, cleanSchedules);
       }
 
       // 5. 스케줄 데이터 콜백 (캘린더 매니저 등)
-      if (typeof onSchedulesLoaded === 'function' && result.blipSchedules) {
-        onSchedulesLoaded(result.blipSchedules);
+      if (typeof onSchedulesLoaded === 'function' && cleanSchedules) {
+        onSchedulesLoaded(cleanSchedules);
       }
 
       // 6. 전체 데이터 로드 완료 콜백
@@ -1325,4 +1718,475 @@ export function initAppStorageData({
       }
     }
   );
+}
+
+/* =========================================================================
+   11. 통합 사용자 설정 엔진 (User Settings Management Engine)
+   ========================================================================= */
+
+// 1. 사용자 설정 로드 (기본값 및 원본 메타데이터 안전 병합)
+export function loadUserSettings(callback) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['userSettings'], (res) => {
+      let settings = res.userSettings;
+      
+      // TAB_CONFIG_LIST 원본 메타데이터 맵 구축 (iframeUrl, sandbox, channelKey, type 등 보존)
+      const baseTabMap = {};
+      TAB_CONFIG_LIST.forEach(t => { baseTabMap[t.id] = t; });
+
+      if (!settings || typeof settings !== 'object') {
+        settings = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+      } else {
+        let mergedTabs = [];
+        if (Array.isArray(settings.tabList) && settings.tabList.length > 0) {
+          settings.tabList.forEach(savedTab => {
+            const baseTab = baseTabMap[savedTab.id];
+            // constants.js의 TAB_CONFIG_LIST에 존재하는 탭만 유지 (코드에서 삭제된 탭은 자동 정리)
+            if (baseTab) {
+              mergedTabs.push({
+                ...savedTab,
+                ...baseTab,
+                enabled: savedTab.enabled !== false
+              });
+            }
+          });
+          // 새로 추가되었거나 누락된 탭이 있으면 뒤에 병합
+          TAB_CONFIG_LIST.forEach(baseTab => {
+            if (!mergedTabs.some(t => t.id === baseTab.id)) {
+              mergedTabs.push({ ...baseTab, enabled: baseTab.enabled !== false });
+            }
+          });
+        } else {
+          mergedTabs = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS.tabList));
+        }
+
+        // 깊은 기본값 병합
+        settings = {
+          navPosition: settings.navPosition || DEFAULT_USER_SETTINGS.navPosition,
+          notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...(settings.notifications || {}) },
+          sound: { ...DEFAULT_USER_SETTINGS.sound, ...(settings.sound || {}) },
+          tabList: mergedTabs,
+          fanpages: (settings.fanpages && settings.fanpages.length > 0) ? settings.fanpages : DEFAULT_USER_SETTINGS.fanpages
+        };
+      }
+      if (typeof callback === 'function') callback(settings);
+    });
+  } else {
+    if (typeof callback === 'function') callback(JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS)));
+  }
+}
+
+// 2. 사용자 설정 저장
+export function saveUserSettings(newSettings, callback) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.set({ userSettings: newSettings }, () => {
+      if (typeof callback === 'function') callback(newSettings);
+    });
+  } else {
+    if (typeof callback === 'function') callback(newSettings);
+  }
+}
+
+// 3. 네비게이션 위치 적용 (좌측 vs 우측)
+export function initNavPosition(position = 'left') {
+  const isRight = position === 'right';
+  document.body.classList.toggle('nav-right', isRight);
+  document.body.classList.toggle('nav-left', !isRight);
+
+  const appLayout = document.querySelector('.app-layout');
+  if (appLayout) {
+    appLayout.classList.toggle('nav-right', isRight);
+    appLayout.classList.toggle('nav-left', !isRight);
+  }
+}
+
+// 4. 설정 모달 및 인터랙션 전체 초기화
+export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPositionChanged } = {}) {
+  const modalOverlay = document.getElementById('settingsModalOverlay');
+  const openBtn = document.getElementById('openSettingsBtn');
+  const closeBtn = document.getElementById('settingsCloseBtn');
+  const doneBtn = document.getElementById('saveSettingsDoneBtn');
+  const resetBtn = document.getElementById('resetSettingsBtn');
+  const saveNotice = document.getElementById('settingsSaveNotice');
+
+  if (!modalOverlay) return;
+
+  let currentSettings = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+
+  function showSaveNotice(msg = '저장되었습니다.') {
+    if (saveNotice) {
+      const text = (typeof msg === 'string' && msg.trim()) ? msg : '저장되었습니다.';
+      saveNotice.textContent = text;
+      saveNotice.classList.add('visible');
+      setTimeout(() => saveNotice.classList.remove('visible'), 2000);
+    }
+  }
+
+  // 모달 열기/닫기
+  function openModal() {
+    const currentOverlay = document.getElementById('settingsModalOverlay');
+    if (!currentOverlay) return;
+    loadUserSettings((loaded) => {
+      currentSettings = loaded;
+      populateSettingsForm(currentSettings);
+      currentOverlay.classList.add('active');
+    });
+  }
+
+  function closeModal() {
+    const currentOverlay = document.getElementById('settingsModalOverlay');
+    if (currentOverlay) currentOverlay.classList.remove('active');
+  }
+
+  // 전역 이벤트 위임 (어떤 #openSettingsBtn이든 항상 열림 보장)
+  if (!window.__settingsDelegationInitialized) {
+    window.__settingsDelegationInitialized = true;
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#openSettingsBtn')) {
+        openModal();
+      } else if (e.target.closest('#settingsCloseBtn') || e.target.closest('#saveSettingsDoneBtn')) {
+        closeModal();
+      } else if (e.target.id === 'settingsModalOverlay') {
+        closeModal();
+      }
+    });
+  }
+
+  // 서브 탭 전환 (모달 내부 클릭 위임)
+  modalOverlay.addEventListener('click', (e) => {
+    const navBtn = e.target.closest('.settings-nav-btn');
+    if (navBtn) {
+      const targetTab = navBtn.getAttribute('data-tab');
+      const navBtns = modalOverlay.querySelectorAll('.settings-nav-btn');
+      const sections = modalOverlay.querySelectorAll('.settings-section');
+      navBtns.forEach(b => b.classList.remove('active'));
+      sections.forEach(s => s.classList.remove('active'));
+      navBtn.classList.add('active');
+      const targetSection = document.getElementById(targetTab);
+      if (targetSection) targetSection.classList.add('active');
+    }
+  });
+
+  // 폼 채우기 및 리스너 바인딩
+  function populateSettingsForm(settings) {
+    // 1. 사이드바 위치 라디오
+    const navPos = settings.navPosition || 'left';
+    const radioLeft = document.getElementById('navPosLeft');
+    const radioRight = document.getElementById('navPosRight');
+    if (radioLeft && radioRight) {
+      if (navPos === 'right') radioRight.checked = true;
+      else radioLeft.checked = true;
+    }
+
+    // 2. 새로고침 주기 셀렉트
+    const intervalSelect = document.getElementById('settingRefreshInterval');
+    if (intervalSelect) {
+      intervalSelect.value = String(settings.refreshInterval || 15);
+    }
+
+    // 3. 미디어 음소거
+    const muteSwitch = document.getElementById('settingMuteOnLoad');
+    if (muteSwitch) {
+      muteSwitch.checked = !!(settings.sound && settings.sound.muteOnLoad);
+    }
+
+    // 4. 알림 스위치
+    const noti = settings.notifications || DEFAULT_USER_SETTINGS.notifications;
+    const notiMaster = document.getElementById('settingNotiMaster');
+    const notiYoutube = document.getElementById('settingNotiYoutube');
+    const notiLive = document.getElementById('settingNotiLive');
+    const notiSchedule = document.getElementById('settingNotiSchedule');
+    const subOpts = document.getElementById('notiSubOptions');
+
+    if (notiMaster) notiMaster.checked = noti.enabled !== false;
+    if (notiYoutube) notiYoutube.checked = noti.youtube !== false;
+    if (notiLive) notiLive.checked = noti.live !== false;
+    if (notiSchedule) notiSchedule.checked = noti.schedule !== false;
+    if (subOpts) subOpts.style.opacity = notiMaster && notiMaster.checked ? '1' : '0.4';
+
+    // 4. 탭 순서 & 활성화 목록
+    renderTabReorderList(settings.tabList);
+
+    // 5. 팬페이지 목록
+    renderFanpageReorderList(settings.fanpages);
+  }
+
+  // 탭 목록 UI 렌더링
+  function renderTabReorderList(tabList = []) {
+    const listEl = document.getElementById('tabReorderList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    tabList.forEach((tab, index) => {
+      let iconHtml = '';
+      if (tab.channelKey && CHANNEL_DATA_MAP[tab.channelKey]) {
+        const ch = CHANNEL_DATA_MAP[tab.channelKey];
+        if (ch.svg) iconHtml = `<span class="reorder-icon-mini">${ch.svg}</span>`;
+        else if (ch.img) iconHtml = `<img class="reorder-icon-mini-img" src="${ch.img}" alt="">`;
+      } else if (tab.svg) {
+        iconHtml = `<span class="reorder-icon-mini">${tab.svg}</span>`;
+      } else if (tab.icon) {
+        iconHtml = `<span class="reorder-icon-mini-emoji">${tab.icon}</span>`;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'reorder-item-row';
+      row.innerHTML = `
+        <div class="reorder-item-left">
+          <label class="setting-switch small">
+            <input type="checkbox" class="tab-toggle-cb" data-id="${tab.id}" ${tab.enabled !== false ? 'checked' : ''}>
+            <span class="slider round"></span>
+          </label>
+          <span class="reorder-item-label">${iconHtml}<span>${escapeHtml(tab.label || tab.id)}</span></span>
+        </div>
+        <div class="reorder-btn-group">
+          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>▲</button>
+          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === tabList.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    // 탭 활성/비활성 토글 리스너
+    listEl.querySelectorAll('.tab-toggle-cb').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const id = e.target.getAttribute('data-id');
+        const target = currentSettings.tabList.find(t => t.id === id);
+        if (target) {
+          target.enabled = e.target.checked;
+          saveUserSettings(currentSettings, () => {
+            showSaveNotice();
+            if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
+          });
+        }
+      });
+    });
+
+    // 탭 순서 변경 버튼 리스너
+    listEl.querySelectorAll('.reorder-arrow-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const isUp = btn.classList.contains('up');
+        const targetIdx = isUp ? idx - 1 : idx + 1;
+
+        if (targetIdx >= 0 && targetIdx < currentSettings.tabList.length) {
+          const item = currentSettings.tabList.splice(idx, 1)[0];
+          currentSettings.tabList.splice(targetIdx, 0, item);
+          renderTabReorderList(currentSettings.tabList);
+          saveUserSettings(currentSettings, () => {
+            showSaveNotice();
+            if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
+          });
+        }
+      });
+    });
+  }
+
+  // 팬페이지 목록 UI 렌더링
+  function renderFanpageReorderList(fanpages = []) {
+    const listEl = document.getElementById('fanpageReorderList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    fanpages.forEach((fp, index) => {
+      const row = document.createElement('div');
+      row.className = 'reorder-item-row';
+      row.innerHTML = `
+        <div class="reorder-item-left">
+          <label class="setting-switch small">
+            <input type="checkbox" class="fp-toggle-cb" data-id="${fp.id}" ${fp.enabled !== false ? 'checked' : ''}>
+            <span class="slider round"></span>
+          </label>
+          <span class="reorder-item-label">${fp.icon ? fp.icon + ' ' : ''}<strong>${escapeHtml(fp.name)}</strong></span>
+          <span class="reorder-item-sub">${escapeHtml(fp.url)}</span>
+        </div>
+        <div class="reorder-btn-group">
+          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>▲</button>
+          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === fanpages.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="reorder-delete-btn" data-id="${fp.id}" title="삭제">🗑️</button>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    // 팬페이지 토글 리스너
+    listEl.querySelectorAll('.fp-toggle-cb').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const id = e.target.getAttribute('data-id');
+        const target = currentSettings.fanpages.find(f => f.id === id);
+        if (target) {
+          target.enabled = e.target.checked;
+          saveUserSettings(currentSettings, () => {
+            showSaveNotice();
+            if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+          });
+        }
+      });
+    });
+
+    // 팬페이지 순서 변경 리스너
+    listEl.querySelectorAll('.reorder-arrow-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const isUp = btn.classList.contains('up');
+        const targetIdx = isUp ? idx - 1 : idx + 1;
+
+        if (targetIdx >= 0 && targetIdx < currentSettings.fanpages.length) {
+          const item = currentSettings.fanpages.splice(idx, 1)[0];
+          currentSettings.fanpages.splice(targetIdx, 0, item);
+          renderFanpageReorderList(currentSettings.fanpages);
+          saveUserSettings(currentSettings, () => {
+            showSaveNotice();
+            if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+          });
+        }
+      });
+    });
+
+    // 팬페이지 삭제 리스너
+    listEl.querySelectorAll('.reorder-delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        if (confirm('이 팬페이지 바로가기를 삭제하시겠습니까?')) {
+          currentSettings.fanpages = currentSettings.fanpages.filter(f => f.id !== id);
+          renderFanpageReorderList(currentSettings.fanpages);
+          saveUserSettings(currentSettings, () => {
+            showSaveNotice();
+            if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+          });
+        }
+      });
+    });
+  }
+
+  // 사이드바 위치 라디오 체인지 이벤트
+  modalOverlay.querySelectorAll('input[name="navPosition"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        currentSettings.navPosition = e.target.value;
+        initNavPosition(currentSettings.navPosition);
+        saveUserSettings(currentSettings, () => {
+          showSaveNotice('사이드바 위치가 변경되었습니다.');
+          if (typeof onNavPositionChanged === 'function') onNavPositionChanged(currentSettings.navPosition);
+        });
+      }
+    });
+  });
+
+  // 새로고침 주기 셀렉트 체인지 이벤트
+  const intervalSelect = document.getElementById('settingRefreshInterval');
+  if (intervalSelect) {
+    intervalSelect.addEventListener('change', (e) => {
+      currentSettings.refreshInterval = parseInt(e.target.value, 10) || 15;
+      saveUserSettings(currentSettings, () => {
+        showSaveNotice('새로고침 주기가 변경되었습니다.');
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({
+            action: "UPDATE_REFRESH_INTERVAL",
+            intervalMinutes: currentSettings.refreshInterval
+          });
+        }
+      });
+    });
+  }
+
+  // 음소거 스위치 체인지
+  const muteSwitch = document.getElementById('settingMuteOnLoad');
+  if (muteSwitch) {
+    muteSwitch.addEventListener('change', (e) => {
+      currentSettings.sound = currentSettings.sound || {};
+      currentSettings.sound.muteOnLoad = e.target.checked;
+      saveUserSettings(currentSettings, () => showSaveNotice());
+    });
+  }
+
+  // 알림 스위치 체인지
+  const notiMaster = document.getElementById('settingNotiMaster');
+  const notiYoutube = document.getElementById('settingNotiYoutube');
+  const notiLive = document.getElementById('settingNotiLive');
+  const notiSchedule = document.getElementById('settingNotiSchedule');
+  const subOpts = document.getElementById('notiSubOptions');
+
+  function syncNotiSettings() {
+    currentSettings.notifications = {
+      enabled: notiMaster ? notiMaster.checked : true,
+      youtube: notiYoutube ? notiYoutube.checked : true,
+      live: notiLive ? notiLive.checked : true,
+      schedule: notiSchedule ? notiSchedule.checked : true
+    };
+    if (subOpts) subOpts.style.opacity = currentSettings.notifications.enabled ? '1' : '0.4';
+    saveUserSettings(currentSettings, () => showSaveNotice());
+  }
+
+  if (notiMaster) notiMaster.addEventListener('change', syncNotiSettings);
+  if (notiYoutube) notiYoutube.addEventListener('change', syncNotiSettings);
+  if (notiLive) notiLive.addEventListener('change', syncNotiSettings);
+  if (notiSchedule) notiSchedule.addEventListener('change', syncNotiSettings);
+
+  // 신규 팬페이지 추가 버튼
+  const addFpBtn = document.getElementById('addNewFanpageBtn');
+  if (addFpBtn) {
+    addFpBtn.addEventListener('click', () => {
+      const iconInput = document.getElementById('newFpIcon');
+      const nameInput = document.getElementById('newFpName');
+      const urlInput = document.getElementById('newFpUrl');
+
+      const name = (nameInput.value || '').trim();
+      const url = (urlInput.value || '').trim();
+      const icon = (iconInput.value || '').trim() || '🌐';
+
+      if (!name || !url) {
+        alert('팬페이지 이름과 URL을 모두 입력해주세요.');
+        return;
+      }
+
+      const newId = 'fp_' + Date.now();
+      currentSettings.fanpages.push({
+        id: newId,
+        name: name,
+        url: url,
+        icon: icon,
+        enabled: true
+      });
+
+      nameInput.value = '';
+      urlInput.value = '';
+      iconInput.value = '';
+
+      renderFanpageReorderList(currentSettings.fanpages);
+      saveUserSettings(currentSettings, () => {
+        showSaveNotice('팬페이지가 추가되었습니다.');
+        if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+      });
+    });
+  }
+
+  // 기본값 복원 버튼
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (confirm('모든 사용자 설정을 기본값으로 초기화하시겠습니까?')) {
+        currentSettings = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+        populateSettingsForm(currentSettings);
+        initNavPosition(currentSettings.navPosition);
+        saveUserSettings(currentSettings, () => {
+          showSaveNotice('기본값으로 복원되었습니다.');
+          if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
+          if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+          if (typeof onNavPositionChanged === 'function') onNavPositionChanged(currentSettings.navPosition);
+        });
+      }
+    });
+  }
+
+  // 다른 창(사이드패널 <-> 대시보드) 간 실시간 설정 동기화 감지
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.userSettings && changes.userSettings.newValue) {
+        const updated = changes.userSettings.newValue;
+        if (updated.navPosition) initNavPosition(updated.navPosition);
+        if (typeof onTabsChanged === 'function' && updated.tabList) onTabsChanged(updated.tabList);
+        if (typeof onFanpagesChanged === 'function' && updated.fanpages) onFanpagesChanged(updated.fanpages);
+      }
+    });
+  }
 }

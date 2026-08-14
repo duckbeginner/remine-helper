@@ -50,7 +50,7 @@ export const CHANNEL_DATA_MAP = {
   clip: {
     name: 'Naver Clip',
     url: 'https://clip.naver.com/@themuzeent',
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" fill="currentColor"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z"/><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54"/><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z"/></svg>'
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" fill="#03C75A"><path d="M25.73 18.02c.68.5.92 1.43.56 2.2A12.5 12.5 0 0 1 15 27.44h-.3A12.4 12.4 0 0 1 2.59 15.57a12.3 12.3 0 0 1 3.43-9.15 12.3 12.3 0 0 1 8.99-3.84 12.4 12.4 0 0 1 11.28 7.2c.38.82.1 1.8-.67 2.28l-2.41 1.55-2.23 1.4-7.94 5.07a.6.6 0 0 1-.57.02.6.6 0 0 1-.29-.49v-9.2c0-.3.2-.45.3-.5a.55.55 0 0 1 .57.02l3.99 2.56 2.16-1.44-4.88-3.12a2.94 2.94 0 0 0-4.52 2.54v9.07a2.93 2.93 0 0 0 4.52 2.54l8.89-5.67 2.22-1.4 1.47-.94a4.2 4.2 0 0 0 1.54-5.29A14.8 14.8 0 0 0 15.01.2C10.93.2 7.13 1.82 4.3 4.77a14.7 14.7 0 0 0-4.1 10.9 14.74 14.74 0 0 0 14.45 14.14H15a14.8 14.8 0 0 0 13.44-8.58 4.2 4.2 0 0 0-.6-4.47z"/><path d="m27.27 16.2-.37-.26-1.47-.94-2.22 1.4 2.41 1.54.11.08 2.1-1.27q-.24-.3-.56-.54"/><path d="m19.2 11.05-2.16 1.43L20.98 15l2.22-1.4z"/></svg>'
   }
 };
 
@@ -59,7 +59,7 @@ export const TAB_CONFIG_LIST = [
   {
     id: "tabHome",
     label: "홈",
-    icon: "🏠",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'></path><polyline points='9 22 9 12 15 12 15 22'></polyline></svg>",
     type: "home",
     defaultActive: true,
     scrollable: true
@@ -67,7 +67,7 @@ export const TAB_CONFIG_LIST = [
   {
     id: "tabSchedule",
     label: "스케줄",
-    icon: "📅",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect><line x1='16' y1='2' x2='16' y2='6'></line><line x1='8' y1='2' x2='8' y2='6'></line><line x1='3' y1='10' x2='21' y2='10'></line></svg>",
     type: "schedule",
     scrollable: false
   },
@@ -108,38 +108,27 @@ export const TAB_CONFIG_LIST = [
   {
     id: "tabSceneFlix",
     label: "SceneFlix",
-    icon: "🎬",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='4' width='20' height='16' rx='2.5'></rect><polygon points='10 8.5 16 12 10 15.5 10 8.5' fill='currentColor'></polygon></svg>",
     type: "iframe",
     iframeUrl: "https://adam-yam.github.io/SCENE-FLIX/?theme={theme}",
     sandbox: "allow-scripts allow-same-origin allow-forms allow-popups",
     height: "100%",
     scrollable: false
-  },
-  {
-    id: "tabMnet",
-    label: "Mnet",
-    channelKey: "mnet",
-    type: "iframe",
-    iframeUrl: "https://artist.mnetplus.world/main/stg/rescene-official",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-popups allow-same-site-none-cookies",
-    height: "100%",
-    scrollable: false,
-    enabled: false
   }
 ];
 
 // 4. 틱톡 기본 최신 피드 목록 (테스트 및 폴백용)
 export const DEFAULT_TIKTOK_FEEDS = [
-  { id: '7672734919575047431', title: '#산 선배님과 어디서나 당당하게 걷기 🎀' },
-  { id: '7672696254983425298', title: '케리아 선수님과 어디서나 당당하게 걷기 🎀' },
-  { id: '7672356334146243860', title: '⚽ #RESCENE #리센느' },
-  { id: '7672325503038131476', title: '😉💛 #MAY #메이 #RESCENE' },
-  { id: '7672310201281678612', title: '바이바이바이올린 🎻 #WONI #LIV' },
-  { id: '7672294299714735381', title: '하지하지마 #MINAMI #ZENA' },
-  { id: '7671931837865905428', title: '최홍만 선배님과 어디서나 당당하게 걷기 🎀' },
-  { id: '7671485804371315989', title: '얼딩이 프리티걸 🎀 #ZENA' },
-  { id: '7670727195324763412', title: 'on my mind #MINAMI' },
-  { id: '7668859808736398612', title: '#영재 선배님과 어디서나 당당하게 걷기 🎀' }
+  // { id: '7672734919575047431', title: '#산 선배님과 어디서나 당당하게 걷기 🎀' },
+  // { id: '7672696254983425298', title: '케리아 선수님과 어디서나 당당하게 걷기 🎀' },
+  // { id: '7672356334146243860', title: '⚽ #RESCENE #리센느' },
+  // { id: '7672325503038131476', title: '😉💛 #MAY #메이 #RESCENE' },
+  // { id: '7672310201281678612', title: '바이바이바이올린 🎻 #WONI #LIV' },
+  // { id: '7672294299714735381', title: '하지하지마 #MINAMI #ZENA' },
+  // { id: '7671931837865905428', title: '최홍만 선배님과 어디서나 당당하게 걷기 🎀' },
+  // { id: '7671485804371315989', title: '얼딩이 프리티걸 🎀 #ZENA' },
+  // { id: '7670727195324763412', title: 'on my mind #MINAMI' },
+  // { id: '7668859808736398612', title: '#영재 선배님과 어디서나 당당하게 걷기 🎀' }
 ];
 
 // 2. 공식 채널 메타데이터 목록 (기본 노출 순서)
@@ -157,8 +146,43 @@ export const OFFICIAL_CHANNELS = [
 
 // 3. 팬페이지 바로가기 메타데이터 목록
 export const FANPAGE_LIST = [
-  { name: "To DO", url: "https://rescenefan.com/", icon: "📝" },
-  { name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊" },
-  { name: "rescene.love", url: "https://rescene.love/", icon: "💖" },
-  { name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸" }
+  { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
+  { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
+  { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
+  { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
 ];
+
+// 5. 새로고침 주기 옵션 (분 단위)
+export const REFRESH_INTERVAL_OPTIONS = [
+  { value: 5, label: "5분마다" },
+  { value: 15, label: "15분마다 (권장)" },
+  { value: 30, label: "30분마다" },
+  { value: 60, label: "1시간마다" },
+  { value: 120, label: "2시간마다" },
+  { value: 360, label: "6시간마다" }
+];
+
+// 6. 기본 사용자 설정 (User Settings Default)
+export const DEFAULT_USER_SETTINGS = {
+  navPosition: 'left', // 'left' | 'right'
+  refreshInterval: 15, // 분 단위 (기본 15분)
+  notifications: {
+    enabled: true,     // 푸시 알림 전체
+    youtube: true,     // 유튜브 새 영상
+    live: true,        // 실시간 라이브 감지
+    schedule: true     // 스케줄 알림
+  },
+  sound: {
+    muteOnLoad: false  // 임베드 로드 시 자동 음소거
+  },
+  tabList: TAB_CONFIG_LIST.map(tab => ({
+    ...tab,
+    enabled: tab.enabled !== false
+  })),
+  fanpages: [
+    { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
+    { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
+    { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
+    { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
+  ]
+};

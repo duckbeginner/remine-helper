@@ -9,7 +9,7 @@ body {
   height: 100vh;
   min-height: 100vh;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #fbc2eb 0%, #a18cd1 100%);
+  background: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
   color: #333;
   display: flex;
   flex-direction: column;
@@ -34,13 +34,13 @@ body::-webkit-scrollbar-track {
 }
 
 body.dark-mode {
-  background: radial-gradient(circle at 20% 20%, #241430 0%, #131118 60%, #0a090d 100%) !important;
-  color: #e2e8f0 !important;
-  scrollbar-color: #33293d transparent;
+  background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
+  color: #f1f5f9 !important;
+  scrollbar-color: #4a385c transparent;
 }
 
 body.dark-mode::-webkit-scrollbar-thumb {
-  background: #33293d;
+  background: #4a385c;
 }
 
 .dashboard-container {
@@ -111,7 +111,7 @@ body.dark-mode::-webkit-scrollbar-thumb {
 
 /* --- 기본 카드 스타일 (.glass-card) --- */
 .glass-card {
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-lg);
@@ -129,7 +129,7 @@ body.dark-mode::-webkit-scrollbar-thumb {
 
 /* 호버: 배경 카드는 기존 스타일 그대로 (블러 유지) */
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.65);
   border: var(--glass-border);
   box-shadow: var(--glass-shadow-hover);
   transform: translateY(-1px);
