@@ -2423,6 +2423,8 @@ body.dark-mode .setting-switch .slider {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 8px;
+  user-select: none;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease, border 0.15s ease;
 }
 
 body.dark-mode .reorder-item-row {
@@ -2430,10 +2432,46 @@ body.dark-mode .reorder-item-row {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+.reorder-item-row.dragging {
+  opacity: 0.35;
+  background: rgba(120, 119, 198, 0.12);
+  border: 1.5px dashed var(--primary-color);
+  transform: scale(0.98);
+}
+
+.reorder-item-row.drag-over-top {
+  border-top: 2px solid var(--primary-color) !important;
+}
+
+.reorder-item-row.drag-over-bottom {
+  border-bottom: 2px solid var(--primary-color) !important;
+}
+
+.reorder-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  cursor: grab;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.reorder-drag-handle:hover {
+  color: var(--primary-color);
+}
+
+.reorder-drag-handle:active,
+.reorder-item-row.dragging .reorder-drag-handle {
+  cursor: grabbing;
+}
+
 .reorder-item-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   overflow: hidden;
 }

@@ -282,16 +282,32 @@ export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { o
   window.addEventListener('pagehide', () => stopAllIframeMedia(document));
   window.addEventListener('beforeunload', () => stopAllIframeMedia(document));
 
-  // 초기 활성 탭 슬라이더 위치 설정
-  const initialActiveBtn = tabBarEl.querySelector('.panel-tab-btn.active');
-  if (initialActiveBtn && sliderEl) {
-    updateGlassSlider(initialActiveBtn, sliderEl);
+  // 초기 활성 탭 슬라이더 위치 설정 및 초기 로딩 트리거
+  const initialActiveBtn = tabBarEl.querySelector('.panel-tab-btn.active, .vtab-btn.active');
+  if (initialActiveBtn) {
+    if (sliderEl) updateGlassSlider(initialActiveBtn, sliderEl);
+    const targetId = initialActiveBtn.getAttribute('data-target');
+    const tabConfig = tabList.find(t => t.id === targetId);
+    if (tabConfig && !loadedMap[targetId]) {
+      const isDark = document.body.classList.contains('dark-mode');
+      if (tabConfig.type === 'iframe') {
+        const containerId = `${targetId.replace('tab', '').toLowerCase()}FeedList`;
+        const container = document.getElementById(containerId);
+        if (container) {
+          renderIframeTab(container, tabConfig, isDark);
+          loadedMap[targetId] = true;
+        }
+      }
+      if (typeof onTabChange === 'function') {
+        onTabChange(targetId, tabConfig, loadedMap);
+      }
+    }
   }
 
   return {
     loadedMap,
     switchTab: (targetId) => {
-      const btn = tabBarEl.querySelector(`.panel-tab-btn[data-target="${targetId}"]`);
+      const btn = tabBarEl.querySelector(`.panel-tab-btn[data-target="${targetId}"], .vtab-btn[data-target="${targetId}"]`);
       if (btn) btn.click();
     }
   };
@@ -2164,11 +2180,97 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     renderFanpageReorderList(settings.fanpages);
   }
 
+  // 드래그 앤 드롭 순서 변경 바인딩 헬퍼
+  function setupReorderListDragAndDrop(listEl, getList, onReorder) {
+    if (!listEl) return;
+    let draggedItem = null;
+    let draggedIndex = -1;
+
+    const rows = listEl.querySelectorAll('.reorder-item-row');
+    rows.forEach(row => {
+      row.setAttribute('draggable', 'true');
+
+      row.addEventListener('dragstart', (e) => {
+        draggedItem = row;
+        draggedIndex = parseInt(row.getAttribute('data-index'), 10);
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(draggedIndex));
+      });
+
+      row.addEventListener('dragend', () => {
+        draggedItem = null;
+        draggedIndex = -1;
+        listEl.querySelectorAll('.reorder-item-row').forEach(r => {
+          r.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+        });
+      });
+
+      row.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!draggedItem || draggedItem === row) return;
+
+        const rect = row.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          row.classList.add('drag-over-top');
+          row.classList.remove('drag-over-bottom');
+        } else {
+          row.classList.add('drag-over-bottom');
+          row.classList.remove('drag-over-top');
+        }
+      });
+
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        row.classList.remove('drag-over-top', 'drag-over-bottom');
+        if (!draggedItem || draggedItem === row) return;
+
+        const fromIdx = draggedIndex;
+        let toIdx = parseInt(row.getAttribute('data-index'), 10);
+        const rect = row.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const isBelow = e.clientY >= midY;
+
+        if (fromIdx < toIdx && !isBelow) {
+          toIdx -= 1;
+        } else if (fromIdx > toIdx && isBelow) {
+          toIdx += 1;
+        }
+
+        const list = getList();
+        if (fromIdx >= 0 && fromIdx < list.length && toIdx >= 0 && toIdx < list.length && fromIdx !== toIdx) {
+          const item = list.splice(fromIdx, 1)[0];
+          list.splice(toIdx, 0, item);
+          onReorder(list);
+        }
+      });
+    });
+  }
+
   // 탭 목록 UI 렌더링
   function renderTabReorderList(tabList = []) {
     const listEl = document.getElementById('tabReorderList');
     if (!listEl) return;
     listEl.innerHTML = '';
+
+    const dragHandleSvg = `
+      <span class="reorder-drag-handle" title="드래그하여 순서 변경">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="9" cy="5" r="1.2"></circle>
+          <circle cx="9" cy="12" r="1.2"></circle>
+          <circle cx="9" cy="19" r="1.2"></circle>
+          <circle cx="15" cy="5" r="1.2"></circle>
+          <circle cx="15" cy="12" r="1.2"></circle>
+          <circle cx="15" cy="19" r="1.2"></circle>
+        </svg>
+      </span>
+    `;
 
     tabList.forEach((tab, index) => {
       let iconHtml = '';
@@ -2184,8 +2286,10 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
 
       const row = document.createElement('div');
       row.className = 'reorder-item-row';
+      row.setAttribute('data-index', String(index));
       row.innerHTML = `
         <div class="reorder-item-left">
+          ${dragHandleSvg}
           <label class="setting-switch small">
             <input type="checkbox" class="tab-toggle-cb" data-id="${tab.id}" ${tab.enabled !== false ? 'checked' : ''}>
             <span class="slider round"></span>
@@ -2203,6 +2307,20 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       `;
       listEl.appendChild(row);
     });
+
+    // 드래그 앤 드롭 활성화
+    setupReorderListDragAndDrop(
+      listEl,
+      () => currentSettings.tabList,
+      (newList) => {
+        currentSettings.tabList = newList;
+        renderTabReorderList(currentSettings.tabList);
+        saveUserSettings(currentSettings, () => {
+          showSaveNotice();
+          if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
+        });
+      }
+    );
 
     // 탭 활성/비활성 토글 리스너
     listEl.querySelectorAll('.tab-toggle-cb').forEach(cb => {
@@ -2245,11 +2363,26 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     if (!listEl) return;
     listEl.innerHTML = '';
 
+    const dragHandleSvg = `
+      <span class="reorder-drag-handle" title="드래그하여 순서 변경">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="9" cy="5" r="1.2"></circle>
+          <circle cx="9" cy="12" r="1.2"></circle>
+          <circle cx="9" cy="19" r="1.2"></circle>
+          <circle cx="15" cy="5" r="1.2"></circle>
+          <circle cx="15" cy="12" r="1.2"></circle>
+          <circle cx="15" cy="19" r="1.2"></circle>
+        </svg>
+      </span>
+    `;
+
     fanpages.forEach((fp, index) => {
       const row = document.createElement('div');
       row.className = 'reorder-item-row';
+      row.setAttribute('data-index', String(index));
       row.innerHTML = `
         <div class="reorder-item-left">
+          ${dragHandleSvg}
           <label class="setting-switch small">
             <input type="checkbox" class="fp-toggle-cb" data-id="${fp.id}" ${fp.enabled !== false ? 'checked' : ''}>
             <span class="slider round"></span>
@@ -2271,6 +2404,20 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       `;
       listEl.appendChild(row);
     });
+
+    // 드래그 앤 드롭 활성화
+    setupReorderListDragAndDrop(
+      listEl,
+      () => currentSettings.fanpages,
+      (newList) => {
+        currentSettings.fanpages = newList;
+        renderFanpageReorderList(currentSettings.fanpages);
+        saveUserSettings(currentSettings, () => {
+          showSaveNotice();
+          if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
+        });
+      }
+    );
 
     // 팬페이지 토글 리스너
     listEl.querySelectorAll('.fp-toggle-cb').forEach(cb => {

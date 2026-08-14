@@ -43,9 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTabList = tabList;
     currentFanpages = fanpages;
 
-    // 1-1. 세로 사이드바 마운트
-    const currentActiveBtn = sidebarMount ? sidebarMount.querySelector('.vtab-btn.active') : null;
-    const activeTabId = currentActiveBtn ? currentActiveBtn.getAttribute('data-target') : 'tabHome';
+    // 1-1. 세로 사이드바 마운트: 활성화된 탭 목록 중 첫 번째 탭을 기본으로 설정
+    const enabledTabs = (tabList || []).filter(t => t.enabled !== false);
+    const firstEnabledTabId = enabledTabs.length > 0 ? enabledTabs[0].id : 'tabHome';
+
+    let activeTabId = firstEnabledTabId;
+    if (!isInitial) {
+      const currentActiveBtn = sidebarMount ? sidebarMount.querySelector('.vtab-btn.active') : null;
+      const currentActiveId = currentActiveBtn ? currentActiveBtn.getAttribute('data-target') : null;
+      if (currentActiveId && enabledTabs.some(t => t.id === currentActiveId)) {
+        activeTabId = currentActiveId;
+      }
+    }
 
     if (sidebarMount) {
       sidebarMount.innerHTML = createVerticalSidebarHTML(tabList, { activeTabId });
@@ -170,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
           initNavPosition(settings.navPosition);
         }
 
-        // 4) 커스텀 탭/팬페이지가 있거나 스토리지 데이터 주입
-        renderAppViews(settings.tabList, settings.fanpages, { cachedStorage: res });
+        // 4) 커스텀 탭/팬페이지가 있거나 스토리지 데이터 주입 (사이드패널 오픈 시 설정된 탭 순서의 첫 번째 탭 열기)
+        renderAppViews(settings.tabList, settings.fanpages, { isInitial: true, cachedStorage: res });
 
         // 5) 사용자 설정 모달 이벤트 바인딩
         if (modalMount) {
@@ -204,25 +213,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-  // 3. 미디어 쿼리 2단 모드 (800px 이상) 시 서브 탭 자동 활성화
-  const wideQuery = window.matchMedia('(min-width: 800px)');
-  function handleWideModeChange(e) {
-    if (e.matches) {
-      const activeBtn = document.querySelector('.vtab-btn.active, .panel-tab-btn.active');
-      if (activeBtn && activeBtn.getAttribute('data-target') === 'tabHome') {
-        const scheduleBtn = document.querySelector('.vtab-btn[data-target="tabSchedule"], .panel-tab-btn[data-target="tabSchedule"]');
-        if (scheduleBtn) {
-          scheduleBtn.click();
-        } else {
-          const firstSubBtn = document.querySelector('.vtab-btn:not([data-target="tabHome"]), .panel-tab-btn:not([data-target="tabHome"])');
-          if (firstSubBtn) firstSubBtn.click();
-        }
-      }
-    }
-  }
-  wideQuery.addEventListener('change', handleWideModeChange);
-  if (wideQuery.matches) {
-    handleWideModeChange(wideQuery);
-  }
 });

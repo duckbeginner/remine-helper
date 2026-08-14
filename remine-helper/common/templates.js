@@ -631,7 +631,7 @@ export function createSettingsModalHTML() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               <span>탭 활성화 및 노출 순서</span>
             </div>
-            <p class="setting-help-text">화면에 표시할 탭을 켜고 끄거나, 위/아래 화살표로 순서를 변경할 수 있습니다.</p>
+            <p class="setting-help-text">화면에 표시할 탭을 켜고 끄거나, 항목을 드래그 또는 화살표로 순서를 변경할 수 있습니다.</p>
             <div class="reorder-list" id="tabReorderList"></div>
           </div>
 
@@ -641,7 +641,7 @@ export function createSettingsModalHTML() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
               <span>팬페이지 바로가기 링크 관리</span>
             </div>
-            <p class="setting-help-text">나만의 팬페이지 바로가기를 추가하거나 순서를 관리할 수 있습니다.</p>
+            <p class="setting-help-text">나만의 팬페이지 바로가기를 추가하거나 드래그하여 순서를 관리할 수 있습니다.</p>
             <div class="reorder-list" id="fanpageReorderList"></div>
             
             <div class="fanpage-add-box">
