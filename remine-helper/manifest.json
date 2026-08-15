@@ -9,9 +9,7 @@
     "notifications",
     "sidePanel",
     "tabs",
-    "declarativeNetRequest",
-    "declarativeNetRequestFeedback",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://*.youtube.com/feeds/*",

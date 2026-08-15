@@ -105,6 +105,6 @@ Chrome Web Store **개인정보 보호(Privacy)** 탭에서 각 권한의 사용
 - **한글**: 새로운 스케줄이나 공식 공지가 등록되었을 때 브라우저 알림을 표시하기 위해 사용합니다.
 - **영문**: Used to deliver browser notifications when new schedules or official announcements are published.
 
-### 6) `declarativeNetRequest` / `declarativeNetRequestWithHostAccess`
-- **한글**: 공식 SNS(유튜브, 인스타그램, 틱톡, 엠넷플러스 등)의 임베드 피드 및 위젯을 사이드패널 내에서 안전하게 로드하기 위해 사용합니다.
+### 6) `declarativeNetRequest`
+- **한글**: 공식 SNS(유튜브, 인스타그램, 틱톡, 엠넷플러스 등)의 임베드 피드 및 영상을 사이드패널 내에서 안전하게 표시하기 위해 사용합니다.
 - **영문**: Used to safely load official social media feeds and embed widgets within the extension views.
