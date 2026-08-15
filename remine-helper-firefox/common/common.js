@@ -1141,12 +1141,42 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     return tA - tB;
   });
 
-  const now = new Date().getTime();
-  let nextIndex = schedules.findIndex(item => parseSafeDate(item.startTime || item.date).getTime() >= now);
-  if (nextIndex === -1) nextIndex = schedules.length - 1;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const nowTime = now.getTime();
 
-  // 기준점(오늘/가장 가까운 예정 일정) 중심: 전 10개 + 후 10개 초기 로드
-  const CHUNK_SIZE = 10;
+  // 1순위: 오늘 날짜(YYYY-MM-DD)와 일치하는 일정 중 현재 시간 이후이거나 첫 번째 일정
+  let todayIndices = [];
+  schedules.forEach((item, idx) => {
+    const d = parseSafeDate(item.startTime || item.date);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (dStr === todayStr) {
+      todayIndices.push(idx);
+    }
+  });
+
+  let nextIndex = -1;
+  if (todayIndices.length > 0) {
+    const upcomingToday = todayIndices.find(idx => {
+      const item = schedules[idx];
+      const endT = item.endTime ? parseSafeDate(item.endTime).getTime() : parseSafeDate(item.startTime || item.date).getTime();
+      return endT >= nowTime;
+    });
+    nextIndex = upcomingToday !== undefined ? upcomingToday : todayIndices[0];
+  }
+
+  // 2순위: 오늘 일정이 없으면 오늘 이후 첫 번째 미래 일정
+  if (nextIndex === -1) {
+    nextIndex = schedules.findIndex(item => parseSafeDate(item.startTime || item.date).getTime() >= nowTime);
+  }
+
+  // 3순위: 미래 일정도 없으면 가장 최근 과거 일정 (마지막 항목)
+  if (nextIndex === -1) {
+    nextIndex = Math.max(0, schedules.length - 1);
+  }
+
+  // 기준점(오늘/가장 가까운 예정 일정) 중심: 전 15개 + 후 15개 초기 로드
+  const CHUNK_SIZE = 15;
   let startIndex = Math.max(0, nextIndex - CHUNK_SIZE);
   let endIndex = Math.min(schedules.length, nextIndex + CHUNK_SIZE + 1);
 
@@ -1227,14 +1257,29 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   }
   container.innerHTML = initialHtml;
 
-  // 초기 포커스: 활성화된(가장 가까운 예정) 일정으로 부드럽게 스크롤 이동
+  const scrollEl = container.closest('.schedule-container') || container;
+
+  // 초기 포커스: 활성화된(가장 가까운 예정) 일정으로 정밀하게 스크롤 이동
   const focusActiveItem = () => {
-    requestAnimationFrame(() => {
+    const doScroll = () => {
       const activeEl = container.querySelector('.schedule-item.active');
-      if (activeEl) {
-        activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+      if (activeEl && scrollEl) {
+        const activeRect = activeEl.getBoundingClientRect();
+        const scrollRect = scrollEl.getBoundingClientRect();
+        if (scrollRect.height > 0 && activeRect.height > 0) {
+          const diff = (activeRect.top - scrollRect.top) - (scrollRect.height / 2) + (activeRect.height / 2);
+          scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + diff);
+        } else if (scrollEl.clientHeight > 0) {
+          const targetTop = activeEl.offsetTop - (scrollEl.clientHeight / 2) + (activeEl.offsetHeight / 2);
+          scrollEl.scrollTop = Math.max(0, targetTop);
+        }
       }
-    });
+    };
+
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 40);
+    setTimeout(doScroll, 120);
+    setTimeout(doScroll, 300);
   };
   focusActiveItem();
 
@@ -1244,8 +1289,8 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   function loadPastItems() {
     if (isScrollingLoading || startIndex <= 0) return;
     isScrollingLoading = true;
-    const oldScrollHeight = container.scrollHeight;
-    const oldScrollTop = container.scrollTop;
+    const oldScrollHeight = scrollEl.scrollHeight;
+    const oldScrollTop = scrollEl.scrollTop;
 
     const prevStart = startIndex;
     startIndex = Math.max(0, startIndex - CHUNK_SIZE);
@@ -1259,8 +1304,8 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     container.insertBefore(fragment, container.firstElementChild);
 
     // 스크롤 점프 방지 (사용자 시야 유지)
-    const heightDiff = container.scrollHeight - oldScrollHeight;
-    container.scrollTop = oldScrollTop + heightDiff;
+    const heightDiff = scrollEl.scrollHeight - oldScrollHeight;
+    scrollEl.scrollTop = oldScrollTop + heightDiff;
 
     setTimeout(() => { isScrollingLoading = false; }, 60);
   }
@@ -1283,22 +1328,22 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   }
 
   // 양방향 무한 스크롤 핸들러 (위/아래 넉넉한 80px 임계값으로 추가 로드)
-  container.onscroll = () => {
-    if (container.scrollTop <= 80 && startIndex > 0) {
+  scrollEl.onscroll = () => {
+    if (scrollEl.scrollTop <= 80 && startIndex > 0) {
       loadPastItems();
-    } else if (container.scrollTop + container.clientHeight >= container.scrollHeight - 80 && endIndex < schedules.length) {
+    } else if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 80 && endIndex < schedules.length) {
       loadFutureItems();
     }
   };
 
-  // 휠(Wheel) 바운스 감지 (최상단/최하단 도달 시 추가 스크롤 감지)
-  container.onwheel = (e) => {
-    if (e.deltaY < 0 && container.scrollTop <= 10 && startIndex > 0) {
+  // 휠(Wheel) 바운스 감지 (최상단/최하단 도달 시 추가 스크롤 감지, passive 리스너로 100% 네이티브 스크롤 보장)
+  scrollEl.addEventListener('wheel', (e) => {
+    if (e.deltaY < 0 && scrollEl.scrollTop <= 10 && startIndex > 0) {
       loadPastItems();
-    } else if (e.deltaY > 0 && container.scrollTop + container.clientHeight >= container.scrollHeight - 10 && endIndex < schedules.length) {
+    } else if (e.deltaY > 0 && scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 10 && endIndex < schedules.length) {
       loadFutureItems();
     }
-  };
+  }, { passive: true });
 
   // 클릭 이벤트 위임 (동적으로 추가된 일정 아이템도 안정적으로 모달 오픈)
   container.onclick = (e) => {
@@ -2274,12 +2319,6 @@ export function initCalendarManager({
       if (navControls) navControls.style.visibility = 'hidden';
       if (tabListEl && globalSchedules.length > 0) {
         renderScheduleList(tabListEl, globalSchedules);
-        requestAnimationFrame(() => {
-          const activeEl = tabListEl.querySelector('.schedule-item.active');
-          if (activeEl) {
-            activeEl.scrollIntoView({ block: 'center', behavior: 'auto' });
-          }
-        });
       }
     }
   }

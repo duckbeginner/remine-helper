@@ -36,6 +36,24 @@ function getMicroCache() {
   }
 }
 
+function getRelevantSchedulesForCache(schedules) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return [];
+  const now = new Date().getTime();
+  const sorted = [...schedules].sort((a, b) => {
+    const tA = (a.startTime || a.date) ? new Date(a.startTime || a.date).getTime() : 0;
+    const tB = (b.startTime || b.date) ? new Date(b.startTime || b.date).getTime() : 0;
+    return tA - tB;
+  });
+  let nextIdx = sorted.findIndex(item => {
+    const t = (item.startTime || item.date) ? new Date(item.startTime || item.date).getTime() : 0;
+    return t >= now;
+  });
+  if (nextIdx === -1) nextIdx = Math.max(0, sorted.length - 15);
+  const start = Math.max(0, nextIdx - 5);
+  const end = Math.min(sorted.length, start + 30);
+  return sorted.slice(start, end);
+}
+
 function setMicroCache(data) {
   try {
     if (!data) return;
@@ -44,7 +62,7 @@ function setMicroCache(data) {
       latestVideos: (data.latestVideos || []).slice(0, 6),
       officialPlaylistVideos: (data.officialPlaylistVideos || []).slice(0, 6),
       woniVideos: (data.woniVideos || []).slice(0, 6),
-      blipSchedules: (data.blipSchedules || []).slice(0, 15),
+      blipSchedules: getRelevantSchedulesForCache(data.blipSchedules),
       isLive: data.isLive,
       channelOrder: data.channelOrder
     };

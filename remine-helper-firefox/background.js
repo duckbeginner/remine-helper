@@ -277,346 +277,360 @@ function parseSafeDate(startTimeStr) {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
-// 2024년부터 향후 1년치 스케줄 다중 월 수집 및 병합 함수
-async function fetchAndMergeSchedules() {
-  try {
-    let rawSchedules = [];
+// 단일 월(Year, Month)의 Mnet 및 Blip 스케줄 병렬 수집 함수
+async function fetchMonthRawSchedules(year, month) {
+  const paddedMonth = String(month).padStart(2, '0');
 
-    const startDate = new Date(2024, 0, 1); // 2024년 1월 1일 시작
-    const endDate = new Date();
-    endDate.setFullYear(endDate.getFullYear() + 1); // 향후 1년 뒤까지
-
-    let loopDate = new Date(startDate);
-
-    // 2024년부터 내년 이맘때까지의 모든 월(Month)을 순회하며 일괄 수집
-    while (loopDate <= endDate) {
-      const year = loopDate.getFullYear();
-      const month = loopDate.getMonth() + 1;
-      const paddedMonth = String(month).padStart(2, '0');
-
-      // [A] 엠넷플러스(Mnet Plus) 월별 수집 (공식 마스터 소스)
-      try {
-        const lastDay = new Date(year, month, 0).getDate();
-        const mnetUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/space/api/v1/calendar?endAt=${year}-${paddedMonth}-${lastDay}T23:59:59Z&endAtForAllDay=${year}-${paddedMonth}-${lastDay}&startAt=${year}-${paddedMonth}-01T00:00:00Z&startAtForAllDay=${year}-${paddedMonth}-01`;
-        const mnetRes = await fetch(mnetUrl, {
-          headers: { 'accept': '*/*', 'x-bmf-country': 'KR', 'x-bmf-currency': 'KRW', 'x-bmf-language': 'ko', 'x-bmf-shop-id': '33' }
-        });
-        if (mnetRes.ok) {
-          const mnetJson = await mnetRes.json();
-          if (mnetJson && Array.isArray(mnetJson.events)) {
-            rawSchedules.push(...mnetJson.events.map(ev => {
-              const loc = ev.location || ev.place || ev.venue || ev.locationName || ev.address || null;
-              const isAllDay = ev.allDay || Boolean(ev.startAtAllDay);
-              const labelName = ev.label ? ev.label.name : null;
-              const attendees = Array.isArray(ev.starAttendees) ? ev.starAttendees.map(a => ({
-                id: a.id,
-                nickname: a.nickname,
-                avatarImgPath: a.avatarImgPath,
-                type: a.type
-              })) : [];
-
-              return {
-                title: ev.title ? ev.title.trim() : "",
-                startTime: ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""),
-                endTime: ev.endAt || (ev.endAtForAllDay ? `${ev.endAtForAllDay}T23:59:59Z` : (ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""))),
-                isAllday: isAllDay,
-                message: `[${labelName || '일정'}] ${ev.title}`,
-                typeText: labelName,
-                typeId: labelName === '방송' ? 1 : (labelName === '공연' ? 5 : (labelName === '기념일' ? 3 : (labelName === '행사' ? 5 : null))),
-                location: loc,
-                channel: null,
-                source: 'mnet',
-                starAttendees: attendees,
-                extField: loc ? { key: '장소', value: loc } : null
-              };
-            }));
-          }
-        }
-      } catch (e) { }
-
-      // [B] 블립(Blip) 월별 수집 (공식 유튜브 영상과 매칭 시 공식 정보로 대체)
-      try {
-        const blipUrl = `https://blip.kr/old-api/homepage/schedules?year=${year}&month=${month}&types=1&types=2&types=3&types=4&types=5&types=6&types=7&unitId=133`;
-        const blipRes = await fetch(blipUrl, {
-          headers: {
-            'accept': 'application/json',
-            'x-blip-agent': 'BLIP WEB',
-            'x-blip-device-lang': 'ko',
-            'x-blip-s2s-api-key': 'c95b9a274f67c09a47638bf92632cea9'
-          }
-        });
-        if (blipRes.ok) {
-          const blipJson = await blipRes.json();
-          const blipData = Array.isArray(blipJson) ? blipJson : (blipJson.data || []);
-          rawSchedules.push(...blipData.map(item => {
-            const ext = item.extField || null;
-            let loc = item.location || item.place || item.venue || null;
-            let ch = item.channel || null;
-            if (ext && ext.key && ext.value) {
-              if (ext.key === '장소') loc = loc || ext.value.trim();
-              if (ext.key === '채널' || ext.key === '방송사') ch = ch || ext.value.trim();
-            }
-            const members = Array.isArray(item.members) ? item.members.map(m => ({
-              id: m.memberId || m.id,
-              nickname: m.name || m.nickname,
-              avatarImgPath: m.profileImg || m.avatarImgPath || ''
+  // [A] 엠넷플러스(Mnet Plus) 월별 수집
+  const fetchMnet = async () => {
+    try {
+      const lastDay = new Date(year, month, 0).getDate();
+      const mnetUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/space/api/v1/calendar?endAt=${year}-${paddedMonth}-${lastDay}T23:59:59Z&endAtForAllDay=${year}-${paddedMonth}-${lastDay}&startAt=${year}-${paddedMonth}-01T00:00:00Z&startAtForAllDay=${year}-${paddedMonth}-01`;
+      const mnetRes = await fetch(mnetUrl, {
+        headers: { 'accept': '*/*', 'x-bmf-country': 'KR', 'x-bmf-currency': 'KRW', 'x-bmf-language': 'ko', 'x-bmf-shop-id': '33' }
+      });
+      if (mnetRes.ok) {
+        const mnetJson = await mnetRes.json();
+        if (mnetJson && Array.isArray(mnetJson.events)) {
+          return mnetJson.events.map(ev => {
+            const loc = ev.location || ev.place || ev.venue || ev.locationName || ev.address || null;
+            const isAllDay = ev.allDay || Boolean(ev.startAtAllDay);
+            const labelName = ev.label ? ev.label.name : null;
+            const attendees = Array.isArray(ev.starAttendees) ? ev.starAttendees.map(a => ({
+              id: a.id,
+              nickname: a.nickname,
+              avatarImgPath: a.avatarImgPath,
+              type: a.type
             })) : [];
 
             return {
-              title: item.title ? item.title.trim() : "",
-              startTime: item.startTime,
-              endTime: item.endTime || item.startTime,
-              isAllday: Boolean(item.isAllday),
-              message: item.message || "",
-              typeId: item.typeId || null,
+              title: ev.title ? ev.title.trim() : "",
+              startTime: ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""),
+              endTime: ev.endAt || (ev.endAtForAllDay ? `${ev.endAtForAllDay}T23:59:59Z` : (ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""))),
+              isAllday: isAllDay,
+              message: `[${labelName || '일정'}] ${ev.title}`,
+              typeText: labelName,
+              typeId: labelName === '방송' ? 1 : (labelName === '공연' ? 5 : (labelName === '기념일' ? 3 : (labelName === '행사' ? 5 : null))),
               location: loc,
-              channel: ch,
-              source: 'blip',
-              starAttendees: members,
-              extField: ext
+              channel: null,
+              source: 'mnet',
+              starAttendees: attendees,
+              extField: loc ? { key: '장소', value: loc } : null
             };
-          }));
+          });
         }
-      } catch (e) { }
+      }
+    } catch (e) {}
+    return [];
+  };
 
-      // 다음 달로 이동
+  // [B] 블립(Blip) 월별 수집
+  const fetchBlip = async () => {
+    try {
+      const blipUrl = `https://blip.kr/old-api/homepage/schedules?year=${year}&month=${month}&types=1&types=2&types=3&types=4&types=5&types=6&types=7&unitId=133`;
+      const blipRes = await fetch(blipUrl, {
+        headers: {
+          'accept': 'application/json',
+          'x-blip-agent': 'BLIP WEB',
+          'x-blip-device-lang': 'ko',
+          'x-blip-s2s-api-key': 'c95b9a274f67c09a47638bf92632cea9'
+        }
+      });
+      if (blipRes.ok) {
+        const blipJson = await blipRes.json();
+        const blipData = Array.isArray(blipJson) ? blipJson : (blipJson.data || []);
+        return blipData.map(item => {
+          const ext = item.extField || null;
+          let loc = item.location || item.place || item.venue || null;
+          let ch = item.channel || null;
+          if (ext && ext.key && ext.value) {
+            if (ext.key === '장소') loc = loc || ext.value.trim();
+            if (ext.key === '채널' || ext.key === '방송사') ch = ch || ext.value.trim();
+          }
+          const members = Array.isArray(item.members) ? item.members.map(m => ({
+            id: m.memberId || m.id,
+            nickname: m.name || m.nickname,
+            avatarImgPath: m.profileImg || m.avatarImgPath || ''
+          })) : [];
+
+          return {
+            title: item.title ? item.title.trim() : "",
+            startTime: item.startTime,
+            endTime: item.endTime || item.startTime,
+            isAllday: Boolean(item.isAllday),
+            message: item.message || "",
+            typeId: item.typeId || null,
+            location: loc,
+            channel: ch,
+            source: 'blip',
+            starAttendees: members,
+            extField: ext
+          };
+        });
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  const [mnetList, blipList] = await Promise.all([fetchMnet(), fetchBlip()]);
+  return [...mnetList, ...blipList];
+}
+
+// 스케줄 원본 데이터 필터링, 공식 유튜브 결합, 중복 병합 및 oEmbed 처리 공통 함수
+async function processAndMergeScheduleList(rawSchedules) {
+  let shortsVideoIdSet = new Set();
+  let youtubeScheduleItems = [];
+  try {
+    const ytData = await new Promise(resolve => {
+      chrome.storage.local.get(["latestVideos", "woniVideos", "officialPlaylistVideos"], resolve);
+    });
+    const allYtVideos = [
+      ...(ytData.latestVideos || []),
+      ...(ytData.woniVideos || []),
+      ...(ytData.officialPlaylistVideos || [])
+    ];
+
+    allYtVideos.forEach(v => {
+      if (!v.id) return;
+      const isShorts = v.isShorts || (v.url && v.url.includes('/shorts/')) || /shorts|#shorts|#Shorts|\[shorts\]|\(shorts\)|#쇼츠|#short\b/i.test(v.title || '');
+      if (isShorts) shortsVideoIdSet.add(v.id);
+    });
+
+    const targetScheduleVideos = [
+      ...(ytData.latestVideos || []),
+      ...(ytData.woniVideos || [])
+    ];
+
+    const seenYt = new Set();
+    targetScheduleVideos.forEach(v => {
+      if (!v.id || seenYt.has(v.id)) return;
+      if (shortsVideoIdSet.has(v.id)) return;
+
+      seenYt.add(v.id);
+      const startTime = v.publishedAt || (v.published ? `${v.published}T00:00:00Z` : new Date().toISOString());
+      youtubeScheduleItems.push({
+        title: v.title,
+        startTime: startTime,
+        endTime: startTime,
+        message: `[공식 영상] ${v.title}`,
+        typeText: "영상",
+        location: null,
+        channel: v.channelName || "유튜브",
+        source: "youtube",
+        url: v.url,
+        link: v.url,
+        thumbnail: v.thumbnail,
+        extField: { key: "채널", value: v.channelName || "유튜브" }
+      });
+    });
+  } catch (e) {}
+
+  const exactExcludePatterns = [
+    /직캠/i, /풀캠/i, /팬캠/i, /페이스캠/i, /입덕직캠/i, /최애직캠/i, /팔로우캠/i, /안방1열/i, /음중직캠/i, /음중풀캠/i, /음중팔로우캠/i,
+    /fan\W*cam/i, /k\W*fancam/i, /choreo/i, /fancam/i, /\bcam\b/i,
+    /shorts/i, /#shorts/i, /#쇼츠/i, /\/shorts\//i,
+    /투표/i, /사전투표/i, /실시간투표/i, /\bvote\b/i, /\bvoting\b/i, /\bpoll\b/i,
+    /덕애드/i, /스타패스/i, /아이돌챔프/i, /뮤빗/i, /팬플러스/i, /포도알/i, /케이돌/i, /엠넷플러스\s*투표/i,
+    /포스터\s*이벤트/i, /사인\s*.*이벤트/i, /싸인\s*.*이벤트/i, /이벤트\s*안내/i, /안내\s*\(Notice\)/i,
+    /\[빅크/i, /\bBIGC\b/i, /응모\s*이벤트/i, /증정\s*이벤트/i, /특전\s*이벤트/i, /구매자\s*이벤트/i,
+    /럭키드로우/i, /\b럭드\b/i
+  ];
+
+  const filteredSchedules = rawSchedules.filter(item => {
+    const targetText = [item.title, item.message, item.url, item.link, item.description].filter(Boolean).join(" ");
+    for (let pattern of exactExcludePatterns) {
+      if (pattern.test(targetText)) return false;
+    }
+
+    const ytIdMatches = targetText.matchAll(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/g);
+    for (const m of ytIdMatches) {
+      if (shortsVideoIdSet.has(m[1])) return false;
+    }
+
+    const hasSpecificVideoLink = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/))([\w-]{11})/.test(targetText);
+    const isYoutubeChannelHome = /youtube\.com\/@/i.test(targetText);
+    const cleanTitle = (item.title || '').replace(/[<>]/g, '').trim();
+    const isPlaceholderChannelOnly = !hasSpecificVideoLink && (
+      (isYoutubeChannelHome && /^(?:안녕하세요\s*원이입니다.*|안원잘부.*|rescene\s*vlog.*|youtube\s*live|유튜브\s*라이브)$/i.test(cleanTitle)) ||
+      (isYoutubeChannelHome && /공개\s*예정\s*채널|유튜브에서\s*만나요/i.test(targetText))
+    );
+    if (isPlaceholderChannelOnly) return false;
+
+    return true;
+  });
+
+  const mergedList = [];
+  filteredSchedules.forEach(newItem => {
+    const newD = parseSafeDate(newItem.startTime);
+    const newDateStr = `${newD.getFullYear()}-${String(newD.getMonth() + 1).padStart(2, '0')}-${String(newD.getDate()).padStart(2, '0')}`;
+
+    let matchedIndex = -1;
+    for (let i = 0; i < mergedList.length; i++) {
+      const existing = mergedList[i];
+      const existD = parseSafeDate(existing.startTime);
+      const existDateStr = `${existD.getFullYear()}-${String(existD.getMonth() + 1).padStart(2, '0')}-${String(existD.getDate()).padStart(2, '0')}`;
+
+      if (newDateStr === existDateStr && areSchedulesDuplicate(existing, newItem)) {
+        matchedIndex = i;
+        break;
+      }
+    }
+
+    if (matchedIndex !== -1) {
+      const target = mergedList[matchedIndex];
+      if (newItem.source === 'mnet') {
+        target.source = 'mnet';
+        if (newItem.typeText) target.typeText = newItem.typeText;
+        if (newItem.startTime) target.startTime = newItem.startTime;
+        if (newItem.endTime) target.endTime = newItem.endTime;
+        if (newItem.location) target.location = newItem.location;
+        target.title = pickBestTitle(target.title, newItem.title);
+      } else {
+        target.title = pickBestTitle(target.title, newItem.title);
+      }
+
+      if (newItem.message && newItem.message.length > (target.message ? target.message.length : 0)) {
+        target.message = newItem.message;
+      }
+      if (!target.typeId && newItem.typeId) target.typeId = newItem.typeId;
+      if (!target.typeText && newItem.typeText) target.typeText = newItem.typeText;
+      if (!target.endTime && newItem.endTime) target.endTime = newItem.endTime;
+      if (!target.location && newItem.location) target.location = newItem.location;
+      if (!target.channel && newItem.channel) target.channel = newItem.channel;
+      if (!target.extField && newItem.extField) target.extField = newItem.extField;
+      if ((!target.starAttendees || target.starAttendees.length === 0) && (newItem.starAttendees && newItem.starAttendees.length > 0)) {
+        target.starAttendees = newItem.starAttendees;
+      }
+    } else {
+      mergedList.push({ ...newItem });
+    }
+  });
+
+  youtubeScheduleItems.forEach(ytItem => {
+    mergedList.push(ytItem);
+  });
+
+  await enrichSchedulesWithYouTubeOEmbed(mergedList);
+  mergedList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
+  return mergedList;
+}
+
+// 당일 푸시 알림 발송 헬퍼 함수
+function checkDailyScheduleNotification(schedules) {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  chrome.storage.local.get(['lastScheduleNotiDate'], (res) => {
+    const lastNotiDate = res && res.lastScheduleNotiDate;
+    if (lastNotiDate !== todayStr) {
+      const todaySchedules = schedules.filter(item => {
+        const d = parseSafeDate(item.startTime);
+        const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return itemDateStr === todayStr;
+      });
+
+      if (todaySchedules.length > 0) {
+        todaySchedules.sort((a, b) => {
+          const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
+          const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
+          return tA - tB;
+        });
+
+        const scheduleLines = todaySchedules.slice(0, 5).map(item => {
+          const cleanTitle = cleanDisplayTitle(item.title);
+          let timePrefix = '';
+          if (item.startTime && !item.isAllday && item.startTime.includes('T')) {
+            const d = parseSafeDate(item.startTime);
+            timePrefix = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}] `;
+          }
+          return `• ${timePrefix}${cleanTitle}`;
+        });
+
+        if (todaySchedules.length > 5) {
+          scheduleLines.push(`• ...외 ${todaySchedules.length - 5}건`);
+        }
+
+        sendNotification(
+          `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`,
+          scheduleLines.join('\n'),
+          'schedule'
+        );
+        chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
+      }
+    }
+  });
+}
+
+// 2단계 우선순위(이번달/다음달/전달 우선 -> 배경 백필) 스케줄 수집 및 병합 함수
+async function fetchAndMergeSchedules() {
+  try {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+
+    // 1단계: 핵심 우선순위 월 (이번달, 다음달, 지난달, 다다음달)
+    const nextM = curMonth === 12 ? 1 : curMonth + 1;
+    const nextY = curMonth === 12 ? curYear + 1 : curYear;
+    const prevM = curMonth === 1 ? 12 : curMonth - 1;
+    const prevY = curMonth === 1 ? curYear - 1 : curYear;
+    const next2M = curMonth >= 11 ? (curMonth === 11 ? 1 : 2) : curMonth + 2;
+    const next2Y = curMonth >= 11 ? curYear + 1 : curYear;
+
+    const priorityMonths = [
+      { year: curYear, month: curMonth }, // 이번달
+      { year: nextY, month: nextM },       // 다음달
+      { year: prevY, month: prevM },       // 지난달
+      { year: next2Y, month: next2M }      // 다다음달
+    ];
+
+    const priorityKeySet = new Set(priorityMonths.map(m => `${m.year}-${m.month}`));
+
+    // [Phase 1] 핵심 4개 월 초고속 병렬 페치 (0.3초 이내 완료)
+    const priorityResults = await Promise.all(
+      priorityMonths.map(m => fetchMonthRawSchedules(m.year, m.month))
+    );
+    let allRaw = priorityResults.flat();
+
+    // 1단계 핵심 스케줄 즉시 처리 및 1차 스토리지 저장 (0ms 즉각 노출)
+    const phase1Merged = await processAndMergeScheduleList(allRaw);
+    if (phase1Merged.length > 0) {
+      await chrome.storage.local.set({ blipSchedules: phase1Merged });
+      checkUpcomingScheduleAlerts(phase1Merged);
+      checkDailyScheduleNotification(phase1Merged);
+    }
+
+    // [Phase 2] 나머지 월 백그라운드 백필 (과거 2024.01 ~ 향후 1년 뒤까지)
+    const otherMonths = [];
+    const startDate = new Date(2024, 0, 1);
+    const endDate = new Date();
+    endDate.setFullYear(endDate.getFullYear() + 1);
+
+    let loopDate = new Date(startDate);
+    while (loopDate <= endDate) {
+      const y = loopDate.getFullYear();
+      const m = loopDate.getMonth() + 1;
+      if (!priorityKeySet.has(`${y}-${m}`)) {
+        otherMonths.push({ year: y, month: m });
+      }
       loopDate.setMonth(loopDate.getMonth() + 1);
     }
 
-    // [C] 직접 수집한 공식 유튜브 영상 피드 데이터에서 쇼츠 식별 및 롱폼 영상 일정 목록 생성 (archive 재생목록은 일정 생성 제외)
-    let shortsVideoIdSet = new Set();
-    let shortsVideoList = [];
-    let youtubeScheduleItems = [];
-    try {
-      const ytData = await new Promise(resolve => {
-        chrome.storage.local.get(["latestVideos", "woniVideos", "officialPlaylistVideos"], resolve);
-      });
-      // 쇼츠 식별용 전체 영상 풀
-      const allYtVideos = [
-        ...(ytData.latestVideos || []),
-        ...(ytData.woniVideos || []),
-        ...(ytData.officialPlaylistVideos || [])
-      ];
-
-      // 쇼츠 videoId 세트 및 쇼츠 영상 리스트 구축
-      allYtVideos.forEach(v => {
-        if (!v.id) return;
-        const isShorts = v.isShorts || (v.url && v.url.includes('/shorts/')) || /shorts|#shorts|#Shorts|\[shorts\]|\(shorts\)|#쇼츠|#short\b/i.test(v.title || '');
-        if (isShorts) {
-          shortsVideoIdSet.add(v.id);
-          shortsVideoList.push(v);
-        }
-      });
-
-      // 일정 생성 대상 영상 풀 (공식 최신 영상 + 원이 채널 영상만 포함, archive 재생목록은 제외)
-      const targetScheduleVideos = [
-        ...(ytData.latestVideos || []),
-        ...(ytData.woniVideos || [])
-      ];
-
-      // 공식 롱폼 영상 스케줄 생성 (병합 로직에서 제외하고 독립적으로 직접 추가)
-      const seenYt = new Set();
-      targetScheduleVideos.forEach(v => {
-        if (!v.id || seenYt.has(v.id)) return;
-        // 쇼츠(Shorts) 영상 제외
-        if (shortsVideoIdSet.has(v.id)) return;
-
-        seenYt.add(v.id);
-        const startTime = v.publishedAt || (v.published ? `${v.published}T00:00:00Z` : new Date().toISOString());
-        youtubeScheduleItems.push({
-          title: v.title,
-          startTime: startTime,
-          endTime: startTime,
-          message: `[공식 영상] ${v.title}`,
-          typeText: "영상",
-          location: null,
-          channel: v.channelName || "유튜브",
-          source: "youtube",
-          url: v.url,
-          link: v.url,
-          thumbnail: v.thumbnail,
-          extField: { key: "채널", value: v.channelName || "유튜브" }
-        });
-      });
-    } catch (e) { }
-
-    // 직캠, 투표, 쇼츠, 포스터/응모/증정/공지 이벤트 정밀 필터링
-    const exactExcludePatterns = [
-      /직캠/i, /풀캠/i, /팬캠/i, /페이스캠/i, /입덕직캠/i, /최애직캠/i, /팔로우캠/i, /안방1열/i, /음중직캠/i, /음중풀캠/i, /음중팔로우캠/i,
-      /fan\W*cam/i, /k\W*fancam/i, /choreo/i, /fancam/i, /\bcam\b/i,
-      // 쇼츠 제외
-      /shorts/i, /#shorts/i, /#쇼츠/i, /\/shorts\//i,
-      // 투표 관련 일정 제외
-      /투표/i, /사전투표/i, /실시간투표/i, /\bvote\b/i, /\bvoting\b/i, /\bpoll\b/i,
-      /덕애드/i, /스타패스/i, /아이돌챔프/i, /뮤빗/i, /팬플러스/i, /포도알/i, /케이돌/i, /엠넷플러스\s*투표/i,
-      // 포스터/응모/증정/빅크/특전 이벤트 및 단순 공지 제외
-      /포스터\s*이벤트/i, /사인\s*.*이벤트/i, /싸인\s*.*이벤트/i, /이벤트\s*안내/i, /안내\s*\(Notice\)/i,
-      /\[빅크/i, /\bBIGC\b/i, /응모\s*이벤트/i, /증정\s*이벤트/i, /특전\s*이벤트/i, /구매자\s*이벤트/i,
-      /럭키드로우/i, /\b럭드\b/i
-    ];
-
-    // 1) 공식 유튜브 영상 ID 매핑 테이블 구축
-    const ytVideoIdMap = new Map();
-    youtubeScheduleItems.forEach(ytItem => {
-      const match = (ytItem.url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-      if (match) ytVideoIdMap.set(match[1], ytItem);
-    });
-
-    const filteredSchedules = rawSchedules.filter(item => {
-      const targetText = [item.title, item.message, item.url, item.link, item.description].filter(Boolean).join(" ");
-      for (let pattern of exactExcludePatterns) {
-        if (pattern.test(targetText)) return false;
-      }
-
-      // 1) 쇼츠 영상 링크/ID를 포함하는 일정은 제외
-      const ytIdMatches = targetText.matchAll(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/g);
-      for (const m of ytIdMatches) {
-        const vid = m[1];
-        if (shortsVideoIdSet.has(vid)) return false;
-      }
-
-      // 2) 유튜브 채널 홈 URL만 있고 특정 영상 ID가 없는 유튜브 자컨/라이브 플레이스홀더 알림 일정만 선별 제외
-      const hasSpecificVideoLink = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/))([\w-]{11})/.test(targetText);
-      const isYoutubeChannelHome = /youtube\.com\/@/i.test(targetText);
-      const cleanTitle = (item.title || '').replace(/[<>]/g, '').trim();
-      const isPlaceholderChannelOnly = !hasSpecificVideoLink && (
-        (isYoutubeChannelHome && /^(?:안녕하세요\s*원이입니다.*|안원잘부.*|rescene\s*vlog.*|youtube\s*live|유튜브\s*라이브)$/i.test(cleanTitle)) ||
-        (isYoutubeChannelHome && /공개\s*예정\s*채널|유튜브에서\s*만나요/i.test(targetText))
+    // 4개월씩 병렬 청크로 수집하여 부하 분산 및 빠른 백필
+    const CHUNK_SIZE = 4;
+    for (let i = 0; i < otherMonths.length; i += CHUNK_SIZE) {
+      const chunk = otherMonths.slice(i, i + CHUNK_SIZE);
+      const chunkResults = await Promise.all(
+        chunk.map(m => fetchMonthRawSchedules(m.year, m.month))
       );
-      if (isPlaceholderChannelOnly) return false;
+      allRaw.push(...chunkResults.flat());
+    }
 
-      return true;
-    });
+    // 전체 데이터 최종 병합 및 스토리지 갱신
+    const fullMerged = await processAndMergeScheduleList(allRaw);
+    await chrome.storage.local.set({ blipSchedules: fullMerged });
+    checkUpcomingScheduleAlerts(fullMerged);
 
-    // 지능형 중복 병합 및 정렬 (Mnet 우선 마스터 & Blip 상세 정보 보완)
-    const mergedList = [];
-
-    filteredSchedules.forEach(newItem => {
-      const newD = parseSafeDate(newItem.startTime);
-      const newDateStr = `${newD.getFullYear()}-${String(newD.getMonth() + 1).padStart(2, '0')}-${String(newD.getDate()).padStart(2, '0')}`;
-
-      let matchedIndex = -1;
-
-      for (let i = 0; i < mergedList.length; i++) {
-        const existing = mergedList[i];
-        const existD = parseSafeDate(existing.startTime);
-        const existDateStr = `${existD.getFullYear()}-${String(existD.getMonth() + 1).padStart(2, '0')}-${String(existD.getDate()).padStart(2, '0')}`;
-
-        // 같은 날짜(YYYY-MM-DD) 내 중복 판별
-        if (newDateStr === existDateStr && areSchedulesDuplicate(existing, newItem)) {
-          matchedIndex = i;
-          break;
-        }
-      }
-
-      if (matchedIndex !== -1) {
-        const target = mergedList[matchedIndex];
-
-        // Mnet 출처 우선순위 적용 (새로 들어온 항목이 Mnet이면 공식 정보 우선 반영)
-        if (newItem.source === 'mnet') {
-          target.source = 'mnet';
-          if (newItem.typeText) target.typeText = newItem.typeText;
-          if (newItem.startTime) target.startTime = newItem.startTime;
-          if (newItem.endTime) target.endTime = newItem.endTime;
-          if (newItem.location) target.location = newItem.location;
-          target.title = pickBestTitle(target.title, newItem.title);
-        } else {
-          // 일반 제목 선택
-          target.title = pickBestTitle(target.title, newItem.title);
-        }
-
-        // 상세 설명(message)은 더 상세한 쪽으로 보완
-        if (newItem.message && newItem.message.length > (target.message ? target.message.length : 0)) {
-          target.message = newItem.message;
-        }
-        if (!target.typeId && newItem.typeId) {
-          target.typeId = newItem.typeId;
-        }
-        if (!target.typeText && newItem.typeText) {
-          target.typeText = newItem.typeText;
-        }
-        if (!target.endTime && newItem.endTime) {
-          target.endTime = newItem.endTime;
-        }
-        if (!target.location && newItem.location) {
-          target.location = newItem.location;
-        }
-        if (!target.channel && newItem.channel) {
-          target.channel = newItem.channel;
-        }
-        if (!target.extField && newItem.extField) {
-          target.extField = newItem.extField;
-        }
-        if ((!target.starAttendees || target.starAttendees.length === 0) && (newItem.starAttendees && newItem.starAttendees.length > 0)) {
-          target.starAttendees = newItem.starAttendees;
-        }
-      } else {
-        mergedList.push({ ...newItem });
-      }
-    });
-
-    // 직접 수집한 공식 유튜브 롱폼 영상 일정들을 mergedList에 직접 추가 (병합 복잡도 없이 온전한 공식 정보 유지)
-    youtubeScheduleItems.forEach(ytItem => {
-      mergedList.push(ytItem);
-    });
-
-    // ★ 유튜브 링크가 포함된 일정 항목들을 YouTube oEmbed 실시간 데이터로 풍부하게 재구성 (방송사인 경우 방송사명 유지)
-    await enrichSchedulesWithYouTubeOEmbed(mergedList);
-
-    // 백그라운드 단에서 시간순(오름차순) 정렬 완료
-    mergedList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
-
-    chrome.storage.local.set({ blipSchedules: mergedList });
-
-    // 스케줄 시작 전 임박 알림 (방송/영상/공연 시작 30분 이내 감지)
-    checkUpcomingScheduleAlerts(mergedList);
-
-    // 당일 스케줄 푸시 알림 발송 (하루 1회 발송 제한)
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    chrome.storage.local.get(['lastScheduleNotiDate'], (res) => {
-      const lastNotiDate = res && res.lastScheduleNotiDate;
-      if (lastNotiDate !== todayStr) {
-        const todaySchedules = mergedList.filter(item => {
-          const d = parseSafeDate(item.startTime);
-          const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          return itemDateStr === todayStr;
-        });
-
-        if (todaySchedules.length > 0) {
-          // 시작 시간 순 정렬
-          todaySchedules.sort((a, b) => {
-            const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
-            const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
-            return tA - tB;
-          });
-
-          // 각 일정 상세 목록 줄바꿈 구성 (최대 5건까지 명시 후 초과 시 외 N건)
-          const scheduleLines = todaySchedules.slice(0, 5).map(item => {
-            const cleanTitle = cleanDisplayTitle(item.title);
-            let timePrefix = '';
-            if (item.startTime && !item.isAllday && item.startTime.includes('T')) {
-              const d = parseSafeDate(item.startTime);
-              timePrefix = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}] `;
-            }
-            return `• ${timePrefix}${cleanTitle}`;
-          });
-
-          if (todaySchedules.length > 5) {
-            scheduleLines.push(`• ...외 ${todaySchedules.length - 5}건`);
-          }
-
-          sendNotification(
-            `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`,
-            scheduleLines.join('\n'),
-            'schedule'
-          );
-          chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
-        }
-      }
-    });
   } catch (error) {
-    console.error("장기 스케줄 수집 및 병합 오류:", error);
+    console.error("스케줄 수집 및 병합 오류:", error);
   }
 }
 
