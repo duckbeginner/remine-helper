@@ -15,6 +15,8 @@ jobs:
   build-and-package:
     name: Package Extension & Create Release
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -84,13 +86,13 @@ jobs:
 
       - name: Upload & Publish to Chrome Web Store
         if: env.SKIP == 'false'
-        uses: mnao305/chrome-webstore-upload-action@v2.0.1
+        uses: mnao305/chrome-extension-upload@v5.0.0
         with:
           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
           client-id: ${{ secrets.CHROME_CLIENT_ID }}
           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          file-name: publish/*.zip
+          file-path: publish/remine-helper-chrome-v${{ needs.build-and-package.outputs.version }}.zip
           publish: true
 
   publish-firefox-amo:
