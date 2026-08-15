@@ -93,4 +93,38 @@ jobs:
           file-path: publish/remine-helper-chrome-v${{ needs.build-and-package.outputs.version }}.zip
           publish: false
 
+  publish-firefox-amo:
+    name: Publish to Firefox Add-ons (AMO)
+    needs: build-and-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    env:
+      FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+    steps:
+      - name: Check Secrets Configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREFOX_JWT_ISSUER" ]; then
+            echo "::notice ::Firefox AMO secrets not set. Skipping AMO upload."
+            echo "SKIP=true" >> $GITHUB_ENV
+          else
+            echo "SKIP=false" >> $GITHUB_ENV
+          fi
+
+      - name: Download Firefox Build Artifact
+        if: env.SKIP == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: remine-helper-firefox
+          path: publish/
+
+      - name: Upload & Sign on Firefox Add-ons (AMO)
+        if: env.SKIP == 'false'
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: '{8e25f021-4c94-49f8-91b7-18f5f3e5a810}'
+          xpi-path: publish/remine-helper-firefox-v${{ needs.build-and-package.outputs.version }}.zip
+          jwt-issuer: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.FIREFOX_JWT_SECRET }}
+
 
