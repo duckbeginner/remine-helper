@@ -17,31 +17,100 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #ffb6c1 transparent;
   contain: layout;
-}
 
-body::-webkit-scrollbar {
-  width: 8px;
-}
+  &::-webkit-scrollbar {
+    width: 8px;
 
-body::-webkit-scrollbar-thumb {
-  background: #ffb6c1;
-  border-radius: 4px;
-}
+    &-thumb {
+      background: #ffb6c1;
+      border-radius: 4px;
+    }
 
-body::-webkit-scrollbar-track {
-  background: transparent;
-}
+    &-track {
+      background: transparent;
+    }
+  }
 
-html.dark-mode,
-html.dark-mode body,
-body.dark-mode {
-  background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
-  color: #f1f5f9 !important;
-  scrollbar-color: #4a385c transparent;
-}
+  :is(html.dark-mode, body.dark-mode) &,
+  &.dark-mode {
+    background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
+    color: #f1f5f9 !important;
+    scrollbar-color: #4a385c transparent;
 
-body.dark-mode::-webkit-scrollbar-thumb {
-  background: #4a385c;
+    &::-webkit-scrollbar-thumb {
+      background: #4a385c;
+    }
+
+    .maximize-btn {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+  }
+
+  /* 최대화 모드 */
+  &.calendar-maximized {
+    .dashboard-container {
+      display: flex !important;
+      flex-direction: column !important;
+      height: calc(100vh - 24px) !important;
+      max-height: calc(100vh - 24px) !important;
+      width: 100% !important;
+      max-width: none !important;
+      gap: 8px;
+    }
+
+    .dashboard-col.left-col {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      min-width: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .dashboard-main-card {
+      height: 100% !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box;
+    }
+
+    .dashboard-tab-mount,
+    .panel-tab-content,
+    .iframe-wrapper,
+    .feed-list-container {
+      width: 100% !important;
+      min-width: 0 !important;
+      height: 100% !important;
+      box-sizing: border-box;
+    }
+
+    .dashboard-col.right-col {
+      display: flex !important;
+      flex-direction: row;
+      height: auto !important;
+      max-height: unset !important;
+      overflow: visible !important;
+      order: -1;
+      gap: 0;
+      width: 100% !important;
+
+      .glass-card:first-child {
+        flex: 1;
+        margin-bottom: 0;
+        width: 100% !important;
+      }
+
+      .glass-card:not(:first-child),
+      .disclaimer-card {
+        display: none !important;
+      }
+    }
+
+    .feed-list-container {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+    }
+  }
 }
 
 .dashboard-container {
@@ -65,13 +134,52 @@ body.dark-mode::-webkit-scrollbar-thumb {
   gap: 12px;
   min-width: 0;
   min-height: 0;
-}
 
-/* 좌측 메인 탭/캘린더 카드 */
-.dashboard-col.left-col {
-  height: 100%;
-  min-height: 0;
-  flex: 1;
+  /* 좌측 메인 탭/캘린더 카드 */
+  &.left-col {
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+
+  /* 우측 컬럼: 스크롤 및 상단 공식채널 스티키 */
+  &.right-col {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: visible;
+    scrollbar-width: thin;
+    padding: 2px 2px 0 2px;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+
+      &-thumb {
+        background: rgba(255, 105, 180, 0.25);
+        border-radius: 6px;
+      }
+    }
+
+    /* 1. 상단 공식 채널 바로가기 카드 스티키 */
+    .glass-card:first-child {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* 2. 하단 면책 푸터 카드 — 스티키 하단 고정 */
+    .disclaimer-card {
+      position: sticky;
+      bottom: 0;
+      z-index: 40;
+      margin-top: auto;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+  }
 }
 
 .dashboard-main-card {
@@ -103,11 +211,11 @@ body.dark-mode::-webkit-scrollbar-thumb {
   position: relative;
   z-index: 10;
   flex-shrink: 0;
-}
 
-.dashboard-main-header .panel-tab-bar {
-  flex: 1;
-  margin-bottom: 0;
+  .panel-tab-bar {
+    flex: 1;
+    margin-bottom: 0;
+  }
 }
 
 /* --- 기본 카드 스타일 (.glass-card) --- */
@@ -126,14 +234,13 @@ body.dark-mode::-webkit-scrollbar-thumb {
   margin-bottom: 6px;
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-/* 호버: 배경 카드는 기존 스타일 그대로 (블러 유지) */
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.65);
-  border: var(--glass-border);
-  box-shadow: var(--glass-shadow-hover);
-  transform: translateY(-1px);
+  &:hover {
+    background: rgba(255, 255, 255, 0.65);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow-hover);
+    transform: translateY(-1px);
+  }
 }
 
 /* 테마 버튼과 최대화 버튼 디자인 완벽 통일 */
@@ -155,124 +262,16 @@ body.dark-mode::-webkit-scrollbar-thumb {
   text-decoration: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.85);
   white-space: nowrap;
-}
 
-.maximize-btn:hover {
-  background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.65) 100%);
-  color: var(--primary-color);
-  border-color: rgba(255, 105, 180, 0.4);
-  box-shadow: 0 4px 16px rgba(255, 20, 147, 0.12);
-  transform: translateY(-1px);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-/* 우측 컬럼: 스크롤 및 상단 공식채널 스티키 */
-.dashboard-col.right-col {
-  height: 100%;
-  max-height: 100%;
-  overflow-y: auto;
-  overflow-x: visible;   /* hover translateY 클리핑 방지 */
-  scrollbar-width: thin;
-  padding: 2px 2px 0 2px; /* 카드 hover 시 위·좌·우 클리핑 방지 여백 */
-  box-sizing: border-box;
-}
-
-.dashboard-col.right-col::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dashboard-col.right-col::-webkit-scrollbar-thumb {
-  background: rgba(255, 105, 180, 0.25);
-  border-radius: 6px;
-}
-
-/* 1. 상단 공식 채널 바로가기 카드 스티키 */
-.dashboard-col.right-col .glass-card:first-child {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-/* 2. 하단 면책 푸터 카드 — 스티키 하단 고정 */
-.dashboard-col.right-col .disclaimer-card {
-  position: sticky;
-  bottom: 0;
-  z-index: 40;
-  margin-top: auto;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-/* 최대화 모드 */
-body.calendar-maximized .dashboard-container {
-  display: flex !important;
-  flex-direction: column !important;
-  height: calc(100vh - 24px) !important;
-  max-height: calc(100vh - 24px) !important;
-  width: 100% !important;
-  max-width: none !important;
-  gap: 8px;
-}
-
-/* 최대화 모드: left-col이 남은 공간 모두 차지 및 꽉 채움 */
-body.calendar-maximized .dashboard-col.left-col {
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-body.calendar-maximized .dashboard-main-card {
-  height: 100% !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-}
-
-body.calendar-maximized .dashboard-tab-mount,
-body.calendar-maximized .panel-tab-content {
-  width: 100% !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  box-sizing: border-box;
-}
-
-body.calendar-maximized .iframe-wrapper,
-body.calendar-maximized .feed-list-container {
-  width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-}
-
-/* 최대화 모드: right-col 전체 숨기지 않고 허브 카드만 상단에 유지 */
-body.calendar-maximized .dashboard-col.right-col {
-  display: flex !important;
-  flex-direction: row;
-  height: auto !important;
-  max-height: unset !important;
-  overflow: visible !important;
-  order: -1;
-  gap: 0;
-  width: 100% !important;
-}
-
-body.calendar-maximized .dashboard-col.right-col .glass-card:first-child {
-  flex: 1;
-  margin-bottom: 0;
-  width: 100% !important;
-}
-
-body.calendar-maximized .dashboard-col.right-col .glass-card:not(:first-child),
-body.calendar-maximized .dashboard-col.right-col .disclaimer-card {
-  display: none !important;
-}
-
-body.calendar-maximized .feed-list-container {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  &:hover {
+    background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.65) 100%);
+    color: var(--primary-color);
+    border-color: rgba(255, 105, 180, 0.4);
+    box-shadow: 0 4px 16px rgba(255, 20, 147, 0.12);
+    transform: translateY(-1px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 /* =========================================================================
@@ -284,13 +283,12 @@ body.calendar-maximized .feed-list-container {
     padding: 8px;
   }
 
-  /* 전체 컨테이너를 viewport 높이로 잡아 내부에서 공간 자동 분배 */
   .dashboard-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
-    height: calc(100vh - 16px); /* body padding(8px*2) 제외 */
+    height: calc(100vh - 16px);
     min-height: unset;
   }
 
@@ -298,25 +296,46 @@ body.calendar-maximized .feed-list-container {
     display: none;
   }
 
-  /* 좌측 메인: 남은 공간 모두 차지 */
-  .dashboard-col.left-col {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
+  .dashboard-col {
+    &.left-col {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+    }
+
+    &.right-col {
+      order: -1;
+      width: 100%;
+      height: auto;
+      max-height: unset;
+      overflow-y: visible;
+      gap: 0;
+
+      .glass-card:first-child {
+        position: static;
+        display: flex;
+        margin-bottom: 0;
+      }
+
+      .glass-card:not(:first-child),
+      .disclaimer-card {
+        display: none;
+      }
+
+      .glass-card {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
   }
 
   .dashboard-main-card {
-    height: 100%;      /* left-col 높이를 그대로 채움 */
+    height: 100%;
     min-height: unset;
     width: 100%;
   }
 
-  .dashboard-tab-mount {
-    width: 100%;
-    height: 100%;
-    flex: 1 1 100%;
-  }
-
+  .dashboard-tab-mount,
   .panel-tab-content {
     width: 100%;
     height: 100%;
@@ -328,13 +347,13 @@ body.calendar-maximized .feed-list-container {
     height: 100%;
     min-height: calc(100vh - 120px);
     flex: 1 1 100%;
-  }
 
-  .iframe-wrapper iframe {
-    width: 100%;
-    height: 100%;
-    min-height: calc(100vh - 120px);
-    flex: 1 1 100%;
+    iframe {
+      width: 100%;
+      height: 100%;
+      min-height: calc(100vh - 120px);
+      flex: 1 1 100%;
+    }
   }
 
   .feed-list-container {
@@ -342,35 +361,6 @@ body.calendar-maximized .feed-list-container {
     width: 100%;
   }
 
-  /* 우측 컬럼: 모바일에서 상단으로 올라오며 허브 아이콘만 노출 */
-  .dashboard-col.right-col {
-    order: -1;              /* left-col(탭/캘린더)보다 위로 */
-    width: 100%;
-    height: auto;
-    max-height: unset;
-    overflow-y: visible;
-    gap: 0;
-  }
-
-  /* 허브 아이콘 카드(첫 번째 카드)만 표시 */
-  .dashboard-col.right-col .glass-card:first-child {
-    position: static;
-    display: flex;
-    margin-bottom: 0;
-  }
-
-  /* 나머지 카드(영상·팬페이지·푸터)는 모바일에서 숨김 */
-  .dashboard-col.right-col .glass-card:not(:first-child),
-  .dashboard-col.right-col .disclaimer-card {
-    display: none;
-  }
-
-  .dashboard-col.right-col .glass-card {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  /* 1단 반응형 뷰에서 비디오 카드 크기가 거대해지지 않도록 170px로 단정하게 제한 */
   .hscroll-viewport .video-card {
     flex: 0 0 170px !important;
     max-width: 180px !important;
@@ -381,11 +371,4 @@ body.calendar-maximized .feed-list-container {
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
     width: 100%;
   }
-}
-
-/* 다크모드 대응 */
-body.dark-mode .maximize-btn {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #cbd5e1 !important;
 }

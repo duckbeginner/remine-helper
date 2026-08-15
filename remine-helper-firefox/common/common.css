@@ -1,30 +1,56 @@
 /* =========================================================================
-   common/common.css - Crystal Glassmorphism 디자인 시스템 & 공통 컴포넌트 스타일
+   common/common.css - Crystal Glassmorphism 디자인 시스템 & 공통 컴포넌트 스타일 (Native CSS Nesting)
    ========================================================================= */
 
+:root {
+  --primary-color: #ff007a;
+  --primary-light: #ffe4ec;
+  --primary-hover: #ff69b4;
+  --primary-gradient: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  --accent-tint: rgba(255, 20, 147, 0.07);
+  --accent-tint-strong: rgba(255, 20, 147, 0.12);
+  --bg-gradient-sidepanel: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
+  --bg-gradient-dashboard: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
+  --bg-gradient-dark: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%);
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.75);
+  --glass-border-hover: 1px solid rgba(255, 105, 180, 0.5);
+  --glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  --glass-shadow-hover: 0 10px 28px rgba(255, 20, 147, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --glass-blur: blur(20px) saturate(180%);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
 /* --- 초기 로드 중 화면 깜빡임/전환 애니메이션 원천 차단 (Preload No-Transition) --- */
-html.preload,
-html.preload *,
-html.preload *::before,
-html.preload *::after {
-  transition: none !important;
-  animation: none !important;
+html.preload {
+  &,
+  & *,
+  & *::before,
+  & *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* --- 사용자가 테마를 변경할 때만 0.3s 부드러운 전환 애니메이션 활성화 --- */
-html.theme-transitioning,
-html.theme-transitioning *,
-html.theme-transitioning *::before,
-html.theme-transitioning *::after {
-  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+html.theme-transitioning {
+  &,
+  & body,
+  & *,
+  & *::before,
+  & *::after {
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
 }
 
 html {
   color-scheme: light;
-}
 
-html.dark-mode {
-  color-scheme: dark;
+  &.dark-mode {
+    color-scheme: dark;
+  }
 }
 
 /* --- common.html (컴포넌트 라이브러리 프리뷰) 페이지 전용 body 스타일 --- */
@@ -35,27 +61,6 @@ body {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
-}
-
-:root {
-  --primary-color: #ff007a;
-  --primary-light: #ffe4ec;
-  --primary-hover: #ff69b4;
-  --accent-tint: rgba(255, 20, 147, 0.07);
-  --accent-tint-strong: rgba(255, 20, 147, 0.12);
-  --bg-gradient-sidepanel: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
-  --bg-gradient-dashboard: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
-  --bg-gradient-dark: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%);
-  --bg-dark: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%);
-  --glass-bg: rgba(255, 255, 255, 0.45);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.75);
-  --glass-border-hover: 1px solid rgba(255, 105, 180, 0.5);
-  --glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.85);
-  --glass-shadow-hover: 0 10px 28px rgba(255, 20, 147, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --glass-blur: blur(20px) saturate(180%);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
 }
 
 /* --- 기본 카드 스타일 (.glass-card) --- */
@@ -74,58 +79,87 @@ body {
   margin-bottom: 6px;
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 호버: 배경 카드는 기존 스타일 그대로 (블러 유지) */
+  &:hover {
+    background: rgba(255, 255, 255, 0.65);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow-hover);
+    transform: translateY(-1px);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(45, 38, 58, 0.85) !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 12px 35px rgba(255, 20, 147, 0.16), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    }
+  }
+
+  &.mb-12 {
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--primary-color);
+
+    img {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      object-fit: cover;
+
+      &.custom-logo {
+        border-radius: 3px;
+        object-fit: contain;
+
+        :is(html.dark-mode, body.dark-mode) & {
+          filter: brightness(0) invert(1) !important;
+        }
+      }
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ff9ebb !important;
+    }
+  }
+
+  .subsection-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    margin: 6px 0 4px 0;
+    color: #555;
+  }
+
+  /* 스케줄 카드 (남은 공간 흡수 + 최소 120px 확보) */
+  &.schedule-card-flex {
+    flex: 1 0 120px !important;
+    min-height: 120px !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(35, 30, 46, 0.72) !important;
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+    color: #f1f5f9 !important;
+  }
 }
 
-/* 호버: 배경 카드는 기존 스타일 그대로 (블러 유지) */
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.65);
-  border: var(--glass-border);
-  box-shadow: var(--glass-shadow-hover);
-  transform: translateY(-1px);
-}
-
-.glass-card.mb-12 {
-  margin-bottom: 6px;
-}
-
-.glass-card h2 {
-  font-size: 13px;
-  font-weight: 700;
-  margin: 0 0 6px 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--primary-color);
-}
-
-.glass-card h2 img {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.glass-card h2 img.custom-logo,
 img.custom-logo {
   border-radius: 3px;
   object-fit: contain;
-}
 
-.glass-card .subsection-title {
-  font-size: 11.5px;
-  font-weight: 600;
-  margin: 6px 0 4px 0;
-  color: #555;
-}
-
-/* 스케줄 카드 (남은 공간 흡수 + 최소 120px 확보) */
-.schedule-card-flex {
-  flex: 1 0 120px !important;
-  min-height: 120px !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  margin-bottom: 6px;
+  :is(html.dark-mode, body.dark-mode) & {
+    filter: brightness(0) invert(1) !important;
+  }
 }
 
 /* --- 상단 탭 바 & 동적 글래스 슬라이더 --- */
@@ -145,6 +179,12 @@ img.custom-logo {
   top: 0;
   z-index: 100;
   flex-shrink: 0;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(34, 28, 45, 0.78) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+  }
 }
 
 .tab-glass-slider {
@@ -164,11 +204,17 @@ img.custom-logo {
   z-index: 1;
   opacity: 0;
   transform: scale(0.96);
-}
 
-.tab-glass-slider.visible {
-  opacity: 1;
-  transform: scale(1);
+  &.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  }
 }
 
 .panel-tab-btn {
@@ -191,32 +237,59 @@ img.custom-logo {
   text-align: center;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
-}
 
-.panel-tab-btn .btn-name {
-  display: none;
-  white-space: nowrap !important;
-}
+  .btn-name {
+    display: none;
+    white-space: nowrap !important;
+  }
 
-.panel-tab-btn:hover {
-  color: var(--primary-color);
-}
+  &:hover {
+    color: var(--primary-color);
 
-.panel-tab-btn.active {
-  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%) !important;
-  color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
-  font-weight: 700;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ff9ebb;
+    }
+  }
 
-.panel-tab-btn.active .btn-name {
-  display: inline;
-}
+  &.active {
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+    font-weight: 700;
 
-.panel-tab-btn.active .tab-icon-wrap svg,
-.panel-tab-btn.active .tab-icon-wrap img {
-  filter: brightness(0) invert(1) !important;
+    .btn-name {
+      display: inline;
+    }
+
+    .tab-icon-wrap svg,
+    .tab-icon-wrap img {
+      filter: brightness(0) invert(1) !important;
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
+      color: white !important;
+      box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #cbd5e1;
+  }
+
+  &[data-target="tabX"] {
+    color: #000000 !important;
+
+    svg {
+      fill: currentColor !important;
+      filter: none !important;
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ffffff !important;
+    }
+  }
 }
 
 .tab-icon-wrap {
@@ -226,12 +299,12 @@ img.custom-logo {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-}
 
-.tab-icon-wrap svg {
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+  svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
 }
 
 .tab-icon-dc {
@@ -240,6 +313,10 @@ img.custom-logo {
   border-radius: 3px;
   object-fit: contain;
   filter: invert(1);
+
+  :is(html.dark-mode, body.dark-mode) & {
+    filter: invert(0);
+  }
 }
 
 /* --- 탭 컨텐츠 컨테이너 --- */
@@ -255,30 +332,30 @@ img.custom-logo {
   padding-right: 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
-}
 
-:is(html.dark-mode, body.dark-mode) .panel-tab-content {
-  scrollbar-color: #4a385c transparent;
-}
+  :is(html.dark-mode, body.dark-mode) & {
+    scrollbar-color: #4a385c transparent;
+  }
 
-.panel-tab-content.active {
-  display: flex;
-}
+  &.active {
+    display: flex;
+  }
 
-.panel-tab-content#tabSceneFlix,
-.panel-tab-content#tabClip,
-.panel-tab-content#tabTiktok,
-.panel-tab-content#tabBlip,
-.panel-tab-content#tabSchedule {
-  overflow: hidden;
-  min-height: 0;
-  flex: 1;
-}
+  &#tabSceneFlix,
+  &#tabClip,
+  &#tabTiktok,
+  &#tabBlip,
+  &#tabSchedule {
+    overflow: hidden;
+    min-height: 0;
+    flex: 1;
+  }
 
-.panel-tab-content#tabHome {
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
+  &#tabHome {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
 }
 
 /* --- 공식 채널 허브 & 컨트롤 버튼 --- */
@@ -312,29 +389,84 @@ img.custom-logo {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.65) 100%);
+    color: var(--primary-color);
+    border-color: rgba(255, 105, 180, 0.4);
+    box-shadow: 0 4px 16px rgba(255, 20, 147, 0.12);
+    transform: translateY(-1px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    .vtab-icon-svg svg {
+      transform: scale(1.1);
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.15) !important;
+      color: #ff9ebb !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 4px 12px rgba(224, 86, 253, 0.3) !important;
+    }
+  }
+
+  .vtab-icon-svg {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 2px;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+  }
 }
 
-.theme-toggle-btn:hover {
-  background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.65) 100%);
-  color: var(--primary-color);
-  border-color: rgba(255, 105, 180, 0.4);
-  box-shadow: 0 4px 16px rgba(255, 20, 147, 0.12);
-  transform: translateY(-1px);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.theme-toggle-btn .vtab-icon-svg {
-  width: 14px;
-  height: 14px;
+.maximize-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin-right: 2px;
-}
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.85);
 
-.theme-toggle-btn:hover .vtab-icon-svg svg {
-  transform: scale(1.1);
+  &:hover {
+    background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.65) 100%);
+    color: var(--primary-color);
+    border-color: rgba(255, 105, 180, 0.4);
+    box-shadow: 0 4px 16px rgba(255, 20, 147, 0.12);
+    transform: translateY(-1px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.15) !important;
+      color: #ff9ebb !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 4px 12px rgba(224, 86, 253, 0.3) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+  }
 }
 
 .hub-oneline {
@@ -354,10 +486,16 @@ img.custom-logo {
   overflow-x: auto;
   scrollbar-width: none;
   flex-shrink: 0;
-}
 
-.hub-oneline::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(0, 0, 0, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
 }
 
 .hub-icon-btn {
@@ -379,39 +517,82 @@ img.custom-logo {
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.9);
   box-sizing: border-box;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, var(--accent-tint-strong) 0%, rgba(255, 255, 255, 0.7) 100%);
+    transform: translateY(-2px) scale(1.15);
+    border-color: rgba(255, 105, 180, 0.45);
+    box-shadow: 0 6px 18px rgba(255, 20, 147, 0.18);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.18) !important;
+      border-color: rgba(255, 105, 180, 0.5) !important;
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.35) !important;
+    }
+  }
+
+  svg,
+  img {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  img.custom-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    object-fit: contain;
+  }
+
+  &.dragging {
+    opacity: 0.3;
+  }
+
+  &[data-key="x"],
+  &[data-key="x_twt"] {
+    color: #000000 !important;
+
+    svg {
+      fill: currentColor !important;
+      filter: none !important;
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ffffff !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
 }
 
-.hub-icon-btn:active {
-  cursor: grabbing;
-}
-
-.hub-icon-btn:hover {
-  background: linear-gradient(135deg, var(--accent-tint-strong) 0%, rgba(255, 255, 255, 0.7) 100%);
-  transform: translateY(-2px) scale(1.15);
-  border-color: rgba(255, 105, 180, 0.45);
-  box-shadow: 0 6px 18px rgba(255, 20, 147, 0.18);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.hub-icon-btn svg,
-.hub-icon-btn img {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-.hub-icon-btn img.custom-logo {
-  width: 20px;
-  height: 20px;
+.hub-icon-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: linear-gradient(135deg, #e056fd, #ff1493);
+  color: #fff;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 1.5px 3.5px;
   border-radius: 4px;
-  object-fit: contain;
-}
-
-.hub-icon-btn.dragging {
-  opacity: 0.3;
+  pointer-events: none;
+  letter-spacing: -0.2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: 2;
 }
 
 /* --- 수평 스크롤러 & 비디오 카드 --- */
@@ -429,10 +610,16 @@ img.custom-logo {
   width: 100%;
   scrollbar-width: none;
   padding: 4px 2px;
-}
 
-.hscroll-viewport::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .video-card {
+    flex: 0 0 calc((100% - 16px) / 3);
+    min-width: 130px;
+    width: auto;
+  }
 }
 
 .hscroll-btn {
@@ -452,34 +639,28 @@ img.custom-logo {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
   opacity: 0.8;
-}
 
-.hscroll-btn.left {
-  left: 6px;
-}
+  &.left {
+    left: 6px;
+  }
 
-.hscroll-btn.right {
-  right: 6px;
-}
+  &.right {
+    right: 6px;
+  }
 
-.hscroll-btn:hover {
-  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 14px rgba(255, 20, 147, 0.35);
-  opacity: 1;
-  transform: translateY(-50%) scale(1.08);
+  &:hover {
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 14px rgba(255, 20, 147, 0.35);
+    opacity: 1;
+    transform: translateY(-50%) scale(1.08);
+  }
 }
 
 .video-grid {
   display: block;
   position: relative;
-}
-
-.hscroll-viewport .video-card {
-  flex: 0 0 calc((100% - 16px) / 3);
-  min-width: 130px;
-  width: auto;
 }
 
 .video-card {
@@ -498,53 +679,65 @@ img.custom-logo {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.85);
   overflow: hidden;
   aspect-ratio: 16 / 9;
-}
 
-.video-card:hover {
-  z-index: 20;
-  border-color: rgba(255, 105, 180, 0.5);
-  background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.6) 100%);
-  box-shadow: 0 8px 24px rgba(255, 20, 147, 0.15), 0 2px 8px rgba(0, 0, 0, 0.04);
-  transform: scale(1.06);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+  &:hover {
+    z-index: 20;
+    border-color: rgba(255, 105, 180, 0.5);
+    background: linear-gradient(135deg, var(--accent-tint) 0%, rgba(255, 255, 255, 0.6) 100%);
+    box-shadow: 0 8px 24px rgba(255, 20, 147, 0.15), 0 2px 8px rgba(0, 0, 0, 0.04);
+    transform: scale(1.06);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 
-.video-card img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16/9;
-  object-fit: cover;
-  border-radius: 6px;
-  background: #eee;
-  display: block;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 105, 180, 0.5) !important;
+      box-shadow: 0 6px 18px rgba(224, 86, 253, 0.3) !important;
+    }
+  }
 
-.video-card .card-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
-  padding: 6px 6px 4px 6px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+  img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #eee;
+    display: block;
+  }
 
-.video-card .card-title {
-  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
-  font-weight: bold;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: white;
-}
+  .card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+    padding: 6px 6px 4px 6px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
 
-.video-card .card-date {
-  font-size: clamp(0.62rem, 0.8vw, 0.72rem);
-  color: rgba(255, 255, 255, 0.75);
+  .card-title {
+    font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+    font-weight: bold;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: white;
+  }
+
+  .card-date {
+    font-size: clamp(0.62rem, 0.8vw, 0.72rem);
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  }
 }
 
 /* --- 스케줄 리스트 (가로스크롤 방지 + 세로 스크롤) --- */
@@ -564,6 +757,11 @@ img.custom-logo {
   min-height: 0;
   display: flex;
   flex-direction: column;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
 }
 
 .schedule-viewport {
@@ -578,32 +776,32 @@ img.custom-logo {
   padding: 2px 2px 2px 1px;
   scrollbar-width: thin;
   transition: scrollbar-color 0.2s ease;
-}
 
-.schedule-viewport:hover {
-  scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
-}
+  &:hover {
+    scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
 
-:is(html.dark-mode, body.dark-mode) .schedule-viewport:hover {
-  scrollbar-color: #4a385c transparent;
-}
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 105, 180, 0.4);
+    }
 
-.schedule-viewport::-webkit-scrollbar {
-  width: 4px;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      scrollbar-color: #4a385c transparent;
 
-.schedule-viewport::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 3px;
-  transition: background 0.2s ease;
-}
+      &::-webkit-scrollbar-thumb {
+        background: #4a385c;
+      }
+    }
+  }
 
-.schedule-viewport:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 105, 180, 0.4);
-}
+  &::-webkit-scrollbar {
+    width: 4px;
 
-:is(html.dark-mode, body.dark-mode) .schedule-viewport:hover::-webkit-scrollbar-thumb {
-  background: #4a385c;
+    &-thumb {
+      background: transparent;
+      border-radius: 3px;
+      transition: background 0.2s ease;
+    }
+  }
 }
 
 .schedule-item {
@@ -623,27 +821,47 @@ img.custom-logo {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   min-height: 36px;
   margin-bottom: 5px;
-}
 
-.schedule-item:last-child {
-  margin-bottom: 0;
-}
+  &:last-child {
+    margin-bottom: 0;
+  }
 
-.schedule-item:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(255, 105, 180, 0.35);
-  color: var(--primary-color, #ff007a);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(255, 105, 180, 0.15);
-}
+  &:hover {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 105, 180, 0.35);
+    color: var(--primary-color, #ff007a);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(255, 105, 180, 0.15);
 
-.schedule-item.active {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.2) 0%, rgba(255, 20, 147, 0.1) 100%) !important;
-  color: #ff007a !important;
-  font-weight: 700;
-  border: 1px solid rgba(255, 0, 122, 0.35) !important;
-  border-left: 3.5px solid #ff007a !important;
-  box-shadow: 0 3px 10px rgba(255, 20, 147, 0.16);
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 105, 180, 0.25) !important;
+      color: #ff9ebb !important;
+    }
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.2) 0%, rgba(255, 20, 147, 0.1) 100%) !important;
+    color: #ff007a !important;
+    font-weight: 700;
+    border: 1px solid rgba(255, 0, 122, 0.35) !important;
+    border-left: 3.5px solid #ff007a !important;
+    box-shadow: 0 3px 10px rgba(255, 20, 147, 0.16);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: linear-gradient(135deg, rgba(255, 105, 180, 0.25) 0%, rgba(224, 86, 253, 0.15) 100%) !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      color: #ff9ebb !important;
+      border-left: 3.5px solid #ff69b4 !important;
+      box-shadow: 0 3px 12px rgba(255, 105, 180, 0.25) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.07);
+  }
 }
 
 .schedule-line {
@@ -653,23 +871,27 @@ img.custom-logo {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-}
 
-.schedule-line .schedule-date-time {
-  color: #d63384;
-  font-weight: bold;
-  flex-shrink: 0;
-  margin-right: 4px;
-  font-size: 11px;
-}
+  .schedule-date-time {
+    color: #d63384;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-right: 4px;
+    font-size: 11px;
+  }
 
-.schedule-line .schedule-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1 1 0%;
-  min-width: 0;
-  color: #333;
+  .schedule-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 0%;
+    min-width: 0;
+    color: #333;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #e2e8f0;
+    }
+  }
 }
 
 .schedule-type-badge {
@@ -678,14 +900,10 @@ img.custom-logo {
   justify-content: center;
   line-height: 1.2;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
 
-:is(html.dark-mode, body.dark-mode) .schedule-line .schedule-title {
-  color: #e2e8f0;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-type-badge {
-  filter: brightness(0.88) saturate(1.2);
+  :is(html.dark-mode, body.dark-mode) & {
+    filter: brightness(0.88) saturate(1.2);
+  }
 }
 
 /* --- 팬페이지 바로가기 그리드 --- */
@@ -709,16 +927,29 @@ img.custom-logo {
   font-weight: 700;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-}
 
-.fanpage-link-card:hover {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.18) 0%, rgba(255, 20, 147, 0.1) 100%);
-  color: var(--primary-color);
-  border-color: rgba(255, 105, 180, 0.45);
-  box-shadow: 0 6px 20px rgba(255, 20, 147, 0.15);
-  transform: translateY(-2px);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  &:hover {
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.18) 0%, rgba(255, 20, 147, 0.1) 100%);
+    color: var(--primary-color);
+    border-color: rgba(255, 105, 180, 0.45);
+    box-shadow: 0 6px 20px rgba(255, 20, 147, 0.15);
+    transform: translateY(-2px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
+      color: white !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: #ff9ebb !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
 }
 
 /* --- 캘린더 뷰 전용 스타일 (Crystal Glassmorphism) --- */
@@ -735,6 +966,12 @@ img.custom-logo {
   box-shadow: 0 8px 24px rgba(255, 105, 180, 0.06);
   height: 100%;
   box-sizing: border-box;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(22, 19, 28, 0.55) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+  }
 }
 
 .calendar-header {
@@ -746,12 +983,16 @@ img.custom-logo {
   font-size: clamp(0.9rem, 1.2vw, 1rem);
   color: var(--primary-color);
   width: 100%;
-}
 
-.calendar-header .calendar-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  .calendar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #ff9ebb !important;
+  }
 }
 
 .schedule-view-switcher {
@@ -765,6 +1006,11 @@ img.custom-logo {
   padding: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   gap: 2px;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(30, 24, 42, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
 }
 
 .view-switch-btn {
@@ -780,16 +1026,30 @@ img.custom-logo {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-.view-switch-btn:hover {
-  color: var(--primary-color, #ff007a);
-}
+  &:hover {
+    color: var(--primary-color, #ff007a);
 
-.view-switch-btn.active {
-  background: linear-gradient(135deg, #ff007a 0%, #ff4da6 100%);
-  color: #fff !important;
-  box-shadow: 0 2px 8px rgba(255, 0, 122, 0.35);
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ff9ebb !important;
+    }
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #ff007a 0%, #ff4da6 100%);
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(255, 0, 122, 0.35);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: linear-gradient(135deg, #ff007a 0%, #ff69b4 100%) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 10px rgba(255, 105, 180, 0.35) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #94a3b8 !important;
+  }
 }
 
 .schedule-tab-list-container {
@@ -814,14 +1074,26 @@ img.custom-logo {
   font-weight: bold;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-}
 
-.cal-nav-btn:hover {
-  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 12px rgba(255, 20, 147, 0.35);
-  transform: scale(1.08);
+  &:hover {
+    background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.35);
+    transform: scale(1.08);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
+      color: white !important;
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.4) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #ff9ebb !important;
+  }
 }
 
 .calendar-view-container {
@@ -848,6 +1120,12 @@ img.custom-logo {
   border-radius: 8px;
   padding: 4px 0;
   flex-shrink: 0;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    color: #94a3b8 !important;
+  }
 }
 
 .calendar-grid {
@@ -860,23 +1138,23 @@ img.custom-logo {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
-}
 
-:is(html.dark-mode, body.dark-mode) .calendar-grid {
-  scrollbar-color: #4a385c transparent;
-}
+  &::-webkit-scrollbar {
+    width: 4px;
 
-.calendar-grid::-webkit-scrollbar {
-  width: 4px;
-}
+    &-thumb {
+      background: rgba(255, 105, 180, 0.4);
+      border-radius: 3px;
+    }
+  }
 
-.calendar-grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 105, 180, 0.4);
-  border-radius: 3px;
-}
+  :is(html.dark-mode, body.dark-mode) & {
+    scrollbar-color: #4a385c transparent;
 
-:is(html.dark-mode, body.dark-mode) .calendar-grid::-webkit-scrollbar-thumb {
-  background: #4a385c;
+    &::-webkit-scrollbar-thumb {
+      background: #4a385c;
+    }
+  }
 }
 
 .calendar-week-row {
@@ -887,43 +1165,49 @@ img.custom-logo {
   min-height: 45px;
   height: 100%;
   transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-}
 
-.calendar-week-row:hover {
-  flex: 3;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 105, 180, 0.4);
-  border-radius: 10px;
-  padding: 3px;
-  box-shadow: 0 6px 18px rgba(255, 105, 180, 0.15);
-  z-index: 10;
-  overflow-y: auto;
-}
+  &:hover {
+    flex: 3;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 105, 180, 0.4);
+    border-radius: 10px;
+    padding: 3px;
+    box-shadow: 0 6px 18px rgba(255, 105, 180, 0.15);
+    z-index: 10;
+    overflow-y: auto;
 
-.calendar-week-row:hover .cal-event-badge {
-  height: auto !important;
-  max-height: none !important;
-  min-height: fit-content;
-  font-size: clamp(0.68rem, 0.85vw, 0.78rem);
-  padding: 3px 6px;
-  white-space: normal;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  line-height: 1.25;
-}
+    .cal-event-badge {
+      height: auto !important;
+      max-height: none !important;
+      min-height: fit-content;
+      font-size: clamp(0.68rem, 0.85vw, 0.78rem);
+      padding: 3px 6px;
+      white-space: normal;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      line-height: 1.25;
+    }
 
-.calendar-week-row:hover .badge-hover-time {
-  display: block !important;
-  animation: badgeFadeIn 0.15s ease-in-out;
-}
+    .badge-hover-time {
+      display: block !important;
+      animation: badgeFadeIn 0.15s ease-in-out;
+    }
 
-.calendar-week-row:hover .badge-title-text {
-  -webkit-line-clamp: 4 !important;
-  white-space: normal !important;
-  word-break: break-word !important;
+    .badge-title-text {
+      -webkit-line-clamp: 4 !important;
+      white-space: normal !important;
+      word-break: break-word !important;
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(40, 32, 52, 0.85) !important;
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+  }
 }
 
 .calendar-cell {
@@ -942,50 +1226,76 @@ img.custom-logo {
   font-size: clamp(0.65rem, 0.8vw, 0.75rem);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
 
-.calendar-cell:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(255, 105, 180, 0.6);
-  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
-  transform: translateY(-1px);
-}
+  &:hover {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 105, 180, 0.6);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+    transform: translateY(-1px);
 
-.calendar-cell.other-month {
-  background: transparent;
-  color: #bbb;
-  border-color: transparent;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 105, 180, 0.5);
+      box-shadow: 0 4px 14px rgba(224, 86, 253, 0.3);
+    }
+  }
 
-.calendar-cell.other-month:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
+  &.other-month {
+    background: transparent;
+    color: #bbb;
+    border-color: transparent;
 
-.calendar-cell.today {
-  border: 2px solid var(--primary-color);
-  background: rgba(255, 240, 245, 0.65);
-  box-shadow: 0 0 10px rgba(255, 0, 122, 0.2);
-}
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
 
-.cell-date {
-  font-weight: 700;
-  margin-bottom: 3px;
-  color: #555;
-  pointer-events: none;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      background: transparent;
+      color: #555;
+    }
+  }
 
-.cell-events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  flex: 1;
-  scrollbar-width: none;
-}
+  &.today {
+    border: 2px solid var(--primary-color);
+    background: rgba(255, 240, 245, 0.65);
+    box-shadow: 0 0 10px rgba(255, 0, 122, 0.2);
 
-.cell-events::-webkit-scrollbar {
-  display: none;
+    :is(html.dark-mode, body.dark-mode) & {
+      border-color: #ff69b4;
+      background: rgba(60, 30, 50, 0.5);
+      box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+    }
+  }
+
+  .cell-date {
+    font-weight: 700;
+    margin-bottom: 3px;
+    color: #555;
+    pointer-events: none;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #cbd5e1;
+    }
+  }
+
+  .cell-events {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .cal-event-badge {
@@ -1007,61 +1317,97 @@ img.custom-logo {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   word-break: break-word;
   overflow: hidden;
-}
 
-.cal-event-badge .badge-hover-time {
-  display: none;
-  font-size: 0.62rem;
-  font-weight: 700;
-  margin-bottom: 2px;
-  line-height: 1.15;
-  opacity: 0.95;
-  white-space: nowrap;
-  letter-spacing: -0.2px;
-}
+  .badge-hover-time {
+    display: none;
+    font-size: 0.62rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+    line-height: 1.15;
+    opacity: 0.95;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+  }
 
-.cal-event-badge .badge-main-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 3px;
-  width: 100%;
-  min-width: 0;
-}
+  .badge-main-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+    min-width: 0;
+  }
 
-.cal-event-badge .badge-title-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-all;
-  overflow-wrap: anywhere;
-  min-width: 0;
-  flex: 1 1 auto;
-  line-height: 1.25;
-}
+  .badge-title-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    min-width: 0;
+    flex: 1 1 auto;
+    line-height: 1.25;
+  }
 
-.cal-event-badge .sched-channel-icon {
-  margin-top: 1px;
-}
+  .sched-channel-icon {
+    margin-top: 1px;
+  }
 
-.cal-event-badge:hover {
-  filter: brightness(1.05);
-  transform: scale(1.04);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
-  z-index: 15;
-  position: relative;
-}
+  &:hover {
+    filter: brightness(1.05);
+    transform: scale(1.04);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    z-index: 15;
+    position: relative;
 
-.cal-event-badge:hover .badge-hover-time {
-  display: block;
-  animation: badgeFadeIn 0.15s ease-in-out;
-}
+    .badge-hover-time {
+      display: block;
+      animation: badgeFadeIn 0.15s ease-in-out;
+    }
 
-.cal-event-badge:hover .badge-title-text {
-  -webkit-line-clamp: 4;
-  white-space: normal;
-  word-break: break-word;
+    .badge-title-text {
+      -webkit-line-clamp: 4;
+      white-space: normal;
+      word-break: break-word;
+    }
+  }
+
+  &.multi-day-badge {
+    position: relative;
+    font-weight: 700;
+  }
+
+  &.span-start {
+    border-top-right-radius: 2px !important;
+    border-bottom-right-radius: 2px !important;
+  }
+
+  &.span-middle {
+    border-radius: 2px !important;
+    opacity: 0.92;
+  }
+
+  &.span-end {
+    border-top-left-radius: 2px !important;
+    border-bottom-left-radius: 2px !important;
+  }
+
+  &.span-hover-active {
+    filter: brightness(1.22) saturate(1.25) !important;
+    transform: scale(1.04);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+    z-index: 20 !important;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      filter: brightness(1.35) saturate(1.35) !important;
+      box-shadow: 0 3px 12px rgba(255, 105, 180, 0.4) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    filter: brightness(0.95);
+  }
 }
 
 @keyframes badgeFadeIn {
@@ -1069,50 +1415,10 @@ img.custom-logo {
     opacity: 0;
     transform: translateY(-2px);
   }
-
   to {
     opacity: 0.95;
     transform: translateY(0);
   }
-}
-
-.cal-event-badge:hover {
-  filter: brightness(1.05);
-  transform: scale(1.03);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-
-/* --- 캘린더 연속 일정 (Multi-day Span) 스타일 --- */
-.cal-event-badge.multi-day-badge {
-  position: relative;
-  font-weight: 700;
-}
-
-.cal-event-badge.span-start {
-  border-top-right-radius: 2px !important;
-  border-bottom-right-radius: 2px !important;
-}
-
-.cal-event-badge.span-middle {
-  border-radius: 2px !important;
-  opacity: 0.92;
-}
-
-.cal-event-badge.span-end {
-  border-top-left-radius: 2px !important;
-  border-bottom-left-radius: 2px !important;
-}
-
-.cal-event-badge.span-hover-active {
-  filter: brightness(1.22) saturate(1.25) !important;
-  transform: scale(1.04);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
-  z-index: 20 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .cal-event-badge.span-hover-active {
-  filter: brightness(1.35) saturate(1.35) !important;
-  box-shadow: 0 3px 12px rgba(255, 105, 180, 0.4) !important;
 }
 
 .badge-time {
@@ -1135,10 +1441,10 @@ img.custom-logo {
   align-items: start;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
-}
 
-:is(html.dark-mode, body.dark-mode) .feed-list-container {
-  scrollbar-color: #4a385c transparent;
+  :is(html.dark-mode, body.dark-mode) & {
+    scrollbar-color: #4a385c transparent;
+  }
 }
 
 .feed-iframe-wrapper {
@@ -1151,11 +1457,28 @@ img.custom-logo {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
   height: fit-content;
-}
 
-.feed-iframe-wrapper:hover {
-  border-color: rgba(255, 105, 180, 0.6);
-  box-shadow: 0 6px 20px rgba(255, 105, 180, 0.15);
+  &:hover {
+    border-color: rgba(255, 105, 180, 0.6);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.15);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      border-color: rgba(255, 105, 180, 0.4) !important;
+      box-shadow: 0 6px 20px rgba(224, 86, 253, 0.3) !important;
+    }
+  }
+
+  iframe {
+    width: 100%;
+    border: none;
+    display: block;
+    background: transparent;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(22, 19, 28, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
 }
 
 .tiktok-feed-item {
@@ -1171,17 +1494,17 @@ img.custom-logo {
   padding: 0 !important;
   display: flex;
   justify-content: center;
-}
 
-.tiktok-feed-item iframe {
-  width: 325px;
-  max-width: 100%;
-  margin: 0 auto;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  display: block;
-  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  iframe {
+    width: 325px;
+    max-width: 100%;
+    margin: 0 auto;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    display: block;
+    transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
 #tiktokFeedList {
@@ -1194,13 +1517,6 @@ img.custom-logo {
   padding: 0;
   padding-bottom: 24px;
   box-sizing: border-box;
-}
-
-.feed-iframe-wrapper iframe {
-  width: 100%;
-  border: none;
-  display: block;
-  background: transparent;
 }
 
 .iframe-wrapper {
@@ -1218,16 +1534,21 @@ img.custom-logo {
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
-}
 
-.iframe-wrapper iframe {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  flex: 1 1 100%;
-  border: none;
-  background: transparent;
-  display: block;
+  iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    flex: 1 1 100%;
+    border: none;
+    background: transparent;
+    display: block;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(22, 19, 28, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
 }
 
 /* --- 하단 푸터 (Disclaimer Card) --- */
@@ -1242,18 +1563,29 @@ img.custom-logo {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   box-sizing: border-box;
   width: 100%;
-}
 
-.disclaimer-card footer,
-.disclaimer-card .disclaimer-text {
-  font-size: 10.5px;
-  line-height: 1.4;
-  color: #777;
-  text-align: center;
-  margin: 0;
-  padding: 0;
-  word-break: keep-all;
-  font-weight: 500;
+  &.sticky-footer {
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(22, 19, 28, 0.65) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+  }
+
+  footer,
+  .disclaimer-text {
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: #777;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    word-break: keep-all;
+    font-weight: 500;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #94a3b8 !important;
+    }
+  }
 }
 
 /* --- 모달 & 툴팁 --- */
@@ -1324,6 +1656,12 @@ img.custom-logo {
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
   pointer-events: auto;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(28, 24, 36, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+  }
 }
 
 .schedule-embed-card {
@@ -1342,6 +1680,12 @@ img.custom-logo {
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
   pointer-events: auto;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(28, 24, 36, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+  }
 }
 
 .embed-modal-title {
@@ -1351,6 +1695,10 @@ img.custom-logo {
   display: flex;
   align-items: center;
   gap: 4px;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #ff9ebb !important;
+  }
 }
 
 .embed-modal-body {
@@ -1362,123 +1710,154 @@ img.custom-logo {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
   padding-right: 2px;
-}
 
-.embed-modal-body::-webkit-scrollbar {
-  width: 6px;
-}
+  &::-webkit-scrollbar {
+    width: 6px;
 
-.embed-modal-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 105, 180, 0.4);
-  border-radius: 3px;
-}
+    &-thumb {
+      background: rgba(255, 105, 180, 0.4);
+      border-radius: 3px;
+    }
 
-.embed-modal-body::-webkit-scrollbar-track {
-  background: transparent;
+    &-track {
+      background: transparent;
+    }
+  }
 }
 
 /* 유튜브 스마트 프리뷰 카드 호버 인터랙션 */
 .youtube-preview-card {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-}
 
-.youtube-preview-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 0, 0, 0.35) !important;
-}
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 0, 0, 0.35) !important;
 
-.youtube-preview-card:hover img {
-  transform: scale(1.06);
-}
+    img {
+      transform: scale(1.06);
+    }
 
-.youtube-preview-card:hover .yt-play-btn {
-  transform: scale(1.15) !important;
-  background: #ff0000 !important;
-  box-shadow: 0 6px 22px rgba(255, 0, 0, 0.75) !important;
+    .yt-play-btn {
+      transform: scale(1.15) !important;
+      background: #ff0000 !important;
+      box-shadow: 0 6px 22px rgba(255, 0, 0, 0.75) !important;
+    }
+  }
 }
 
 /* 틱톡 숏폼 스마트 프리뷰 카드 (Theme-Adaptive) */
 .tiktok-short-preview-card {
-  margin-bottom: 12px;
-  border-radius: 12px;
-  overflow: hidden;
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 14px 16px;
   border: 1px solid rgba(254, 44, 85, 0.25);
+  border-radius: 12px;
   box-shadow: 0 4px 14px rgba(254, 44, 85, 0.08);
+  box-sizing: border-box;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 12px;
+  overflow: hidden;
+  padding: 14px 16px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-sizing: border-box;
-}
 
-.tiktok-short-preview-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(254, 44, 85, 0.6);
-  box-shadow: 0 6px 20px rgba(254, 44, 85, 0.2);
-}
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(254, 44, 85, 0.6);
+    box-shadow: 0 6px 20px rgba(254, 44, 85, 0.2);
 
-.tiktok-card-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
+    .tiktok-icon-box {
+      transform: scale(1.08);
+    }
 
-.tiktok-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(254, 44, 85, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(254, 44, 85, 0.15);
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
+    .tiktok-card-btn {
+      background: #fe2c55;
+      color: #ffffff;
+      border-color: #fe2c55;
+    }
 
-.tiktok-short-preview-card:hover .tiktok-icon-box {
-  transform: scale(1.08);
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      box-shadow: 0 6px 20px rgba(254, 44, 85, 0.35) !important;
+      border-color: rgba(254, 44, 85, 0.8) !important;
+    }
+  }
 
-.tiktok-card-info {
-  min-width: 0;
-}
+  .tiktok-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
 
-.tiktok-card-title {
-  color: #1e293b;
-  font-size: 12.5px;
-  font-weight: bold;
-}
+  .tiktok-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(254, 44, 85, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(254, 44, 85, 0.15);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
 
-.tiktok-card-desc {
-  color: #64748b;
-  font-size: 11px;
-  margin-top: 2px;
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(10, 8, 14, 0.85) !important;
+      border-color: rgba(254, 44, 85, 0.35) !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+    }
+  }
 
-.tiktok-card-btn {
-  background: rgba(254, 44, 85, 0.1);
-  color: #fe2c55;
-  border: 1px solid rgba(254, 44, 85, 0.35);
-  padding: 5px 11px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: bold;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-}
+  .tiktok-card-info {
+    min-width: 0;
+  }
 
-.tiktok-short-preview-card:hover .tiktok-card-btn {
-  background: #fe2c55;
-  color: #ffffff;
-  border-color: #fe2c55;
+  .tiktok-card-title {
+    color: #1e293b;
+    font-size: 12.5px;
+    font-weight: bold;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #f1f5f9 !important;
+    }
+  }
+
+  .tiktok-card-desc {
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 2px;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #94a3b8 !important;
+    }
+  }
+
+  .tiktok-card-btn {
+    background: rgba(254, 44, 85, 0.1);
+    color: #fe2c55;
+    border: 1px solid rgba(254, 44, 85, 0.35);
+    padding: 5px 11px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(254, 44, 85, 0.2) !important;
+      color: #ff6482 !important;
+      border-color: rgba(254, 44, 85, 0.5) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(22, 19, 28, 0.85) !important;
+    border-color: rgba(254, 44, 85, 0.35) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  }
 }
 
 .modal-header {
@@ -1489,6 +1868,10 @@ img.custom-logo {
   font-weight: bold;
   font-size: 0.95rem;
   color: #d63384;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #ff9ebb;
+  }
 }
 
 .modal-close-btn {
@@ -1499,10 +1882,14 @@ img.custom-logo {
   cursor: pointer;
   color: #888;
   transition: 0.2s;
-}
 
-.modal-close-btn:hover {
-  color: var(--primary-hover);
+  &:hover {
+    color: var(--primary-hover);
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #aaa;
+  }
 }
 
 .modal-body {
@@ -1518,34 +1905,43 @@ img.custom-logo {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 105, 180, 0.4) transparent;
   padding-right: 2px;
-}
 
-.modal-body::-webkit-scrollbar {
-  width: 6px;
-}
+  &::-webkit-scrollbar {
+    width: 6px;
 
-.modal-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 105, 180, 0.4);
-  border-radius: 3px;
-}
+    &-thumb {
+      background: rgba(255, 105, 180, 0.4);
+      border-radius: 3px;
+    }
 
-.modal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
+    &-track {
+      background: transparent;
+    }
+  }
 
-.modal-body .detail-time {
-  color: #d63384;
-  font-weight: bold;
-  display: block;
-  margin-bottom: 6px;
-  border-bottom: 1px solid #ffe4ec;
-  padding-bottom: 3px;
-}
+  .detail-time {
+    color: #d63384;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #ffe4ec;
+    padding-bottom: 3px;
 
-.modal-body a {
-  color: #ff1493;
-  text-decoration: underline;
-  word-break: break-all;
+    :is(html.dark-mode, body.dark-mode) & {
+      color: #ff9ebb !important;
+      border-bottom-color: #333 !important;
+    }
+  }
+
+  a {
+    color: #ff1493;
+    text-decoration: underline;
+    word-break: break-all;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #cbd5e1 !important;
+  }
 }
 
 /* --- 라이브 배너 --- */
@@ -1588,392 +1984,23 @@ img.custom-logo {
 }
 
 @keyframes liveDotPulse {
-  0% {
+  0%, 100% {
     transform: scale(0.9);
     opacity: 0.8;
   }
-
   50% {
     transform: scale(1.3);
     opacity: 1;
   }
-
-  100% {
-    transform: scale(0.9);
-    opacity: 0.8;
-  }
 }
 
 @keyframes pulse {
-  0% {
+  0%, 100% {
     opacity: 1;
   }
-
   50% {
     opacity: 0.6;
   }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-/* =========================================================================
-   다크 모드 일괄 동기화 (Crystal Dark Theme)
-   ========================================================================= */
-html.dark-mode,
-html.dark-mode body,
-:is(html.dark-mode, body.dark-mode) {
-  background: var(--bg-dark) !important;
-  color: #f1f5f9 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .glass-card {
-  background: rgba(35, 30, 46, 0.72) !important;
-  border: 1px solid rgba(255, 255, 255, 0.13) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
-  color: #f1f5f9 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .glass-card:hover {
-  background: rgba(45, 38, 58, 0.85) !important;
-  border-color: rgba(255, 105, 180, 0.4) !important;
-  box-shadow: 0 12px 35px rgba(255, 20, 147, 0.16), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .glass-card h2 {
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .panel-tab-bar {
-  background: rgba(34, 28, 45, 0.78) !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tab-glass-slider {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .panel-tab-btn {
-  color: #cbd5e1;
-}
-
-:is(html.dark-mode, body.dark-mode) .panel-tab-btn:hover {
-  color: #ff9ebb;
-}
-
-:is(html.dark-mode, body.dark-mode) .panel-tab-btn.active {
-  background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
-  color: white !important;
-  box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tab-icon-dc {
-  filter: invert(0);
-}
-
-:is(html.dark-mode, body.dark-mode) .custom-logo,
-:is(html.dark-mode, body.dark-mode) .glass-card h2 img.custom-logo {
-  filter: brightness(0) invert(1) !important;
-}
-
-/* X 아이콘 전용 순수 블랙 & 순수 화이트 컬러 (라이트/다크 왜곡 완벽 해결) */
-.panel-tab-btn[data-target="tabX"],
-.vtab-btn[data-target="tabX"],
-.hub-icon-btn[data-key="x"],
-.hub-icon-btn[data-key="x_twt"] {
-  color: #000000 !important;
-}
-
-.panel-tab-btn[data-target="tabX"] svg,
-.vtab-btn[data-target="tabX"] svg,
-.hub-icon-btn[data-key="x"] svg,
-.hub-icon-btn[data-key="x_twt"] svg {
-  fill: currentColor !important;
-  filter: none !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .panel-tab-btn[data-target="tabX"],
-:is(html.dark-mode, body.dark-mode) .vtab-btn[data-target="tabX"],
-:is(html.dark-mode, body.dark-mode) .hub-icon-btn[data-key="x"],
-:is(html.dark-mode, body.dark-mode) .hub-icon-btn[data-key="x_twt"] {
-  color: #ffffff !important;
-}
-
-.hub-icon-badge {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  background: linear-gradient(135deg, #e056fd, #ff1493);
-  color: #fff;
-  font-size: 7.5px;
-  font-weight: 800;
-  line-height: 1;
-  padding: 1.5px 3.5px;
-  border-radius: 4px;
-  pointer-events: none;
-  letter-spacing: -0.2px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  z-index: 2;
-}
-
-:is(html.dark-mode, body.dark-mode) .theme-toggle-btn,
-:is(html.dark-mode, body.dark-mode) .maximize-btn {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #cbd5e1 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .theme-toggle-btn:hover,
-:is(html.dark-mode, body.dark-mode) .maximize-btn:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: #ff9ebb !important;
-  border-color: rgba(255, 105, 180, 0.4) !important;
-  box-shadow: 0 4px 12px rgba(224, 86, 253, 0.3) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .hub-icon-btn {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .hub-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-color: rgba(255, 105, 180, 0.5) !important;
-  box-shadow: 0 4px 14px rgba(224, 86, 253, 0.35) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .video-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .video-card:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 105, 180, 0.5) !important;
-  box-shadow: 0 6px 18px rgba(224, 86, 253, 0.3) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .hub-oneline {
-  background: rgba(0, 0, 0, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-container {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-item {
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.07);
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-item:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 105, 180, 0.25) !important;
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-item.active {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.25) 0%, rgba(224, 86, 253, 0.15) 100%) !important;
-  border-color: rgba(255, 105, 180, 0.4) !important;
-  color: #ff9ebb !important;
-  font-weight: 700;
-  border-left: 3.5px solid #ff69b4 !important;
-  box-shadow: 0 3px 12px rgba(255, 105, 180, 0.25) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .fanpage-link-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #ff9ebb !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .fanpage-link-card:hover {
-  background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
-  color: white !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 4px 16px rgba(224, 86, 253, 0.4) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-wrapper {
-  background: rgba(22, 19, 28, 0.55) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-header {
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-view-switcher {
-  background: rgba(30, 24, 42, 0.7) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .view-switch-btn {
-  color: #94a3b8 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .view-switch-btn:hover {
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .view-switch-btn.active {
-  background: linear-gradient(135deg, #ff007a 0%, #ff69b4 100%) !important;
-  color: #fff !important;
-  box-shadow: 0 2px 10px rgba(255, 105, 180, 0.35) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .cal-nav-btn {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .cal-nav-btn:hover {
-  background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%) !important;
-  color: white !important;
-  box-shadow: 0 4px 14px rgba(224, 86, 253, 0.4) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-weekdays {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-  color: #94a3b8 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-week-row:hover {
-  background: rgba(40, 32, 52, 0.85) !important;
-  border-color: rgba(255, 105, 180, 0.4) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-cell {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-cell:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 105, 180, 0.5);
-  box-shadow: 0 4px 14px rgba(224, 86, 253, 0.3);
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-cell.other-month {
-  background: transparent;
-  color: #555;
-}
-
-:is(html.dark-mode, body.dark-mode) .calendar-cell.today {
-  border-color: #ff69b4;
-  background: rgba(60, 30, 50, 0.5);
-  box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
-}
-
-:is(html.dark-mode, body.dark-mode) .cell-date {
-  color: #cbd5e1;
-}
-
-:is(html.dark-mode, body.dark-mode) .cal-event-badge {
-  filter: brightness(0.95);
-}
-
-:is(html.dark-mode, body.dark-mode) .feed-iframe-wrapper {
-  background: rgba(22, 19, 28, 0.6) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .feed-iframe-wrapper:hover {
-  border-color: rgba(255, 105, 180, 0.4) !important;
-  box-shadow: 0 6px 20px rgba(224, 86, 253, 0.3) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .iframe-wrapper {
-  background: rgba(22, 19, 28, 0.6) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .disclaimer-card.sticky-footer {
-  background: rgba(22, 19, 28, 0.65) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .disclaimer-card footer {
-  color: #94a3b8 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .schedule-modal-card,
-:is(html.dark-mode, body.dark-mode) .schedule-embed-card {
-  background: rgba(28, 24, 36, 0.95) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #cbd5e1 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .embed-modal-title {
-  color: #ff9ebb !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .modal-header {
-  color: #ff9ebb;
-}
-
-:is(html.dark-mode, body.dark-mode) .modal-close-btn {
-  color: #aaa;
-}
-
-:is(html.dark-mode, body.dark-mode) .modal-body {
-  color: #cbd5e1 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .modal-body .detail-time {
-  color: #ff9ebb !important;
-  border-bottom-color: #333 !important;
-}
-
-/* 다크 모드 틱톡 숏폼 스마트 카드 동기화 */
-:is(html.dark-mode, body.dark-mode) .tiktok-short-preview-card {
-  background: rgba(22, 19, 28, 0.85) !important;
-  border-color: rgba(254, 44, 85, 0.35) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-short-preview-card:hover {
-  box-shadow: 0 6px 20px rgba(254, 44, 85, 0.35) !important;
-  border-color: rgba(254, 44, 85, 0.8) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-icon-box {
-  background: rgba(10, 8, 14, 0.85) !important;
-  border-color: rgba(254, 44, 85, 0.35) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-card-title {
-  color: #f1f5f9 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-card-desc {
-  color: #94a3b8 !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-card-btn {
-  background: rgba(254, 44, 85, 0.2) !important;
-  color: #ff6482 !important;
-  border-color: rgba(254, 44, 85, 0.5) !important;
-}
-
-:is(html.dark-mode, body.dark-mode) .tiktok-short-preview-card:hover .tiktok-card-btn {
-  background: #fe2c55 !important;
-  color: #ffffff !important;
 }
 
 /* =========================================================================
@@ -1988,11 +2015,14 @@ html.dark-mode body,
   overflow: hidden;
   position: relative;
   background: transparent;
-}
 
-.app-layout.nav-right,
-body.nav-right .app-layout {
-  flex-direction: row-reverse;
+  &.nav-right {
+    flex-direction: row-reverse;
+  }
+
+  body.nav-right & {
+    flex-direction: row-reverse;
+  }
 }
 
 /* 세로 사이드바 레일 */
@@ -2018,17 +2048,17 @@ body.nav-right .app-layout {
   transition: border 0.3s ease;
   flex-shrink: 0;
   position: relative;
-}
 
-:is(html.dark-mode, body.dark-mode) .vertical-sidebar {
-  background: rgba(22, 17, 30, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
+  body.nav-right & {
+    border-right: none;
+    border-left: var(--glass-border);
+  }
 
-body.nav-right .vertical-sidebar {
-  border-right: none;
-  border-left: var(--glass-border);
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(22, 17, 30, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .vtab-group-top {
@@ -2051,10 +2081,10 @@ body.nav-right .vertical-sidebar {
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   overflow: visible !important;
-}
 
-:is(html.dark-mode, body.dark-mode) .vtab-group-bottom {
-  border-top-color: rgba(255, 255, 255, 0.08);
+  :is(html.dark-mode, body.dark-mode) & {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
 }
 
 /* 세로 글래스 슬라이더 */
@@ -2070,16 +2100,16 @@ body.nav-right .vertical-sidebar {
   opacity: 0;
   transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
   z-index: 1;
-}
 
-.vtab-slider.visible {
-  opacity: 1;
-}
+  &.visible {
+    opacity: 1;
+  }
 
-:is(html.dark-mode, body.dark-mode) .vtab-slider {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* 탭 버튼 및 유틸 버튼 */
@@ -2100,6 +2130,35 @@ body.nav-right .vertical-sidebar {
   padding: 0;
   margin: 0;
   overflow: visible !important;
+
+  &:hover {
+    color: var(--primary-color);
+    transform: scale(1.06);
+
+    .vtab-tooltip {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: var(--primary-color);
+    }
+  }
+
+  &.active {
+    background: var(--primary-color) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(255, 0, 122, 0.35);
+
+    .vtab-icon svg,
+    .vtab-icon img {
+      filter: brightness(0) invert(1) !important;
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #94a3b8;
+  }
 }
 
 .vtab-util-btn {
@@ -2121,6 +2180,42 @@ body.nav-right .vertical-sidebar {
   padding: 2px 0;
   margin: 0;
   overflow: visible !important;
+
+  &:hover {
+    color: var(--primary-color);
+    transform: scale(1.06);
+
+    .vtab-icon-svg svg {
+      transform: scale(1.1);
+    }
+
+    .vtab-btn-label {
+      color: var(--primary-color);
+    }
+
+    .vtab-tooltip {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    :is(html.dark-mode, body.dark-mode) & {
+      color: var(--primary-color);
+
+      .vtab-btn-label {
+        color: var(--primary-color);
+      }
+    }
+  }
+
+  .vtab-icon-emoji {
+    font-size: 15px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #94a3b8;
+  }
 }
 
 .vtab-btn-label {
@@ -2131,6 +2226,10 @@ body.nav-right .vertical-sidebar {
   letter-spacing: -0.2px;
   pointer-events: none;
   transition: color 0.2s ease;
+
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #94a3b8;
+  }
 }
 
 .vtab-icon-svg {
@@ -2141,63 +2240,14 @@ body.nav-right .vertical-sidebar {
   justify-content: center;
   pointer-events: none;
   flex-shrink: 0;
-}
 
-.vtab-icon-svg svg {
-  width: 100%;
-  height: 100%;
-  stroke: currentColor;
-  pointer-events: none;
-  transition: transform 0.2s ease;
-}
-
-.vtab-util-btn:hover .vtab-icon-svg svg {
-  transform: scale(1.1);
-}
-
-.vtab-util-btn .vtab-icon-emoji {
-  font-size: 15px;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.vtab-btn:hover,
-.vtab-util-btn:hover {
-  color: var(--primary-color);
-  transform: scale(1.06);
-}
-
-.vtab-util-btn:hover .vtab-btn-label {
-  color: var(--primary-color);
-}
-
-:is(html.dark-mode, body.dark-mode) .vtab-btn,
-:is(html.dark-mode, body.dark-mode) .vtab-util-btn {
-  color: #94a3b8;
-}
-
-:is(html.dark-mode, body.dark-mode) .vtab-btn-label {
-  color: #94a3b8;
-}
-
-:is(html.dark-mode, body.dark-mode) .vtab-btn:hover,
-:is(html.dark-mode, body.dark-mode) .vtab-util-btn:hover {
-  color: var(--primary-color);
-}
-
-:is(html.dark-mode, body.dark-mode) .vtab-util-btn:hover .vtab-btn-label {
-  color: var(--primary-color);
-}
-
-.vtab-btn.active {
-  background: var(--primary-color) !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(255, 0, 122, 0.35);
-}
-
-.vtab-btn.active .vtab-icon svg,
-.vtab-btn.active .vtab-icon img {
-  filter: brightness(0) invert(1) !important;
+  svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    pointer-events: none;
+    transition: transform 0.2s ease;
+  }
 }
 
 .vtab-icon {
@@ -2208,19 +2258,19 @@ body.nav-right .vertical-sidebar {
   justify-content: center;
   flex-shrink: 0;
   pointer-events: none;
-}
 
-.vtab-icon svg {
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
+  svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
 
-.vtab-icon img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
 }
 
 .vtab-icon-emoji {
@@ -2249,18 +2299,12 @@ body.nav-right .vertical-sidebar {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 99999 !important;
-}
 
-body.nav-right .vtab-tooltip {
-  left: auto;
-  right: 54px;
-  transform: translateX(6px);
-}
-
-.vtab-btn:hover .vtab-tooltip,
-.vtab-util-btn:hover .vtab-tooltip {
-  opacity: 1;
-  transform: translateX(0);
+  body.nav-right & {
+    left: auto;
+    right: 54px;
+    transform: translateX(6px);
+  }
 }
 
 /* 메인 컨텐츠 영역 */
@@ -2296,11 +2340,15 @@ body.nav-right .vtab-tooltip {
   transition: opacity 0.25s ease;
   padding: 16px;
   box-sizing: border-box;
-}
 
-.settings-modal-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
+  &.active {
+    opacity: 1;
+    pointer-events: auto;
+
+    .settings-modal-card {
+      transform: scale(1);
+    }
+  }
 }
 
 .settings-modal-card {
@@ -2319,16 +2367,12 @@ body.nav-right .vtab-tooltip {
   transform: scale(0.95);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   color: #1e293b;
-}
 
-.settings-modal-overlay.active .settings-modal-card {
-  transform: scale(1);
-}
-
-:is(html.dark-mode, body.dark-mode) .settings-modal-card {
-  background: rgba(24, 20, 30, 0.94);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(24, 20, 30, 0.94);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+  }
 }
 
 .settings-modal-header {
@@ -2337,10 +2381,10 @@ body.nav-right .vtab-tooltip {
   align-items: center;
   padding: 14px 18px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
 
-:is(html.dark-mode, body.dark-mode) .settings-modal-header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  :is(html.dark-mode, body.dark-mode) & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .settings-modal-title {
@@ -2358,16 +2402,16 @@ body.nav-right .vtab-tooltip {
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 0.2s ease;
-}
 
-.settings-close-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #333;
-}
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #333;
 
-:is(html.dark-mode, body.dark-mode) .settings-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+  }
 }
 
 /* 서브 탭 네비게이션 */
@@ -2378,11 +2422,11 @@ body.nav-right .vtab-tooltip {
   background: rgba(0, 0, 0, 0.03);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   overflow-x: auto;
-}
 
-:is(html.dark-mode, body.dark-mode) .settings-tab-nav {
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .settings-nav-btn {
@@ -2396,16 +2440,16 @@ body.nav-right .vtab-tooltip {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
-}
 
-.settings-nav-btn:hover {
-  color: var(--primary-color);
-}
+  &:hover {
+    color: var(--primary-color);
+  }
 
-.settings-nav-btn.active {
-  background: var(--primary-color);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(255, 0, 122, 0.3);
+  &.active {
+    background: var(--primary-color);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(255, 0, 122, 0.3);
+  }
 }
 
 /* 바디 & 섹션 */
@@ -2419,10 +2463,10 @@ body.nav-right .vtab-tooltip {
 .settings-section {
   display: none;
   flex-direction: column;
-}
 
-.settings-section.active {
-  display: flex;
+  &.active {
+    display: flex;
+  }
 }
 
 .setting-group-title {
@@ -2430,10 +2474,10 @@ body.nav-right .vtab-tooltip {
   font-weight: 700;
   margin-bottom: 10px;
   color: #0f172a;
-}
 
-:is(html.dark-mode, body.dark-mode) .setting-group-title {
-  color: #f1f5f9;
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #f1f5f9;
+  }
 }
 
 .setting-help-text {
@@ -2453,34 +2497,36 @@ body.nav-right .vtab-tooltip {
   border-radius: 10px;
   margin-bottom: 8px;
   transition: all 0.2s ease;
+
+  &.sub {
+    padding: 8px 12px;
+    margin-left: 12px;
+    margin-bottom: 6px;
+    background: rgba(0, 0, 0, 0.02);
+
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
 }
 
-:is(html.dark-mode, body.dark-mode) .setting-item-row {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
-}
+.setting-desc {
+  strong {
+    display: block;
+    font-size: 12.5px;
+    margin-bottom: 2px;
+  }
 
-.setting-item-row.sub {
-  padding: 8px 12px;
-  margin-left: 12px;
-  margin-bottom: 6px;
-  background: rgba(0, 0, 0, 0.02);
-}
-
-:is(html.dark-mode, body.dark-mode) .setting-item-row.sub {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.setting-desc strong {
-  display: block;
-  font-size: 12.5px;
-  margin-bottom: 2px;
-}
-
-.setting-desc p {
-  margin: 0;
-  font-size: 11px;
-  color: #64748b;
+  p {
+    margin: 0;
+    font-size: 11px;
+    color: #64748b;
+  }
 }
 
 /* 라디오 그룹 */
@@ -2498,10 +2544,10 @@ body.nav-right .vtab-tooltip {
   background: rgba(0, 0, 0, 0.04);
   padding: 5px 9px;
   border-radius: 6px;
-}
 
-:is(html.dark-mode, body.dark-mode) .setting-radio-label {
-  background: rgba(255, 255, 255, 0.06);
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 /* 셀렉트 드롭다운 */
@@ -2524,22 +2570,22 @@ body.nav-right .vtab-tooltip {
   outline: none;
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-}
 
-.setting-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(255, 0, 122, 0.15);
-}
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 0, 122, 0.15);
+  }
 
-:is(html.dark-mode, body.dark-mode) .setting-select {
-  background: rgba(30, 26, 40, 0.85);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #f1f5f9;
-}
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(30, 26, 40, 0.85);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
 
-:is(html.dark-mode, body.dark-mode) .setting-select option {
-  background: #1e1b29;
-  color: #f1f5f9;
+    option {
+      background: #1e1b29;
+      color: #f1f5f9;
+    }
+  }
 }
 
 /* 토글 스위치 */
@@ -2549,64 +2595,62 @@ body.nav-right .vtab-tooltip {
   width: 40px;
   height: 22px;
   flex-shrink: 0;
-}
 
-.setting-switch.small {
-  width: 34px;
-  height: 18px;
-}
+  &.small {
+    width: 34px;
+    height: 18px;
 
-.setting-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+    .slider:before {
+      height: 12px;
+      width: 12px;
+    }
 
-.setting-switch .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #cbd5e1;
-  transition: 0.25s;
-  border-radius: 22px;
-}
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+  }
 
-:is(html.dark-mode, body.dark-mode) .setting-switch .slider {
-  background-color: #475569;
-}
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 
-.setting-switch .slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.25s;
-  border-radius: 50%;
-}
+    &:checked + .slider {
+      background-color: var(--primary-color);
 
-.setting-switch.small .slider:before {
-  height: 12px;
-  width: 12px;
-  left: 3px;
-  bottom: 3px;
-}
+      &:before {
+        transform: translateX(18px);
+      }
+    }
+  }
 
-.setting-switch input:checked + .slider {
-  background-color: var(--primary-color);
-}
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.25s;
+    border-radius: 22px;
 
-.setting-switch input:checked + .slider:before {
-  transform: translateX(18px);
-}
+    &:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.25s;
+      border-radius: 50%;
+    }
 
-.setting-switch.small input:checked + .slider:before {
-  transform: translateX(16px);
+    :is(html.dark-mode, body.dark-mode) & {
+      background-color: #475569;
+    }
+  }
 }
 
 /* 순서 변경 리스트 */
@@ -2627,26 +2671,30 @@ body.nav-right .vtab-tooltip {
   border-radius: 8px;
   user-select: none;
   transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease, border 0.15s ease;
-}
 
-:is(html.dark-mode, body.dark-mode) .reorder-item-row {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
-}
+  &.dragging {
+    opacity: 0.35;
+    background: rgba(120, 119, 198, 0.12);
+    border: 1.5px dashed var(--primary-color);
+    transform: scale(0.98);
 
-.reorder-item-row.dragging {
-  opacity: 0.35;
-  background: rgba(120, 119, 198, 0.12);
-  border: 1.5px dashed var(--primary-color);
-  transform: scale(0.98);
-}
+    .reorder-drag-handle {
+      cursor: grabbing;
+    }
+  }
 
-.reorder-item-row.drag-over-top {
-  border-top: 2px solid var(--primary-color) !important;
-}
+  &.drag-over-top {
+    border-top: 2px solid var(--primary-color) !important;
+  }
 
-.reorder-item-row.drag-over-bottom {
-  border-bottom: 2px solid var(--primary-color) !important;
+  &.drag-over-bottom {
+    border-bottom: 2px solid var(--primary-color) !important;
+  }
+
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .reorder-drag-handle {
@@ -2659,15 +2707,14 @@ body.nav-right .vtab-tooltip {
   color: #94a3b8;
   flex-shrink: 0;
   transition: color 0.15s ease;
-}
 
-.reorder-drag-handle:hover {
-  color: var(--primary-color);
-}
+  &:hover {
+    color: var(--primary-color);
+  }
 
-.reorder-drag-handle:active,
-.reorder-item-row.dragging .reorder-drag-handle {
-  cursor: grabbing;
+  &:active {
+    cursor: grabbing;
+  }
 }
 
 .reorder-item-left {
@@ -2697,21 +2744,23 @@ body.nav-right .vtab-tooltip {
   height: 15px;
   flex-shrink: 0;
   color: var(--text-color, #333);
-}
 
-:is(html.dark-mode, body.dark-mode) .reorder-icon-mini {
-  color: #f1f5f9;
-}
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 
-.reorder-icon-mini svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+    path[fill="#000"],
+    path[fill="#030303"] {
+      :is(html.dark-mode, body.dark-mode) & {
+        fill: #f1f5f9 !important;
+      }
+    }
+  }
 
-:is(html.dark-mode, body.dark-mode) .reorder-icon-mini svg path[fill="#000"],
-:is(html.dark-mode, body.dark-mode) .reorder-icon-mini svg path[fill="#030303"] {
-  fill: #f1f5f9 !important;
+  :is(html.dark-mode, body.dark-mode) & {
+    color: #f1f5f9;
+  }
 }
 
 .reorder-icon-mini-img {
@@ -2757,12 +2806,11 @@ body.nav-right .vtab-tooltip {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-}
 
-:is(html.dark-mode, body.dark-mode) .reorder-edit-btn,
-:is(html.dark-mode, body.dark-mode) .reorder-delete-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
 }
 
 .reorder-edit-btn:hover {
@@ -2788,28 +2836,28 @@ body.nav-right .vtab-tooltip {
   align-items: center;
   gap: 6px;
   width: 100%;
-}
 
-.reorder-item-edit-row input {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 5px;
-  padding: 5px 8px;
-  font-size: 11.5px;
-  outline: none;
-  color: #1e293b;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
+  input {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 11.5px;
+    outline: none;
+    color: #1e293b;
+    transition: border-color 0.2s, box-shadow 0.2s;
 
-:is(html.dark-mode, body.dark-mode) .reorder-item-edit-row input {
-  background: rgba(30, 24, 42, 0.95);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #f1f5f9;
-}
+    &:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.25);
+    }
 
-.reorder-item-edit-row input:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.25);
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(30, 24, 42, 0.95);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+    }
+  }
 }
 
 .reorder-inline-btn {
@@ -2825,34 +2873,34 @@ body.nav-right .vtab-tooltip {
   gap: 3px;
   transition: all 0.2s ease;
   white-space: nowrap;
-}
 
-.reorder-inline-btn.save {
-  background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%);
-  color: #fff;
-}
+  &.save {
+    background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%);
+    color: #fff;
 
-.reorder-inline-btn.save:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 2px 8px rgba(255, 20, 147, 0.35);
-}
+    &:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 2px 8px rgba(255, 20, 147, 0.35);
+    }
+  }
 
-.reorder-inline-btn.cancel {
-  background: rgba(0, 0, 0, 0.08);
-  color: #64748b;
-}
+  &.cancel {
+    background: rgba(0, 0, 0, 0.08);
+    color: #64748b;
 
-:is(html.dark-mode, body.dark-mode) .reorder-inline-btn.cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-}
+    &:hover {
+      background: rgba(0, 0, 0, 0.15);
+    }
 
-.reorder-inline-btn.cancel:hover {
-  background: rgba(0, 0, 0, 0.15);
-}
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
 
-:is(html.dark-mode, body.dark-mode) .reorder-inline-btn.cancel:hover {
-  background: rgba(255, 255, 255, 0.18);
+      &:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+    }
+  }
 }
 
 /* 팬페이지 추가 박스 */
@@ -2862,36 +2910,36 @@ body.nav-right .vtab-tooltip {
   border-radius: 8px;
   padding: 10px;
   margin-top: 8px;
-}
 
-:is(html.dark-mode, body.dark-mode) .fanpage-add-box {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.12);
+  :is(html.dark-mode, body.dark-mode) & {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 .fanpage-input-row {
   display: flex;
   gap: 6px;
-}
 
-.fanpage-input-row input {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 6px;
-  padding: 6px 9px;
-  font-size: 12px;
-  outline: none;
-  box-sizing: border-box;
-}
+  input {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
 
-:is(html.dark-mode, body.dark-mode) .fanpage-input-row input {
-  background: rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
+    &:focus {
+      border-color: var(--primary-color);
+    }
 
-.fanpage-input-row input:focus {
-  border-color: var(--primary-color);
+    :is(html.dark-mode, body.dark-mode) & {
+      background: rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+  }
 }
 
 /* 모달 푸터 및 버튼 */
@@ -2902,11 +2950,11 @@ body.nav-right .vtab-tooltip {
   padding: 12px 18px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(0, 0, 0, 0.02);
-}
 
-:is(html.dark-mode, body.dark-mode) .settings-modal-footer {
-  border-top-color: rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  :is(html.dark-mode, body.dark-mode) & {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+  }
 }
 
 .settings-save-notice {
@@ -2915,10 +2963,10 @@ body.nav-right .vtab-tooltip {
   font-weight: 600;
   opacity: 0;
   transition: opacity 0.2s ease;
-}
 
-.settings-save-notice.visible {
-  opacity: 1;
+  &.visible {
+    opacity: 1;
+  }
 }
 
 .setting-action-btn {
@@ -2929,26 +2977,26 @@ body.nav-right .vtab-tooltip {
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-}
 
-.setting-action-btn.primary {
-  background: var(--primary-color);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(255, 0, 122, 0.3);
-}
+  &.primary {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 0, 122, 0.3);
 
-.setting-action-btn.primary:hover {
-  background: var(--primary-hover);
-}
+    &:hover {
+      background: var(--primary-hover);
+    }
+  }
 
-.setting-action-btn.danger-outline {
-  background: transparent;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #ef4444;
-}
+  &.danger-outline {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
 
-.setting-action-btn.danger-outline:hover {
-  background: rgba(239, 68, 68, 0.1);
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+  }
 }
 
 /* 스케줄 / 캘린더 채널 미니 엠블럼 아이콘 */
@@ -2959,29 +3007,29 @@ body.nav-right .vtab-tooltip {
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   transition: transform 0.15s ease;
-}
 
-.sched-channel-icon:hover {
-  transform: scale(1.15);
-}
+  &:hover {
+    transform: scale(1.15);
+  }
 
-.cal-event-badge .sched-channel-icon {
-  width: 11px;
-  height: 11px;
-  margin-right: 2.5px;
-  vertical-align: -1px;
-}
+  .cal-event-badge & {
+    width: 11px;
+    height: 11px;
+    margin-right: 2.5px;
+    vertical-align: -1px;
+  }
 
-.schedule-item .sched-channel-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 4px;
-  vertical-align: -2px;
-}
+  .schedule-item & {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    vertical-align: -2px;
+  }
 
-.modal-header-title .sched-channel-icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 6px;
-  vertical-align: -3px;
-}
+  .modal-header-title & {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+    vertical-align: -3px;
+  }
+}\n
