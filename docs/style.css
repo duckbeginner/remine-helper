@@ -1112,6 +1112,7 @@ body.dark-mode .frame-header {
   display: flex;
   flex-direction: column;
   position: relative;
+  height: 100%;
 }
 
 .download-card.popular {
@@ -1127,20 +1128,36 @@ body.dark-mode .frame-header {
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
-  padding: 3px 12px;
+  padding: 4px 14px;
   border-radius: var(--radius-full);
   box-shadow: 0 4px 12px rgba(255, 0, 122, 0.3);
+  letter-spacing: -0.2px;
+}
+
+.popular-tag.firefox-tag {
+  background: linear-gradient(135deg, #FF7139 0%, #FF3E6C 100%);
+  box-shadow: 0 4px 12px rgba(255, 113, 57, 0.3);
 }
 
 .browser-icon {
   margin-bottom: 20px;
   color: var(--primary-pink);
+  display: flex;
+  align-items: center;
+}
+
+.browser-icon.firefox-icon {
+  color: #FF7139;
 }
 
 .download-browser-title {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   margin-bottom: 12px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  line-height: 1.35;
 }
 
 .download-browser-desc {
@@ -1148,6 +1165,9 @@ body.dark-mode .frame-header {
   color: var(--text-muted);
   margin-bottom: 24px;
   line-height: 1.6;
+  min-height: 72px;
+  display: flex;
+  align-items: flex-start;
 }
 
 .install-steps-list {
@@ -1158,6 +1178,13 @@ body.dark-mode .frame-header {
   background: rgba(0, 0, 0, 0.04);
   padding: 16px;
   border-radius: 12px;
+  flex: 1;
+  min-height: 152px;
+  justify-content: center;
+}
+
+.download-card .btn {
+  margin-top: auto;
 }
 
 body.dark-mode .install-steps-list {
