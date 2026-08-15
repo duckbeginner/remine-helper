@@ -151,7 +151,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 async function fetchAllData() {
   await fetchYouTubeVideos(OFFICIAL_CHANNEL_ID, "latestVideos", "공식 유튜브");
-  await fetchYouTubePlaylist(OFFICIAL_PLAYLIST_ID, "officialPlaylistVideos", "공식 유튜브 재생목록");
+  await fetchYouTubePlaylist(OFFICIAL_PLAYLIST_ID, "officialPlaylistVideos", "RESCENE Archive");
   await fetchYouTubeVideos(WONI_CHANNEL_ID, "woniVideos", "안녕하세요원이입니다잘부탁드립니다");
   await fetchAndMergeSchedules();
 }
@@ -396,9 +396,12 @@ async function processAndMergeScheduleList(rawSchedules) {
       if (isShorts) shortsVideoIdSet.add(v.id);
     });
 
+    const officialYtIdSet = new Set((ytData.latestVideos || []).map(v => v.id).filter(Boolean));
+    const woniYtIdSet = new Set((ytData.woniVideos || []).map(v => v.id).filter(Boolean));
+
     const targetScheduleVideos = [
-      ...(ytData.latestVideos || []),
-      ...(ytData.woniVideos || [])
+      ...(ytData.latestVideos || []).map(v => ({ ...v, isOfficialYoutube: true })),
+      ...(ytData.woniVideos || []).map(v => ({ ...v, isWoniYoutube: true }))
     ];
 
     const seenYt = new Set();
@@ -409,18 +412,22 @@ async function processAndMergeScheduleList(rawSchedules) {
       seenYt.add(v.id);
       const startTime = v.publishedAt || (v.published ? `${v.published}T00:00:00Z` : new Date().toISOString());
       youtubeScheduleItems.push({
+        id: v.id,
+        videoId: v.id,
         title: v.title,
         startTime: startTime,
         endTime: startTime,
-        message: `[공식 영상] ${v.title}`,
+        message: v.isWoniYoutube ? `[원이 영상] ${v.title}` : `[공식 영상] ${v.title}`,
         typeText: "영상",
         location: null,
-        channel: v.channelName || "유튜브",
+        channel: v.channelName || (v.isWoniYoutube ? "안녕하세요원이입니다잘부탁드립니다" : "공식 유튜브"),
         source: "youtube",
         url: v.url,
         link: v.url,
         thumbnail: v.thumbnail,
-        extField: { key: "채널", value: v.channelName || "유튜브" }
+        isOfficialYoutube: Boolean(v.isOfficialYoutube),
+        isWoniYoutube: Boolean(v.isWoniYoutube),
+        extField: { key: "채널", value: v.channelName || (v.isWoniYoutube ? "안녕하세요원이입니다잘부탁드립니다" : "공식 유튜브") }
       });
     });
   } catch (e) {}
@@ -711,6 +718,18 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules) {
         if (/RESCENE|안녕하세요원이|자컨|비하인드|vlog|브이로그|ep\.|유튜브|youtube/i.test((item.channel || '') + ' ' + (item.title || '') + ' ' + (item.message || ''))) {
           item.typeText = "영상";
         }
+      }
+
+      // 5) 비디오 ID 기준 공식/원이 채널 플래그 매핑
+      if (!item.isOfficialYoutube && !item.isWoniYoutube) {
+        try {
+          const ytIds = await new Promise(r => chrome.storage.local.get(['latestVideos', 'woniVideos'], r));
+          if (ytIds && ytIds.latestVideos && ytIds.latestVideos.some(v => v.id === vid)) {
+            item.isOfficialYoutube = true;
+          } else if (ytIds && ytIds.woniVideos && ytIds.woniVideos.some(v => v.id === vid)) {
+            item.isWoniYoutube = true;
+          }
+        } catch (e) {}
       }
     }
   }

@@ -1192,8 +1192,13 @@ img.custom-logo {
     }
 
     .badge-hover-time {
-      display: block !important;
+      display: flex !important;
       animation: badgeFadeIn 0.15s ease-in-out;
+    }
+
+    .badge-hover-time ~ .badge-main-content .sched-channel-icon,
+    .badge-hover-time + .badge-main-content .sched-channel-icon {
+      display: none !important;
     }
 
     .badge-title-text {
@@ -1320,6 +1325,8 @@ img.custom-logo {
 
   .badge-hover-time {
     display: none;
+    align-items: center;
+    gap: 3px;
     font-size: 0.62rem;
     font-weight: 700;
     margin-bottom: 2px;
@@ -1327,6 +1334,11 @@ img.custom-logo {
     opacity: 0.95;
     white-space: nowrap;
     letter-spacing: -0.2px;
+
+    .sched-channel-icon {
+      margin: 0 0 0 2px !important;
+      vertical-align: -1px !important;
+    }
   }
 
   .badge-main-content {
@@ -1362,8 +1374,13 @@ img.custom-logo {
     position: relative;
 
     .badge-hover-time {
-      display: block;
+      display: flex !important;
       animation: badgeFadeIn 0.15s ease-in-out;
+    }
+
+    .badge-hover-time ~ .badge-main-content .sched-channel-icon,
+    .badge-hover-time + .badge-main-content .sched-channel-icon {
+      display: none !important;
     }
 
     .badge-title-text {

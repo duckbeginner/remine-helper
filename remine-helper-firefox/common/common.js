@@ -877,6 +877,8 @@ export function deduplicateScheduleList(schedules = []) {
       if ((!target.starAttendees || target.starAttendees.length === 0) && (newItem.starAttendees && newItem.starAttendees.length > 0)) {
         target.starAttendees = newItem.starAttendees;
       }
+      if (newItem.isOfficialYoutube) target.isOfficialYoutube = true;
+      if (newItem.isWoniYoutube) target.isWoniYoutube = true;
     } else {
       mergedList.push({ ...newItem });
     }
@@ -1097,26 +1099,27 @@ export function getScheduleTypeInfo(item) {
 // 공식 채널 / 원이 채널 영상 일정 제목 앞 미니 엠블럼 아이콘 생성
 export function getChannelIconHTML(item, { isSmall = false } = {}) {
   if (!item) return '';
-  const text = `${item.channel || ''} ${(item.extField && item.extField.value) || ''} ${item.title || ''} ${item.url || ''} ${item.link || ''} ${item.source || ''}`.toLowerCase();
 
   const size = isSmall ? 11 : 14;
   const margin = isSmall ? 'margin-right:2px; vertical-align:-1px;' : 'margin-right:4px; vertical-align:-2px;';
 
-  // 1. 원이 채널 (안녕하세요원이입니다잘부탁드립니다)
-  if (text.includes('안녕하세요원이') || text.includes('helloiamwoni') || text.includes('안원잘부') || text.includes('@helloiamwoninicetomeetyou')) {
+  const channelName = String(item.channel || (item.extField && item.extField.value) || '').trim();
+
+  // 1. 원이 개인 채널
+  const isWoni = Boolean(item.isWoniYoutube) ||
+                 channelName === '안녕하세요원이입니다잘부탁드립니다' ||
+                 item.channelKey === 'helloiamwoni';
+
+  if (isWoni) {
     return `<img src="icons/hellowoni_profile.jpg" class="sched-channel-icon woni" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="원이채널" title="안녕하세요원이입니다잘부탁드립니다">`;
   }
 
-  // 2. 공식 유튜브 채널 (RESCENE)
-  const isBroadcaster = /mbc|kbs|sbs|mnet|jtbc|tvn|ena|ebs|tv조선/i.test(item.channel || (item.extField && item.extField.value) || '');
-  if (!isBroadcaster && (
-    item.source === 'youtube' ||
-    text.includes('@rescene_official') ||
-    text.includes('base notes') ||
-    text.includes('re:creation') ||
-    text.includes('re-log') ||
-    (item.typeText === '영상' && (text.includes('rescene') || text.includes('리센느') || item.channel === 'RESCENE'))
-  )) {
+  // 2. RESCENE 공식 채널
+  const isOfficial = Boolean(item.isOfficialYoutube) ||
+                     (item.source === 'youtube' && (channelName === '공식 유튜브' || channelName === 'RESCENE')) ||
+                     channelName === '공식 유튜브';
+
+  if (isOfficial) {
     return `<img src="icons/rescene_official_profile.jpg" class="sched-channel-icon official" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="공식채널" title="RESCENE 공식 유튜브 채널">`;
   }
 
@@ -1497,7 +1500,7 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
           badge.style.background = bg;
           badge.style.color = color;
 
-          let timeStrForBadge = "";
+          let timeStrForHover = "";
           let timeStrForModal = "";
           const rawDate = item.startTime || item.date;
 
@@ -1508,7 +1511,7 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
             if (!(h === 0 && m === '00' && String(rawDate).includes('T15:00:00'))) {
               const ap = h >= 12 ? '오후' : '오전';
               h = h % 12 || 12;
-              timeStrForBadge = `<span class="badge-time">${ap} ${h}:${m}</span>`;
+              timeStrForHover = `${ap} ${h}:${m}`;
               timeStrForModal = `${ap} ${h}:${m}`;
             } else {
               timeStrForModal = item.isMultiDay ? "연속 일정" : "종일 일정";
@@ -1522,7 +1525,10 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
 
           const channelIconSmall = getChannelIconHTML(item, { isSmall: true });
 
-          const hoverTimeHtml = timeStrForModal ? `<div class="badge-hover-time">${escapeHtml(timeStrForModal)}</div>` : '';
+          // 특정 시간이 존재하는 일정에 한해서만 호버 시 시간 + 아이콘 라인 생성
+          const hoverTimeHtml = timeStrForHover
+            ? `<div class="badge-hover-time"><span class="badge-hover-time-text">${escapeHtml(timeStrForHover)}</span>${channelIconSmall ? `<span class="badge-hover-channel-icon">${channelIconSmall}</span>` : ''}</div>`
+            : '';
           const contentHtml = `<div class="badge-main-content">${channelIconSmall}<span class="badge-title-text">${titleText}</span></div>`;
 
           // 연속 일정인 경우 스타일 및 그룹 식별자 추가
@@ -2025,7 +2031,7 @@ export function showScheduleModal(scheduleData) {
       const nickTitle = isCustomNick ? ` title="닉네임: ${escapeHtml(rawNick)}"` : '';
       return `<span style="display:inline-flex; align-items:center; background:rgba(255,105,180,0.1); border:1px solid rgba(255,105,180,0.25); border-radius:12px; padding:1px 7px; font-size:11px; font-weight:600; color:#d63384; margin:1px 2px;"${nickTitle}>${avatar}${escapeHtml(realName)}</span>`;
     }).join(' ');
-    html += `<div style="display:flex; flex-wrap:wrap; align-items:center; margin:3px 0;"><span class="detail-time" style="display:inline-flex; align-items:center; margin:0; margin-right:4px; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>참석 멤버:</span><div style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:2px;">${attendeesHtml}</div></div>`;
+    html += `<div style="display:flex; flex-wrap:wrap; align-items:center; margin:3px 0;"><span class="detail-time" style="display:inline-flex; align-items:center; margin:0; margin-right:4px; flex-shrink:0; border-bottom:none !important; padding-bottom:0 !important;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>참석 멤버:</span><div style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:2px;">${attendeesHtml}</div></div>`;
   }
 
   let hasRenderedLinkInBody = false;
