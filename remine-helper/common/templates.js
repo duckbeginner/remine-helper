@@ -84,9 +84,11 @@ export function createHubIconButtonHTML(channel, channelMap = CHANNEL_DATA_MAP) 
     iconContent = `<span>${escapeHtml((channel.name || '채널').slice(0, 2))}</span>`;
   }
 
+  const badgeHtml = channel.key === 'x_twt' ? `<span class="hub-icon-badge">twt</span>` : '';
+
   return `
     <a href="${channel.url || data.url}" target="_blank" class="hub-icon-btn" data-key="${channel.key}" title="${escapeHtml(channel.name || data.name)}" draggable="true">
-      ${iconContent}
+      ${iconContent}${badgeHtml}
     </a>
   `;
 }

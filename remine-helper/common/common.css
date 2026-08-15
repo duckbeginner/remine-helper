@@ -349,6 +349,7 @@ body {
 }
 
 .hub-icon-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1606,11 +1607,45 @@ html.dark-mode body,
   filter: invert(0);
 }
 
-/* 다크모드에서 검은색인 X 아이콘만 반전 */
-:is(html.dark-mode, body.dark-mode) .panel-tab-btn:not(.active)[data-target="tabX"] svg,
-:is(html.dark-mode, body.dark-mode) .vtab-btn:not(.active)[data-target="tabX"] svg,
-:is(html.dark-mode, body.dark-mode) .hub-icon-btn[data-key="x"] svg {
-  filter: invert(1) brightness(1.2) !important;
+/* X 아이콘 전용 순수 블랙 & 순수 화이트 컬러 (라이트/다크 왜곡 완벽 해결) */
+.panel-tab-btn[data-target="tabX"],
+.vtab-btn[data-target="tabX"],
+.hub-icon-btn[data-key="x"],
+.hub-icon-btn[data-key="x_twt"] {
+  color: #000000 !important;
+}
+
+.panel-tab-btn[data-target="tabX"] svg,
+.vtab-btn[data-target="tabX"] svg,
+.hub-icon-btn[data-key="x"] svg,
+.hub-icon-btn[data-key="x_twt"] svg {
+  fill: currentColor !important;
+  filter: none !important;
+}
+
+:is(html.dark-mode, body.dark-mode) .panel-tab-btn[data-target="tabX"],
+:is(html.dark-mode, body.dark-mode) .vtab-btn[data-target="tabX"],
+:is(html.dark-mode, body.dark-mode) .hub-icon-btn[data-key="x"],
+:is(html.dark-mode, body.dark-mode) .hub-icon-btn[data-key="x_twt"] {
+  color: #ffffff !important;
+}
+
+.hub-icon-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: linear-gradient(135deg, #e056fd, #ff1493);
+  color: #fff;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 1.5px 3.5px;
+  border-radius: 4px;
+  pointer-events: none;
+  letter-spacing: -0.2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: 2;
 }
 
 :is(html.dark-mode, body.dark-mode) .theme-toggle-btn,
@@ -2636,7 +2671,7 @@ body.nav-right .vtab-tooltip {
   gap: 4px;
 }
 
-.reorder-arrow-btn,
+.reorder-edit-btn,
 .reorder-delete-btn {
   background: rgba(0, 0, 0, 0.04);
   border: none;
@@ -2651,25 +2686,100 @@ body.nav-right .vtab-tooltip {
   transition: all 0.2s ease;
 }
 
-:is(html.dark-mode, body.dark-mode) .reorder-arrow-btn,
+:is(html.dark-mode, body.dark-mode) .reorder-edit-btn,
 :is(html.dark-mode, body.dark-mode) .reorder-delete-btn {
   background: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
 
-.reorder-arrow-btn:hover:not(:disabled) {
-  background: var(--primary-color);
+.reorder-edit-btn:hover {
+  background: #3b82f6;
   color: #fff;
-}
-
-.reorder-arrow-btn:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
 }
 
 .reorder-delete-btn:hover {
   background: #ef4444;
   color: #fff;
+}
+
+/* 팬페이지 인라인 편집 폼 */
+.reorder-item-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.reorder-item-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.reorder-item-edit-row input {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  outline: none;
+  color: #1e293b;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+:is(html.dark-mode, body.dark-mode) .reorder-item-edit-row input {
+  background: rgba(30, 24, 42, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+}
+
+.reorder-item-edit-row input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.25);
+}
+
+.reorder-inline-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.reorder-inline-btn.save {
+  background: linear-gradient(135deg, #e056fd 0%, #ff1493 100%);
+  color: #fff;
+}
+
+.reorder-inline-btn.save:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 2px 8px rgba(255, 20, 147, 0.35);
+}
+
+.reorder-inline-btn.cancel {
+  background: rgba(0, 0, 0, 0.08);
+  color: #64748b;
+}
+
+:is(html.dark-mode, body.dark-mode) .reorder-inline-btn.cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.reorder-inline-btn.cancel:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+:is(html.dark-mode, body.dark-mode) .reorder-inline-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* 팬페이지 추가 박스 */

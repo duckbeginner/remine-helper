@@ -2373,7 +2373,14 @@ export function initAppStorageData({
         const btnMap = {};
         currentBtns.forEach(b => { btnMap[b.getAttribute('data-key')] = b; });
         result.channelOrder.forEach(key => {
-          if (btnMap[key]) hubEl.appendChild(btnMap[key]);
+          if (btnMap[key]) {
+            hubEl.appendChild(btnMap[key]);
+            delete btnMap[key];
+          }
+        });
+        // channelOrder에 없는 신규 채널(예: x_twt)도 누락 없이 표시
+        Object.values(btnMap).forEach(btn => {
+          hubEl.appendChild(btn);
         });
       }
       setupHubIconReordering(hubEl, (newOrder) => {
@@ -2760,14 +2767,6 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
           </label>
           <span class="reorder-item-label">${iconHtml}<span>${escapeHtml(tab.label || tab.id)}</span></span>
         </div>
-        <div class="reorder-btn-group">
-          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-          </button>
-          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === tabList.length - 1 ? 'disabled' : ''}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-        </div>
       `;
       listEl.appendChild(row);
     });
@@ -2793,25 +2792,6 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
         const target = currentSettings.tabList.find(t => t.id === id);
         if (target) {
           target.enabled = e.target.checked;
-          saveUserSettings(currentSettings, () => {
-            showSaveNotice();
-            if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
-          });
-        }
-      });
-    });
-
-    // 탭 순서 변경 버튼 리스너
-    listEl.querySelectorAll('.reorder-arrow-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-idx'), 10);
-        const isUp = btn.classList.contains('up');
-        const targetIdx = isUp ? idx - 1 : idx + 1;
-
-        if (targetIdx >= 0 && targetIdx < currentSettings.tabList.length) {
-          const item = currentSettings.tabList.splice(idx, 1)[0];
-          currentSettings.tabList.splice(targetIdx, 0, item);
-          renderTabReorderList(currentSettings.tabList);
           saveUserSettings(currentSettings, () => {
             showSaveNotice();
             if (typeof onTabsChanged === 'function') onTabsChanged(currentSettings.tabList);
@@ -2855,11 +2835,8 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
           <span class="reorder-item-sub">${escapeHtml(fp.url)}</span>
         </div>
         <div class="reorder-btn-group">
-          <button class="reorder-arrow-btn up" data-idx="${index}" title="위로 이동" ${index === 0 ? 'disabled' : ''}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-          </button>
-          <button class="reorder-arrow-btn down" data-idx="${index}" title="아래로 이동" ${index === fanpages.length - 1 ? 'disabled' : ''}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <button class="reorder-edit-btn" data-id="${fp.id}" title="수정">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
           <button class="reorder-delete-btn" data-id="${fp.id}" title="삭제">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -2898,22 +2875,76 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       });
     });
 
-    // 팬페이지 순서 변경 리스너
-    listEl.querySelectorAll('.reorder-arrow-btn').forEach(btn => {
+    // 팬페이지 인라인 수정 리스너
+    listEl.querySelectorAll('.reorder-edit-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-idx'), 10);
-        const isUp = btn.classList.contains('up');
-        const targetIdx = isUp ? idx - 1 : idx + 1;
+        const id = btn.getAttribute('data-id');
+        const fp = currentSettings.fanpages.find(f => f.id === id);
+        if (!fp) return;
 
-        if (targetIdx >= 0 && targetIdx < currentSettings.fanpages.length) {
-          const item = currentSettings.fanpages.splice(idx, 1)[0];
-          currentSettings.fanpages.splice(targetIdx, 0, item);
-          renderFanpageReorderList(currentSettings.fanpages);
+        const row = btn.closest('.reorder-item-row');
+        if (!row) return;
+
+        row.innerHTML = `
+          <div class="reorder-item-edit-form">
+            <div class="reorder-item-edit-row">
+              <input type="text" class="edit-fp-icon" value="${escapeHtml(fp.icon || '')}" placeholder="이모지" maxlength="4" style="width: 52px; text-align: center;">
+              <input type="text" class="edit-fp-name" value="${escapeHtml(fp.name || '')}" placeholder="팬페이지 이름" style="flex: 1;">
+            </div>
+            <div class="reorder-item-edit-row">
+              <input type="url" class="edit-fp-url" value="${escapeHtml(fp.url || '')}" placeholder="https://..." style="flex: 1;">
+              <button class="reorder-inline-btn save edit-fp-save-btn" data-id="${fp.id}">저장</button>
+              <button class="reorder-inline-btn cancel edit-fp-cancel-btn">취소</button>
+            </div>
+          </div>
+        `;
+
+        const nameInput = row.querySelector('.edit-fp-name');
+        const urlInput = row.querySelector('.edit-fp-url');
+        const iconInput = row.querySelector('.edit-fp-icon');
+        const saveBtn = row.querySelector('.edit-fp-save-btn');
+        const cancelBtn = row.querySelector('.edit-fp-cancel-btn');
+
+        if (nameInput) nameInput.focus();
+
+        const doSave = () => {
+          const newName = (nameInput.value || '').trim();
+          const newUrl = (urlInput.value || '').trim();
+          const newIcon = (iconInput.value || '').trim() || '🌐';
+
+          if (!newName || !newUrl) {
+            alert('팬페이지 이름과 URL을 모두 입력해주세요.');
+            return;
+          }
+
+          fp.name = newName;
+          fp.url = newUrl;
+          fp.icon = newIcon;
+
           saveUserSettings(currentSettings, () => {
-            showSaveNotice();
+            showSaveNotice('팬페이지가 수정되었습니다.');
+            renderFanpageReorderList(currentSettings.fanpages);
             if (typeof onFanpagesChanged === 'function') onFanpagesChanged(currentSettings.fanpages);
           });
+        };
+
+        if (saveBtn) saveBtn.addEventListener('click', doSave);
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => {
+            renderFanpageReorderList(currentSettings.fanpages);
+          });
         }
+
+        row.querySelectorAll('input').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              doSave();
+            } else if (e.key === 'Escape') {
+              renderFanpageReorderList(currentSettings.fanpages);
+            }
+          });
+        });
       });
     });
 
