@@ -1145,7 +1145,7 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const nowTime = now.getTime();
 
-  // 1순위: 오늘 날짜(YYYY-MM-DD)와 일치하는 일정 중 현재 시간 이후이거나 첫 번째 일정
+  // 1순위: 오늘 날짜(YYYY-MM-DD)와 일치하는 일정
   let todayIndices = [];
   schedules.forEach((item, idx) => {
     const d = parseSafeDate(item.startTime || item.date);
@@ -1162,7 +1162,8 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
       const endT = item.endTime ? parseSafeDate(item.endTime).getTime() : parseSafeDate(item.startTime || item.date).getTime();
       return endT >= nowTime;
     });
-    nextIndex = upcomingToday !== undefined ? upcomingToday : todayIndices[0];
+    // 오늘 진행 중이거나 예정된 일정이 있으면 그 중 첫 번째, 오늘 일정이 모두 종료되었으면 현재 시점과 가장 가까운 오늘의 마지막 일정 선택
+    nextIndex = upcomingToday !== undefined ? upcomingToday : todayIndices[todayIndices.length - 1];
   }
 
   // 2순위: 오늘 일정이 없으면 오늘 이후 첫 번째 미래 일정
