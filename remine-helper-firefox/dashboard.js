@@ -1,11 +1,14 @@
-// sidepanel.js - 0.01초 극한 가속 (Two-Phase Progressive Mount + Micro-SWR + On-Demand Modals)
+// dashboard.js - 0.05초 초고속 대시보드 진입점 (Page Visibility Throttling & Lazy Mounting)
 import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS } from './constants.js';
 import {
-  createVerticalSidebarHTML,
+  createTabBarHTML,
   createTabContainersHTML,
-  createPrimaryHomeModulesHTML,
-  createSecondaryHomeModulesHTML,
-  createAllHomeModulesHTML,
+  createLiveBannerHTML,
+  createHubCardHTML,
+  createYoutubeSectionHTML,
+  createWoniSectionHTML,
+  createFanpageCardHTML,
+  createStickyFooterHTML,
   createScheduleModalHTML,
   createSettingsModalHTML
 } from './common/templates.js';
@@ -53,9 +56,13 @@ function setMicroCache(data) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const sidebarMount = document.getElementById('sidebarMount');
+  const liveBannerMount = document.getElementById('liveBannerMount');
+  const tabBarMount = document.getElementById('tabBarMount');
   const tabContainersMount = document.getElementById('tabContainersMount');
+  const rightColMount = document.getElementById('dashboardRightColMount');
   const modalMount = document.getElementById('modalMount');
+
+  if (liveBannerMount) liveBannerMount.innerHTML = createLiveBannerHTML();
 
   const microCache = getMicroCache();
   const initialSettings = microCache && microCache.userSettings ? parseUserSettings(microCache.userSettings) : DEFAULT_USER_SETTINGS;
@@ -71,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFanpages = initialSettings.fanpages;
   let isScheduleModalMounted = false;
   let isSettingsModalMounted = false;
+  let isSyncPending = false;
+
   let fullStorageData = microCache || null;
 
   function ensureScheduleModal() {
@@ -89,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
       modalMount.insertAdjacentHTML('beforeend', createSettingsModalHTML());
       initSettingsModal({
         onTabsChanged: (newTabList) => {
-          loadUserSettings((u) => renderAppViews(newTabList, u.fanpages, { isInitial: false, cachedStorage: fullStorageData }));
+          loadUserSettings((u) => renderDashboardViews(newTabList, u.fanpages, { cachedStorage: fullStorageData }));
         },
         onFanpagesChanged: (newFanpages) => {
-          loadUserSettings((u) => renderAppViews(u.tabList, newFanpages, { isInitial: false, cachedStorage: fullStorageData }));
+          loadUserSettings((u) => renderDashboardViews(u.tabList, newFanpages, { cachedStorage: fullStorageData }));
         },
         onNavPositionChanged: (newPos) => {
           initNavPosition(newPos);
@@ -101,103 +110,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function ensureCalendarManager() {
-    if (calendarManager) return calendarManager;
+  function renderDashboardViews(tabList = currentTabList, fanpages = currentFanpages, { cachedStorage = null } = {}) {
+    currentTabList = tabList;
+    currentFanpages = fanpages;
+    const effectiveStorage = cachedStorage || fullStorageData || microCache;
+
+    const dashboardTabs = tabList.filter(t => t.id !== 'tabHome').map(t => ({
+      ...t,
+      defaultActive: t.id === 'tabSchedule'
+    }));
+
+    if (tabBarMount) {
+      tabBarMount.innerHTML = createTabBarHTML(dashboardTabs, { tabBarId: 'dashboardTabBar', activeTabId: 'tabSchedule' });
+    }
+    if (tabContainersMount) {
+      tabContainersMount.innerHTML = createTabContainersHTML(dashboardTabs, 'tabSchedule');
+    }
+    if (rightColMount) {
+      rightColMount.innerHTML = [
+        createHubCardHTML(OFFICIAL_CHANNELS, CHANNEL_DATA_MAP, { showControls: false }),
+        createYoutubeSectionHTML(),
+        createWoniSectionHTML(),
+        createFanpageCardHTML(fanpages),
+        createStickyFooterHTML()
+      ].join('\n');
+    }
+
     calendarManager = initCalendarManager({
       gridId: 'spCalendarGrid',
       titleId: 'spCalendarMonthTitle',
       prevBtnId: 'spPrevMonthBtn',
       nextBtnId: 'spNextMonthBtn'
     });
-    if (fullStorageData && fullStorageData.blipSchedules) {
-      calendarManager.setSchedules(fullStorageData.blipSchedules);
-    }
-    return calendarManager;
-  }
 
-  // 2단계 점진적 뷰 렌더링 함수
-  function renderAppViews(tabList = currentTabList, fanpages = currentFanpages, { isInitial = false, cachedStorage = null } = {}) {
-    currentTabList = tabList;
-    currentFanpages = fanpages;
-
-    const enabledTabs = (tabList || []).filter(t => t.enabled !== false);
-    const firstEnabledTabId = enabledTabs.length > 0 ? enabledTabs[0].id : 'tabHome';
-
-    let activeTabId = firstEnabledTabId;
-    if (!isInitial) {
-      const currentActiveBtn = sidebarMount ? sidebarMount.querySelector('.vtab-btn.active') : null;
-      const currentActiveId = currentActiveBtn ? currentActiveBtn.getAttribute('data-target') : null;
-      if (currentActiveId && enabledTabs.some(t => t.id === currentActiveId)) {
-        activeTabId = currentActiveId;
-      }
-    }
-
-    if (sidebarMount) {
-      sidebarMount.innerHTML = createVerticalSidebarHTML(tabList, { activeTabId });
-    }
-
-    if (tabContainersMount) {
-      tabContainersMount.innerHTML = createTabContainersHTML(tabList, activeTabId);
-    }
-
-    const homeTabEl = document.getElementById('tabHome');
-    const effectiveStorage = cachedStorage || fullStorageData || microCache;
-
-    if (homeTabEl) {
-      if (isInitial) {
-        // [Phase 1] 0.002초 초경량 즉시 페인팅 (상단 허브 + 공식 유튜브만 먼저 주입)
-        homeTabEl.innerHTML = createPrimaryHomeModulesHTML();
-
-        if (effectiveStorage) {
-          initAppStorageData({
-            hubContainerId: 'hubContainer',
-            liveBannerId: 'liveBanner',
-            youtubeListId: 'youtubeList',
-            playlistId: 'playlistYoutubeList',
-            cachedData: effectiveStorage
-          });
-        }
-
-        // [Phase 2] 1프레임 뒤 스크롤 영역 결합 (원이 채널 + 스케줄 + 팬페이지)
-        requestAnimationFrame(() => {
-          homeTabEl.insertAdjacentHTML('beforeend', createSecondaryHomeModulesHTML({ fanpages }));
-          if (effectiveStorage) {
-            initAppStorageData({
-              woniListId: 'woniYoutubeList',
-              scheduleListId: 'scheduleList',
-              cachedData: effectiveStorage,
-              onSchedulesLoaded: (schedules) => {
-                if (calendarManager) calendarManager.setSchedules(schedules);
-              }
-            });
-          }
-        });
-      } else {
-        homeTabEl.innerHTML = createAllHomeModulesHTML({ fanpages });
-        if (effectiveStorage) {
-          initAppStorageData({
-            hubContainerId: 'hubContainer',
-            liveBannerId: 'liveBanner',
-            youtubeListId: 'youtubeList',
-            playlistId: 'playlistYoutubeList',
-            woniListId: 'woniYoutubeList',
-            scheduleListId: 'scheduleList',
-            cachedData: effectiveStorage,
-            onSchedulesLoaded: (schedules) => {
-              if (calendarManager) calendarManager.setSchedules(schedules);
-            }
-          });
-        }
-      }
-    }
-
-    initTabEngine(document.getElementById('mainVerticalSidebar'), document.getElementById('tabGlassSlider'), tabList, {
+    initTabEngine(document.getElementById('dashboardTabBar'), document.getElementById('tabGlassSlider'), dashboardTabs, {
       onTabChange: (targetId, tabConfig, loadedMap) => {
         const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
-
-        if (targetId === 'tabSchedule') {
-          ensureCalendarManager();
-        } else if (targetId === 'tabInsta' && !loadedMap[targetId]) {
+        if (targetId === 'tabInsta' && !loadedMap[targetId]) {
           loadedMap[targetId] = true;
           if (feedCache.insta) {
             renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
@@ -227,14 +176,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+
+    if (effectiveStorage) {
+      initAppStorageData({
+        hubContainerId: 'hubContainer',
+        liveBannerId: 'liveBanner',
+        youtubeListId: 'youtubeList',
+        playlistId: 'playlistYoutubeList',
+        woniListId: 'woniYoutubeList',
+        cachedData: effectiveStorage,
+        onSchedulesLoaded: (schedules) => {
+          if (calendarManager) calendarManager.setSchedules(schedules);
+        }
+      });
+    }
   }
 
   // =========================================================================
-  // Step 1: 0.002초 초경량 즉시 렌더링 (Critical Path Instant Paint)
+  // Step 1: 0ms 동기식 즉시 마운트 (SWR Instant Mount)
   // =========================================================================
   initNavPosition(initialSettings.navPosition || 'left');
-  renderAppViews(initialSettings.tabList, initialSettings.fanpages, { isInitial: true, cachedStorage: microCache });
+  renderDashboardViews(initialSettings.tabList, initialSettings.fanpages, { cachedStorage: microCache });
 
+  // 캘린더 최대화 버튼 바인딩
+  const maximizeBtn = document.getElementById('maximizeCalendarBtn');
+  if (maximizeBtn) {
+    maximizeBtn.addEventListener('click', () => {
+      const isMaximized = document.body.classList.toggle('calendar-maximized');
+      maximizeBtn.innerHTML = isMaximized
+        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>축소`
+        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>최대화`;
+    });
+  }
+
+  // 전역 이벤트 위임: 설정 버튼 또는 스케줄 클릭 시 온디맨드 모달 마운트
   document.addEventListener('click', (e) => {
     if (e.target.closest('#openSettingsBtn')) {
       ensureSettingsModal();
@@ -244,9 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }, true);
 
   // =========================================================================
-  // Step 2: 브라우저 유휴 시간 백그라운드 스토리지 동기화 (Idle Revalidate)
+  // Step 2: 브라우저 유휴 시간 백그라운드 스토리지 동기화 (Visibility Aware)
   // =========================================================================
   const syncTask = () => {
+    // 탭이 백그라운드에 있으면 사이드패널 오픈 중 자원 경합을 방지하기 위해 동기화 보류
+    if (document.hidden) {
+      isSyncPending = true;
+      return;
+    }
+    isSyncPending = false;
+
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(
         [
@@ -264,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         (res) => {
           if (!res) return;
-          fullStorageData = res;
           setMicroCache(res);
 
           initThemeEngine(document.getElementById('themeToggleBtn'), {
@@ -284,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const fanpagesChanged = JSON.stringify(settings.fanpages) !== JSON.stringify(currentFanpages);
 
           if (tabListChanged || fanpagesChanged) {
-            renderAppViews(settings.tabList, settings.fanpages, { isInitial: false, cachedStorage: res });
+            renderDashboardViews(settings.tabList, settings.fanpages, { cachedStorage: res });
           } else {
             initAppStorageData({
               hubContainerId: 'hubContainer',
@@ -292,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
               youtubeListId: 'youtubeList',
               playlistId: 'playlistYoutubeList',
               woniListId: 'woniYoutubeList',
-              scheduleListId: 'scheduleList',
               cachedData: res,
               onSchedulesLoaded: (schedules) => {
                 if (calendarManager) calendarManager.setSchedules(schedules);
@@ -306,37 +286,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // 대시보드 탭으로 다시 돌아왔을 때 보류된 동기화 실행
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && isSyncPending) {
+      syncTask();
+    }
+  });
+
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(syncTask, { timeout: 100 });
   } else {
     setTimeout(syncTask, 30);
   }
-
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('#openDashboardBtn');
-    if (btn) {
-      const targetPath = 'dashboard.html';
-      const fullUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
-        ? chrome.runtime.getURL(targetPath)
-        : targetPath;
-
-      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
-        chrome.tabs.query({}, (tabs) => {
-          const existingTab = (tabs || []).find(t => t.url && (t.url.includes(targetPath) || t.url === fullUrl));
-          if (existingTab && existingTab.id !== undefined) {
-            chrome.tabs.update(existingTab.id, { active: true });
-            if (existingTab.windowId !== undefined && chrome.windows && chrome.windows.update) {
-              chrome.windows.update(existingTab.windowId, { focused: true });
-            }
-          } else if (chrome.tabs.create) {
-            chrome.tabs.create({ url: fullUrl });
-          } else {
-            window.open(fullUrl, '_blank');
-          }
-        });
-      } else {
-        window.open(fullUrl, '_blank');
-      }
-    }
-  });
 });

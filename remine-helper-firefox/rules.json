@@ -1,0 +1,86 @@
+[
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "x-frame-options", "operation": "remove" },
+        { "header": "content-security-policy", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://x.com/*",
+      "resourceTypes": ["sub_frame"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "set", "value": "https://www.youtube.com" },
+        { "header": "Origin", "operation": "set", "value": "https://www.youtube.com" }
+      ],
+      "responseHeaders": [
+        { "header": "x-frame-options", "operation": "remove" },
+        { "header": "content-security-policy", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://*.youtube.com/*",
+      "resourceTypes": ["sub_frame"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "set", "value": "https://www.youtube-nocookie.com" },
+        { "header": "Origin", "operation": "set", "value": "https://www.youtube-nocookie.com" }
+      ],
+      "responseHeaders": [
+        { "header": "x-frame-options", "operation": "remove" },
+        { "header": "content-security-policy", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://*.youtube-nocookie.com/*",
+      "resourceTypes": ["sub_frame"]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "access-control-allow-origin", "operation": "set", "value": "*" },
+        { "header": "access-control-allow-methods", "operation": "set", "value": "GET, HEAD, OPTIONS, POST" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "x-ig-app-id", "operation": "set", "value": "936619743392459" },
+        { "header": "referer", "operation": "set", "value": "https://www.instagram.com/rescene_official/" },
+        { "header": "sec-fetch-site", "operation": "set", "value": "same-origin" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://www.instagram.com/api/v1/users/web_profile_info/*",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  }
+]

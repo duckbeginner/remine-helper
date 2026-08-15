@@ -1,4 +1,4 @@
-export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'instagram', 'x', 'tiktok', 'clip', 'facebook', 'mnet', 'blip'];
+export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'instagram', 'x', 'x_twt', 'tiktok', 'clip', 'facebook', 'mnet', 'blip'];
 
 // Mnet Plus / Bstage 스타 닉네임 -> 실제 멤버 활동명 매핑 테이블
 export const MEMBER_NICKNAME_MAP = {
@@ -9,6 +9,15 @@ export const MEMBER_NICKNAME_MAP = {
   '메2': '메이',
   '𝕞𝕚𝕟𝕒𝕞𝕚': '미나미',
   'minami': '미나미'
+};
+
+// 멤버별 대표 프로필 아이콘 매핑 테이블 (로컬 패키지 이미지 파일 사용)
+export const MEMBER_AVATAR_MAP = {
+  '원이': 'icons/member_woni.jpeg',
+  '리브': 'icons/member_liv.jpeg',
+  '제나': 'icons/member_zena.jpeg',
+  '메이': 'icons/member_may.jpeg',
+  '미나미': 'icons/member_minami.jpeg'
 };
 
 export const CHANNEL_DATA_MAP = {
@@ -30,12 +39,17 @@ export const CHANNEL_DATA_MAP = {
   instagram: {
     name: 'Instagram',
     url: 'https://www.instagram.com/rescene_official',
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#E1306C" d="M10.2 2.1c-1.5.1-2.5.3-3.4.7-.9.4-1.7.8-2.5 1.6-.8.8-1.3 1.6-1.6 2.5-.3.9-.6 1.9-.6 3.4-.1 1.5-.1 2-.1 5.8s0 4.3.1 5.8c.1 1.5.3 2.5.7 3.4.4.9.8 1.7 1.6 2.5.8.8 1.6 1.3 2.5 1.6.9.3 1.9.6 3.4.6 1.5.1 2 .1 5.8.1 3.8 0 4.3 0 5.8-.1 1.5-.1 2.5-.3 3.4-.7.9-.4 1.7-.8 2.5-1.6.8-.8 1.3-1.6 1.6-2.5.3-.9.6-1.9.6-3.4.1-1.5.1-2 .1-5.8s0-4.3-.1-5.8c-.1-1.5-.3-2.5-.7-3.4-.4-.9-.8-1.7-1.6-2.5-.8-.8-1.6-1.3-2.5-1.6-.9-.3-1.9-.6-3.4-.6-1.5-.1-2-.1-5.8-.1-3.8 0-4.3 0-5.8.1zm.2 25.3c-1.4-.1-2.1-.3-2.6-.5-.7-.3-1.1-.6-1.6-1s-.8-1-1.1-1.6c-.2-.5-.4-1.2-.5-2.6-.1-1.5-.1-1.9-.1-5.7s0-4.2.1-5.7c.1-1.4.3-2.1.5-2.6.3-.7.6-1.1 1-1.6s1-.8 1.6-1.1c.5-.2 1.2-.4 2.6-.5 1.5-.1 1.9-.1 5.7-.1 3.7 0 4.2 0 5.7.1 1.4.1 2.1.3 2.6.5.7.3 1.1.6 1.6 1s.8 1 1.1 1.6c.2.5.4 1.2.5 2.6.1 1.5.1 1.9.1 5.7 0 3.7 0 4.2-.1 5.7-.1 1.4-.3 2.1-.5 2.6-.3.7-.6 1.1-1 1.6s-1 .8-1.6 1.1c-.5.2-1.2.4-2.6.5-1.5.1-1.9.1-5.7.1s-4.2 0-5.7-.1zm11.4-19c0 .9.8 1.7 1.7 1.7s1.7-.8 1.7-1.7c0-.9-.8-1.7-1.7-1.7s-1.7.8-1.7 1.7zm-13 7.5c0 4 3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2-3.2-7.2-7.2-7.2-7.2 3.2-7.2 7.2zm2.5 0c0-2.6 2.1-4.7 4.7-4.7s4.7 2.1 4.7 4.7-2.1 4.7-4.7 4.7-4.7-2.1-4.7-4.7z"/></svg>'
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#E1306C" d="M10.2 2.1c-1.5.1-2.5.3-3.4.7-.9.4-1.7.8-2.5 1.6-.8.8-1.3 1.6-1.6 2.5-.3.9-.6 1.9-.6 3.4-.1 1.5-.1 2-.1 5.8s0 4.3.1 5.8c.1 1.5.3 2.5.7 3.4.4.9.8 1.7 1.6 2.5.8.8 1.6 1.3 2.5 1.6.9.3 1.9.6 3.4.6 1.5.1 2 .1 5.8.1 3.8 0 4.3 0 5.8-.1 1.5-.1 2.5-.3 3.4-.7.9-.4 1.7-.8 2.5-1.6.8-.8 1.3-1.6 1.6-2.5.3-.9.6-1.9.6-3.4.1-1.5.1-2 .1-5.8s0-4.3-.1-5.8c-.1-1.5-.3-2.5-.7-3.4-.4-.9-.8-1.7-1.6-2.5-.8-.8-1.6-1.3-2.5-1.6-.9-.3-1.9-.6-3.4-.6 1.5-.1-2-.1-5.8-.1-3.8 0-4.3 0-5.8.1zm.2 25.3c-1.4-.1-2.1-.3-2.6-.5-.7-.3-1.1-.6-1.6-1s-.8-1-1.1-1.6c-.2-.5-.4-1.2-.5-2.6-.1-1.5-.1-1.9-.1-5.7s0-4.2.1-5.7c.1-1.4.3-2.1.5-2.6.3-.7.6-1.1 1-1.6s1-.8 1.6-1.1c.5-.2 1.2-.4 2.6-.5 1.5-.1 1.9-.1 5.7-.1 3.7 0 4.2 0 5.7.1 1.4.1 2.1.3 2.6.5.7.3 1.1.6 1.6 1s.8 1 1.1 1.6c.2.5.4 1.2.5 2.6.1 1.5.1 1.9.1 5.7 0 3.7 0 4.2-.1 5.7-.1 1.4-.3 2.1-.5 2.6-.3.7-.6 1.1-1 1.6s-1 .8-1.6 1.1c-.5.2-1.2.4-2.6.5-1.5.1-1.9.1-5.7.1s-4.2 0-5.7-.1zm11.4-19c0 .9.8 1.7 1.7 1.7s1.7-.8 1.7-1.7c0-.9-.8-1.7-1.7-1.7s-1.7.8-1.7 1.7zm-13 7.5c0 4 3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2-3.2-7.2-7.2-7.2-7.2 3.2-7.2 7.2zm2.5 0c0-2.6 2.1-4.7 4.7-4.7s4.7 2.1 4.7 4.7-2.1 4.7-4.7 4.7-4.7-2.1-4.7-4.7z"/></svg>'
   },
   x: {
-    name: 'X.com',
+    name: 'X (Official)',
     url: 'https://x.com/resceneofficial',
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#000" d="M18.4 14l9.5-11h-2.2l-8.2 9.6L10.9 3H3.3l9.9 14.5L3.3 29h2.2l8.7-10.1L21 29h7.6l-10.3-15zm-3.1 3.6l-1-1.4L6.3 4.7h3.4l6.5 9.2 1 1.4 8.4 12h-3.4l-6.9-9.8z"/></svg>'
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="currentColor" d="M18.4 14l9.5-11h-2.2l-8.2 9.6L10.9 3H3.3l9.9 14.5L3.3 29h2.2l8.7-10.1L21 29h7.6l-10.3-15zm-3.1 3.6l-1-1.4L6.3 4.7h3.4l6.5 9.2 1 1.4 8.4 12h-3.4l-6.9-9.8z"/></svg>'
+  },
+  x_twt: {
+    name: 'X (Members)',
+    url: 'https://x.com/RESCENE_twt',
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="currentColor" d="M18.4 14l9.5-11h-2.2l-8.2 9.6L10.9 3H3.3l9.9 14.5L3.3 29h2.2l8.7-10.1L21 29h7.6l-10.3-15zm-3.1 3.6l-1-1.4L6.3 4.7h3.4l6.5 9.2 1 1.4 8.4 12h-3.4l-6.9-9.8z"/></svg>'
   },
   facebook: {
     name: 'Facebook',
@@ -135,7 +149,8 @@ export const OFFICIAL_CHANNELS = [
   { key: "youtube", name: "YouTube", url: "https://www.youtube.com/@RESCENE_official" },
   { key: "helloiamwoni", name: "안녕하세요원이입니다잘부탁드립니다", url: "https://www.youtube.com/@helloiamwoninicetomeetyou" },
   { key: "instagram", name: "Instagram", url: "https://www.instagram.com/rescene_official" },
-  { key: "x", name: "X", url: "https://x.com/resceneofficial" },
+  { key: "x", name: "X (Official)", url: "https://x.com/resceneofficial" },
+  { key: "x_twt", name: "X (Members)", url: "https://x.com/RESCENE_twt" },
   { key: "tiktok", name: "TikTok", url: "https://www.tiktok.com/@rescene_official" },
   { key: "clip", name: "Naver Clip", url: "https://clip.naver.com/@themuzeent" },
   { key: "facebook", name: "Facebook", url: "https://www.facebook.com/RESCENE.official" },

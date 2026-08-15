@@ -5,13 +5,9 @@ const WONI_CHANNEL_ID = "UCWpY0eSJtyO-qNAPbKFRSSg";
 // Firefox/older browsers에서 DNR 대신 webRequest로 CSP를 조정하는 처리
 const FIREFOX_FRAME_ANCESTORS = "frame-ancestors https: http: moz-extension:";
 const CSP_URL_PATTERNS = [
-  "*://*.notion.site/*",
   "*://*.mnetplus.world/*",
-  "*://rescene.love/*",
-  "*://rescene.muzip.link/*",
-  "*://rescenefan.com/*",
-  "*://rescene.fan/*",
-  "*://adam-yam.github.io/*"
+  "*://adam-yam.github.io/*",
+  "*://clip.naver.com/*"
 ];
 
 
@@ -97,7 +93,7 @@ try {
 
 
 
-// background.js 내 적절한 위치에 추가 가능
+// 브라우저 툴바 액션 클릭 및 사이드바/사이드패널 동작 설정
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
@@ -107,6 +103,20 @@ chrome.runtime.onInstalled.addListener(() => {
       .catch((error) => console.error(error));
   }
 });
+
+// Firefox 등에서 툴바 아이콘 클릭 시 사이드바 열기 지원
+const actionApi = (typeof chrome !== 'undefined' && (chrome.action || chrome.browserAction)) || (typeof browser !== 'undefined' && (browser.action || browser.browserAction));
+const sidebarApi = (typeof browser !== 'undefined' && browser.sidebarAction) || (typeof chrome !== 'undefined' && chrome.sidebarAction);
+
+if (actionApi && actionApi.onClicked && sidebarApi && sidebarApi.open) {
+  actionApi.onClicked.addListener(() => {
+    try {
+      sidebarApi.open();
+    } catch (e) {
+      console.warn('Failed to open sidebar:', e);
+    }
+  });
+}
 
 function setupRefreshAlarms(intervalMinutes = 15) {
   const period = Math.max(Number(intervalMinutes) || 15, 1);
@@ -905,6 +915,55 @@ function pickBestTitle(title1, title2) {
   if (title1.includes('(') && !title2.includes('(')) return title1;
   if (title2.includes('(') && !title1.includes('(')) return title2;
   return title1.length >= title2.length ? title1 : title2;
+}
+
+// 스케줄 시작 전 임박 알림 (방송/영상/공연 시작 30분 이내 감지)
+function checkUpcomingScheduleAlerts(schedules = []) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return;
+
+  const now = Date.now();
+  const thirtyMinutesMs = 30 * 60 * 1000;
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['notifiedScheduleIds'], (res) => {
+      const notifiedMap = res && res.notifiedScheduleIds ? res.notifiedScheduleIds : {};
+      let hasNewNotification = false;
+
+      schedules.forEach(item => {
+        if (!item.startTime || item.isAllday) return;
+        const startTimeMs = parseSafeDate(item.startTime).getTime();
+        const diffMs = startTimeMs - now;
+
+        // 현재 시각 이후이며 30분 이내에 시작하는 스케줄
+        if (diffMs > 0 && diffMs <= thirtyMinutesMs) {
+          const id = item.id || `${item.title}_${item.startTime}`;
+          if (!notifiedMap[id]) {
+            notifiedMap[id] = now;
+            hasNewNotification = true;
+
+            const minutesLeft = Math.max(1, Math.round(diffMs / 60000));
+            const cleanTitle = cleanDisplayTitle(item.title);
+            sendNotification(
+              `⏰ [스케줄 임박] ${minutesLeft}분 후 시작 예정!`,
+              `${cleanTitle}\n📅 시작 시간: ${parseSafeDate(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+              'schedule'
+            );
+          }
+        }
+      });
+
+      // 24시간 지난 오래된 알림 ID 정리 및 저장
+      if (hasNewNotification) {
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        Object.keys(notifiedMap).forEach(key => {
+          if (now - notifiedMap[key] > oneDayMs) {
+            delete notifiedMap[key];
+          }
+        });
+        chrome.storage.local.set({ notifiedScheduleIds: notifiedMap });
+      }
+    });
+  }
 }
 
 function sendNotification(title, message, category = 'all') {

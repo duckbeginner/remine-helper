@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RESCENE Fan Hub</title>
+  <link rel="icon" href="icons/rescene-logo.png" type="image/x-icon">
+  <script src="common/theme-preload.js"></script>
+  <link rel="stylesheet" href="common/common.css">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- 세로 사이드바 네비게이션 (0ms 사전 렌더링 스켈레톤) -->
+    <div id="sidebarMount">
+      <nav class="vertical-sidebar" id="mainVerticalSidebar">
+        <div class="vtab-list-wrap">
+          <div class="vtab-btn-group">
+            <button class="vtab-btn active" data-target="tabHome" title="홈">
+              <span class="vtab-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+              <span class="vtab-tooltip">홈</span>
+            </button>
+            <button class="vtab-btn" data-target="tabSchedule" title="스케줄">
+              <span class="vtab-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
+              <span class="vtab-tooltip">스케줄</span>
+            </button>
+            <button class="vtab-btn" data-target="tabInsta" title="Instagram">
+              <span class="vtab-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#E1306C" d="M10.2 2.1c-1.5.1-2.5.3-3.4.7-.9.4-1.7.8-2.5 1.6-.8.8-1.3 1.6-1.6 2.5-.3.9-.6 1.9-.6 3.4-.1 1.5-.1 2-.1 5.8s0 4.3.1 5.8c.1 1.5.3 2.5.7 3.4.4.9.8 1.7 1.6 2.5.8.8 1.6 1.3 2.5 1.6.9.3 1.9.6 3.4.6 1.5.1 2 .1 5.8.1 3.8 0 4.3 0 5.8-.1 1.5-.1 2.5-.3 3.4-.7.9-.4 1.7-.8 2.5-1.6.8-.8 1.3-1.6 1.6-2.5.3-.9.6-1.9.6-3.4.1-1.5.1-2 .1-5.8s0-4.3-.1-5.8c-.1-1.5-.3-2.5-.7-3.4-.4-.9-.8-1.7-1.6-2.5-.8-.8-1.6-1.3-2.5-1.6-.9-.3-1.9-.6-3.4-.6-1.5-.1-2-.1-5.8-.1-3.8 0-4.3 0-5.8.1zm.2 25.3c-1.4-.1-2.1-.3-2.6-.5-.7-.3-1.1-.6-1.6-1s-.8-1-1.1-1.6c-.2-.5-.4-1.2-.5-2.6-.1-1.5-.1-1.9-.1-5.7s0-4.2.1-5.7c.1-1.4.3-2.1.5-2.6.3-.7.6-1.1 1-1.6s1-.8 1.6-1.1c.5-.2 1.2-.4 2.6-.5 1.5-.1 1.9-.1 5.7-.1 3.7 0 4.2 0 5.7.1 1.4.1 2.1.3 2.6.5.7.3 1.1.6 1.6 1s.8 1 1.1 1.6c.2.5.4 1.2.5 2.6.1 1.5.1 1.9.1 5.7 0 3.7 0 4.2-.1 5.7-.1 1.4-.3 2.1-.5 2.6-.3.7-.6 1.1-1 1.6s-1 .8-1.6 1.1c-.5.2-1.2.4-2.6.5-1.5.1-1.9.1-5.7.1s-4.2 0-5.7-.1zm11.4-19c0 .9.8 1.7 1.7 1.7s1.7-.8 1.7-1.7c0-.9-.8-1.7-1.7-1.7s-1.7.8-1.7 1.7zm-13 7.5c0 4 3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2-3.2-7.2-7.2-7.2-7.2-7.2-7.2-7.2-7.2 3.2-7.2 7.2zm2.5 0c0-2.6 2.1-4.7 4.7-4.7s4.7 2.1 4.7 4.7-2.1 4.7-4.7 4.7-4.7-2.1-4.7-4.7z"/></svg></span>
+              <span class="vtab-tooltip">Instagram</span>
+            </button>
+            <button class="vtab-btn" data-target="tabX" title="X">
+              <span class="vtab-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="currentColor" d="M18.4 14l9.5-11h-2.2l-8.2 9.6L10.9 3H3.3l9.9 14.5L3.3 29h2.2l8.7-10.1L21 29h7.6l-10.3-15zm-3.1 3.6l-1-1.4L6.3 4.7h3.4l6.5 9.2 1 1.4 8.4 12h-3.4l-6.9-9.8z"/></svg></span>
+              <span class="vtab-tooltip">X</span>
+            </button>
+            <button class="vtab-btn" data-target="tabTiktok" title="TikTok">
+              <span class="vtab-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#FE2C55" d="M24.6 7.6c-1.5-1-2.6-2.6-2.9-4.4-.1-.4-.1-.8-.1-1.2h-4.8v19.3c-.1 2.2-1.9 3.9-4 3.9-.7 0-1.3-.2-1.9-.5-1.3-.7-2.2-2-2.2-3.6 0-2.2 1.8-4 4-4 .4 0 .8.1 1.2.2v-4.9c-.4-.1-.8-.1-1.2-.1-4.9 0-8.9 4-8.9 8.9 0 3 1.5 5.7 3.8 7.3 1.4 1 3.2 1.6 5.1 1.6 4.9 0 8.9-4 8.9-8.9V11.4c1.9 1.4 4.2 2.2 6.7 2.2V8.8c-1.3 0-2.6-.4-3.6-1.2z"/></svg></span>
+              <span class="vtab-tooltip">TikTok</span>
+            </button>
+          </div>
+        </div>
+        <div class="vtab-bottom-controls">
+          <button class="vtab-btn vtab-ctrl-btn" id="themeToggleBtn" title="테마 전환">
+            <span class="vtab-icon-svg" id="themeIconHolder">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path></svg>
+            </span>
+            <span class="vtab-btn-label">테마</span>
+          </button>
+          <button class="vtab-btn vtab-ctrl-btn" id="openSettingsBtn" title="사용자 설정">
+            <span class="vtab-icon-svg">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </span>
+            <span class="vtab-btn-label">설정</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <!-- 메인 컨텐츠 영역 및 홈 탭 컨테이너 (0ms 사전 렌더링 스켈레톤) -->
+    <main class="main-content-area" id="tabContainersMount">
+      <div class="panel-tab-content active" id="tabHome">
+        <a id="liveBanner" class="live-banner mb-12" href="#" target="_blank" style="display: none;">
+          <div class="live-banner-content">
+            <span class="live-pulse-dot"></span>
+            <span class="live-banner-text">🔴 RESCENE LIVE 방송 중! 지금 시청하기</span>
+          </div>
+        </a>
+        <div class="glass-card mb-12">
+          <div class="hub-icon-container" id="hubContainer"></div>
+        </div>
+        <div class="glass-card mb-12">
+          <div class="card-header">
+            <h2>RESCENE Official</h2>
+            <div class="hscroll-controls" data-target="youtubeList">
+              <button class="hscroll-btn left" aria-label="이전 영상"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+              <button class="hscroll-btn right" aria-label="다음 영상"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+            </div>
+          </div>
+          <div class="video-list-horizontal" id="youtubeList"></div>
+          <div class="video-list-horizontal" id="playlistYoutubeList" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 스케줄 상세 모달 및 사용자 설정 모달 마운트 -->
+  <div id="modalMount"></div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

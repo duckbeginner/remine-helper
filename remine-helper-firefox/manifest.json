@@ -1,28 +1,31 @@
 {
   "manifest_version": 2,
   "name": "Remine Helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shortcuts and Notifications for Rescene Fans, Remine.",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
+    "tabs",
     "webRequest",
     "webRequestBlocking",
     "https://*.youtube.com/*",
     "https://blip.kr/*",
     "https://*.mnetplus.world/*",
-    "https://*.dcinside.com/*"
+    "https://*.bstage.in/*",
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
   ],
   "background": {
     "scripts": ["background.js"],
     "persistent": false
   },
   "icons": {
-      "16": "icons/logo16.png",
-      "32": "icons/logo32.png",
-      "48": "icons/logo48.png",
-      "128": "icons/logo128.png"
+    "16": "icons/logo16.png",
+    "32": "icons/logo32.png",
+    "48": "icons/logo48.png",
+    "128": "icons/logo128.png"
   },
   "browser_action": {
     "default_title": "Click to open sidebar",
@@ -38,14 +41,11 @@
     "default_icon": "icons/logo32.png",
     "default_panel": "sidepanel.html"
   },
-  "content_security_policy": "script-src 'self'; object-src 'self'; frame-src https://*.notion.so https://notion.so https://*.notion.site https://*.mnetplus.world https://blip.kr https://rescene.love https://rescene.muzip.link https://rescenefan.com https://rescene.fan https://adam-yam.github.io https://*.instagram.com https://*.twitter.com https://www.tiktok.com https://clip.naver.com/ https://x.com/ https://*.dcinside.com/ https://*.bstage.in; ",
-"browser_specific_settings": {
-  "gecko": {
-    "data_collection_permissions": {
-      "required": [
-        "none"
-      ]
+  "content_security_policy": "script-src 'self'; object-src 'self'; frame-src 'self' https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://www.tiktok.com https://*.mnetplus.world https://blip.kr https://*.bstage.in https://*.x.com https://platform.twitter.com https://platform.x.com https://syndication.twitter.com;",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{8e25f021-4c94-49f8-91b7-18f5f3e5a810}",
+      "strict_min_version": "109.0"
     }
   }
-}
 }

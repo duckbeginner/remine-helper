@@ -5,13 +5,9 @@ const WONI_CHANNEL_ID = "UCWpY0eSJtyO-qNAPbKFRSSg";
 // Firefox/older browsers에서 DNR 대신 webRequest로 CSP를 조정하는 처리
 const FIREFOX_FRAME_ANCESTORS = "frame-ancestors https: http: moz-extension:";
 const CSP_URL_PATTERNS = [
-  "*://*.notion.site/*",
   "*://*.mnetplus.world/*",
-  "*://rescene.love/*",
-  "*://rescene.muzip.link/*",
-  "*://rescenefan.com/*",
-  "*://rescene.fan/*",
-  "*://adam-yam.github.io/*"
+  "*://adam-yam.github.io/*",
+  "*://clip.naver.com/*"
 ];
 
 
@@ -97,7 +93,7 @@ try {
 
 
 
-// background.js 내 적절한 위치에 추가 가능
+// 브라우저 툴바 액션 클릭 및 사이드바/사이드패널 동작 설정
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
@@ -107,6 +103,20 @@ chrome.runtime.onInstalled.addListener(() => {
       .catch((error) => console.error(error));
   }
 });
+
+// Firefox 등에서 툴바 아이콘 클릭 시 사이드바 열기 지원
+const actionApi = (typeof chrome !== 'undefined' && (chrome.action || chrome.browserAction)) || (typeof browser !== 'undefined' && (browser.action || browser.browserAction));
+const sidebarApi = (typeof browser !== 'undefined' && browser.sidebarAction) || (typeof chrome !== 'undefined' && chrome.sidebarAction);
+
+if (actionApi && actionApi.onClicked && sidebarApi && sidebarApi.open) {
+  actionApi.onClicked.addListener(() => {
+    try {
+      sidebarApi.open();
+    } catch (e) {
+      console.warn('Failed to open sidebar:', e);
+    }
+  });
+}
 
 function setupRefreshAlarms(intervalMinutes = 15) {
   const period = Math.max(Number(intervalMinutes) || 15, 1);

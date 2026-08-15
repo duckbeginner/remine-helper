@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>RESCENE Helper Common Component Library</title>
+    <link rel="stylesheet" href="common.css">
+  </head>
+
+  <body>
+
+    <!-- 1. 상단 탭 네비게이션 바 & 글래스 슬라이더 — 동적 마운트 -->
+    <div id="tabBarMount"></div>
+
+    <!-- 2. 실시간 라이브 감지 배너 레퍼런스 -->
+    <a href="#" id="liveBanner" target="_blank" style="display: none;"><span class="live-pulse-dot"></span> [LIVE] 리센느
+      실시간 라이브 중! 클릭 이동</a>
+
+    <!-- 3. 공식 채널 바로가기 허브 카드 레퍼런스 -->
+    <div class="glass-card mb-12">
+      <div class="panel-header-bar">
+        <h2><img src="../icons/rescene-logo.png" alt="icon" class="custom-logo"> 공식 채널 바로가기</h2>
+        <div class="header-controls">
+          <button class="theme-toggle-btn" id="openDashboardBtn" title="대시보드 열기">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            </svg>대시보드
+          </button>
+          <button class="theme-toggle-btn" id="themeToggleBtn" title="테마 전환">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+            </svg>테마
+          </button>
+        </div>
+      </div>
+      <div class="hub-oneline" id="hubContainer">
+        <!-- Hub Icon Buttons inserted dynamically -->
+      </div>
+    </div>
+
+    <!-- 4. 공식 유튜브 영상 섹션 레퍼런스 -->
+    <div class="glass-card mb-12">
+      <h2><img src="../icons/rescene_official_profile.jpg" alt="icon"> RESCENE official</h2>
+      <div id="youtubeList" class="video-grid"></div>
+      <h3 class="subsection-title">RESCENE Archive</h3>
+      <div id="playlistYoutubeList" class="video-grid"></div>
+    </div>
+
+    <!-- 5. 안녕하세요원이입니다잘부탁드립니다 영상 섹션 레퍼런스 -->
+    <div class="glass-card mb-12">
+      <h2><img src="../icons/hellowoni_profile.jpg" alt="icon"> 안녕하세요원이입니다잘부탁드립니다</h2>
+      <div id="woniYoutubeList" class="video-grid"></div>
+    </div>
+
+    <!-- 6. 스케줄 리스트 카드 레퍼런스 (스마트 가변 뷰포트) -->
+    <div class="glass-card mb-12 schedule-card-flex">
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>스케줄
+      </h2>
+      <div class="schedule-container">
+        <div class="schedule-viewport" id="scheduleList"></div>
+      </div>
+    </div>
+
+    <!-- 7. 팬페이지 바로가기 카드 레퍼런스 -->
+    <div class="glass-card mb-12">
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>팬페이지 바로가기
+      </h2>
+      <div class="fanpage-links-grid" id="fanpageLinksGrid"></div>
+    </div>
+
+    <!-- 8. 스케줄 캘린더 래퍼 레퍼런스 -->
+    <div class="calendar-wrapper">
+      <div class="calendar-header">
+        <div class="calendar-header-left">
+          <button class="cal-nav-btn" id="spPrevMonthBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <span id="spCalendarMonthTitle">스케줄 캘린더</span>
+          <button class="cal-nav-btn" id="spNextMonthBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="calendar-weekdays">
+        <div>일</div>
+        <div>월</div>
+        <div>화</div>
+        <div>수</div>
+        <div>목</div>
+        <div>금</div>
+        <div>토</div>
+      </div>
+      <div class="calendar-grid" id="spCalendarGrid"></div>
+    </div>
+
+    <!-- 9. 하단 고정 면책 푸터 레퍼런스 -->
+    <div class="glass-card disclaimer-card sticky-footer">
+      <footer>
+        본 확장 프로그램은 팬이 자발적으로 제작한 비공식 앱으로 소속사 및 아티스트와 무관합니다.<br>
+        모든 콘텐츠의 저작권은 원저작자에게 있습니다.
+      </footer>
+    </div>
+
+    <!-- 10. 스케줄 모달 & 툴팁 레퍼런스 -->
+    <div class="schedule-modal-overlay" id="scheduleModalOverlay">
+      <div class="schedule-modal-container" id="scheduleModalContainer">
+        <div class="schedule-modal-card">
+          <div class="modal-header">
+            <span id="modalTitle">스케줄 상세 정보</span>
+            <button class="modal-close-btn" id="modalCloseBtn" aria-label="닫기">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body" id="modalBodyContent"></div>
+        </div>
+
+        <div class="schedule-embed-card" id="modalEmbedCard" style="display: none;">
+          <div class="modal-header">
+            <span class="embed-modal-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>관련 미디어
+            </span>
+          </div>
+          <div class="embed-modal-body" id="modalEmbedBodyContent"></div>
+        </div>
+      </div>
+    </div>
+    <div class="schedule-tooltip" id="scheduleTooltip"></div>
+    <script type="module">
+      import { createTabBarHTML } from '../common/templates.js';
+      import { initTabEngine } from '../common/common.js';
+
+      // 탭바 동적 렌더링
+      const tabBarMount = document.getElementById('tabBarMount');
+      if (tabBarMount) {
+        tabBarMount.innerHTML = createTabBarHTML();
+        const tabBarEl = tabBarMount.querySelector('.panel-tab-bar');
+        const sliderEl = tabBarMount.querySelector('.tab-glass-slider');
+        initTabEngine(tabBarEl, sliderEl);
+      }
+    </script>
+
+  </body>
+
+</html>
