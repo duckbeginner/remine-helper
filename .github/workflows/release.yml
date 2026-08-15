@@ -93,12 +93,13 @@ jobs:
           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           file-path: publish/remine-helper-chrome-v${{ needs.build-and-package.outputs.version }}.zip
-          publish: true
+          publish: false
 
   publish-firefox-amo:
     name: Publish to Firefox Add-ons (AMO)
     needs: build-and-package
     if: startsWith(github.ref, 'refs/tags/')
+    continue-on-error: true
     runs-on: ubuntu-latest
     env:
       FIREFOX_ADDON_ID: ${{ secrets.FIREFOX_ADDON_ID }}
