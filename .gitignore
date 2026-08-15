@@ -44,3 +44,7 @@ remine-helper/test-sandbox.html
 remine-helper/test-sandbox.js
 remine-helper/test.html
 remine-helper/test.js
+
+# Automation & screenshot scripts
+scripts/
+
