@@ -89,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
       modalMount.insertAdjacentHTML('beforeend', createSettingsModalHTML());
       initSettingsModal({
         onTabsChanged: (newTabList) => {
-          loadUserSettings((u) => renderAppViews(newTabList, u.fanpages));
+          loadUserSettings((u) => renderAppViews(newTabList, u.fanpages, { isInitial: false, cachedStorage: fullStorageData }));
         },
         onFanpagesChanged: (newFanpages) => {
-          loadUserSettings((u) => renderAppViews(u.tabList, newFanpages));
+          loadUserSettings((u) => renderAppViews(u.tabList, newFanpages, { isInitial: false, cachedStorage: fullStorageData }));
         },
         onNavPositionChanged: (newPos) => {
           initNavPosition(newPos);
@@ -141,29 +141,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const homeTabEl = document.getElementById('tabHome');
+    const effectiveStorage = cachedStorage || fullStorageData || microCache;
+
     if (homeTabEl) {
       if (isInitial) {
         // [Phase 1] 0.002초 초경량 즉시 페인팅 (상단 허브 + 공식 유튜브만 먼저 주입)
         homeTabEl.innerHTML = createPrimaryHomeModulesHTML();
 
-        if (cachedStorage) {
+        if (effectiveStorage) {
           initAppStorageData({
             hubContainerId: 'hubContainer',
             liveBannerId: 'liveBanner',
             youtubeListId: 'youtubeList',
             playlistId: 'playlistYoutubeList',
-            cachedData: cachedStorage
+            cachedData: effectiveStorage
           });
         }
 
         // [Phase 2] 1프레임 뒤 스크롤 영역 결합 (원이 채널 + 스케줄 + 팬페이지)
         requestAnimationFrame(() => {
           homeTabEl.insertAdjacentHTML('beforeend', createSecondaryHomeModulesHTML({ fanpages }));
-          if (cachedStorage) {
+          if (effectiveStorage) {
             initAppStorageData({
               woniListId: 'woniYoutubeList',
               scheduleListId: 'scheduleList',
-              cachedData: cachedStorage,
+              cachedData: effectiveStorage,
               onSchedulesLoaded: (schedules) => {
                 if (calendarManager) calendarManager.setSchedules(schedules);
               }
@@ -172,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } else {
         homeTabEl.innerHTML = createAllHomeModulesHTML({ fanpages });
-        if (cachedStorage) {
+        if (effectiveStorage) {
           initAppStorageData({
             hubContainerId: 'hubContainer',
             liveBannerId: 'liveBanner',
@@ -180,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playlistId: 'playlistYoutubeList',
             woniListId: 'woniYoutubeList',
             scheduleListId: 'scheduleList',
-            cachedData: cachedStorage,
+            cachedData: effectiveStorage,
             onSchedulesLoaded: (schedules) => {
               if (calendarManager) calendarManager.setSchedules(schedules);
             }

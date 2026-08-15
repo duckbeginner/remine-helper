@@ -2732,16 +2732,20 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       </span>
     `;
 
+    const baseTabMap = {};
+    TAB_CONFIG_LIST.forEach(t => { baseTabMap[t.id] = t; });
+
     tabList.forEach((tab, index) => {
+      const baseTab = baseTabMap[tab.id] || tab;
       let iconHtml = '';
-      if (tab.channelKey && CHANNEL_DATA_MAP[tab.channelKey]) {
-        const ch = CHANNEL_DATA_MAP[tab.channelKey];
+      if (baseTab.channelKey && CHANNEL_DATA_MAP[baseTab.channelKey]) {
+        const ch = CHANNEL_DATA_MAP[baseTab.channelKey];
         if (ch.svg) iconHtml = `<span class="reorder-icon-mini">${ch.svg}</span>`;
         else if (ch.img) iconHtml = `<img class="reorder-icon-mini-img" src="${ch.img}" alt="">`;
-      } else if (tab.svg) {
-        iconHtml = `<span class="reorder-icon-mini">${tab.svg}</span>`;
-      } else if (tab.icon) {
-        iconHtml = `<span class="reorder-icon-mini-emoji">${tab.icon}</span>`;
+      } else if (baseTab.svg) {
+        iconHtml = `<span class="reorder-icon-mini">${baseTab.svg}</span>`;
+      } else if (baseTab.icon) {
+        iconHtml = `<span class="reorder-icon-mini-emoji">${baseTab.icon}</span>`;
       }
 
       const row = document.createElement('div');
@@ -3048,14 +3052,22 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     });
   }
 
-  // 다른 창(사이드패널 <-> 대시보드) 간 실시간 설정 동기화 감지
+  // 다른 창(사이드패널 <-> 대시보드) 간 실시간 설정 동기화 감지 (불필요한 리렌더링 방지)
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local' && changes.userSettings && changes.userSettings.newValue) {
         const updated = changes.userSettings.newValue;
-        if (updated.navPosition) initNavPosition(updated.navPosition);
-        if (typeof onTabsChanged === 'function' && updated.tabList) onTabsChanged(updated.tabList);
-        if (typeof onFanpagesChanged === 'function' && updated.fanpages) onFanpagesChanged(updated.fanpages);
+        const old = changes.userSettings.oldValue || {};
+        
+        if (updated.navPosition && updated.navPosition !== old.navPosition) {
+          initNavPosition(updated.navPosition);
+        }
+        if (typeof onTabsChanged === 'function' && updated.tabList && JSON.stringify(updated.tabList) !== JSON.stringify(old.tabList)) {
+          onTabsChanged(updated.tabList);
+        }
+        if (typeof onFanpagesChanged === 'function' && updated.fanpages && JSON.stringify(updated.fanpages) !== JSON.stringify(old.fanpages)) {
+          onFanpagesChanged(updated.fanpages);
+        }
       }
     });
   }

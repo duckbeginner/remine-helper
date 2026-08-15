@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let isSettingsModalMounted = false;
   let isSyncPending = false;
 
+  let fullStorageData = microCache || null;
+
   function ensureScheduleModal() {
     if (isScheduleModalMounted) return;
     isScheduleModalMounted = true;
@@ -96,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
       modalMount.insertAdjacentHTML('beforeend', createSettingsModalHTML());
       initSettingsModal({
         onTabsChanged: (newTabList) => {
-          loadUserSettings((u) => renderDashboardViews(newTabList, u.fanpages));
+          loadUserSettings((u) => renderDashboardViews(newTabList, u.fanpages, { cachedStorage: fullStorageData }));
         },
         onFanpagesChanged: (newFanpages) => {
-          loadUserSettings((u) => renderDashboardViews(u.tabList, newFanpages));
+          loadUserSettings((u) => renderDashboardViews(u.tabList, newFanpages, { cachedStorage: fullStorageData }));
         },
         onNavPositionChanged: (newPos) => {
           initNavPosition(newPos);
@@ -111,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderDashboardViews(tabList = currentTabList, fanpages = currentFanpages, { cachedStorage = null } = {}) {
     currentTabList = tabList;
     currentFanpages = fanpages;
+    const effectiveStorage = cachedStorage || fullStorageData || microCache;
 
     const dashboardTabs = tabList.filter(t => t.id !== 'tabHome').map(t => ({
       ...t,
@@ -174,14 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    if (cachedStorage) {
+    if (effectiveStorage) {
       initAppStorageData({
         hubContainerId: 'hubContainer',
         liveBannerId: 'liveBanner',
         youtubeListId: 'youtubeList',
         playlistId: 'playlistYoutubeList',
         woniListId: 'woniYoutubeList',
-        cachedData: cachedStorage,
+        cachedData: effectiveStorage,
         onSchedulesLoaded: (schedules) => {
           if (calendarManager) calendarManager.setSchedules(schedules);
         }
