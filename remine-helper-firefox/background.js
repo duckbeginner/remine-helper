@@ -95,11 +95,8 @@ try {
 
 // 브라우저 툴바 액션 클릭 및 사이드바/사이드패널 동작 설정
 chrome.runtime.onInstalled.addListener(() => {
-  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error) => console.error(error));
-  } else if (chrome.sidebarAction && chrome.sidebarAction.setPanelBehavior) {
-    chrome.sidebarAction.setPanelBehavior({ openPanelOnActionClick: true })
+  if (typeof chrome !== 'undefined' && chrome.sidePanel && typeof chrome.sidePanel['setPanelBehavior'] === 'function') {
+    chrome.sidePanel['setPanelBehavior']({ openPanelOnActionClick: true })
       .catch((error) => console.error(error));
   }
 });
