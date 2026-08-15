@@ -2276,12 +2276,15 @@ export function initCalendarManager({
   titleId = 'spCalendarMonthTitle',
   prevBtnId = 'spPrevMonthBtn',
   nextBtnId = 'spNextMonthBtn',
+  todayMonthBtnId = 'spTodayMonthBtn',
+  todayListBtnId = 'spTodayListBtn',
   calViewId = 'spCalendarView',
   listViewId = 'spScheduleListView',
   tabListId = 'tabScheduleList',
   viewCalBtnId = 'spViewCalBtn',
   viewListBtnId = 'spViewListBtn',
   navControlsId = 'spCalendarNavControls',
+  listNavControlsId = 'spScheduleListNavControls',
   initialDate = new Date()
 } = {}) {
   let currentDate = new Date(initialDate);
@@ -2292,12 +2295,15 @@ export function initCalendarManager({
   const titleEl = typeof titleId === 'string' ? document.getElementById(titleId) : titleId;
   const prevBtn = typeof prevBtnId === 'string' ? document.getElementById(prevBtnId) : prevBtnId;
   const nextBtn = typeof nextBtnId === 'string' ? document.getElementById(nextBtnId) : nextBtnId;
+  const todayMonthBtn = typeof todayMonthBtnId === 'string' ? document.getElementById(todayMonthBtnId) : todayMonthBtnId;
+  const todayListBtn = typeof todayListBtnId === 'string' ? document.getElementById(todayListBtnId) : todayListBtnId;
   const calView = typeof calViewId === 'string' ? document.getElementById(calViewId) : calViewId;
   const listView = typeof listViewId === 'string' ? document.getElementById(listViewId) : listViewId;
   const tabListEl = typeof tabListId === 'string' ? document.getElementById(tabListId) : tabListId;
   const viewCalBtn = typeof viewCalBtnId === 'string' ? document.getElementById(viewCalBtnId) : viewCalBtnId;
   const viewListBtn = typeof viewListBtnId === 'string' ? document.getElementById(viewListBtnId) : viewListBtnId;
   const navControls = typeof navControlsId === 'string' ? document.getElementById(navControlsId) : navControlsId;
+  const listNavControls = typeof listNavControlsId === 'string' ? document.getElementById(listNavControlsId) : listNavControlsId;
 
   function update() {
     if (gridEl) {
@@ -2317,13 +2323,15 @@ export function initCalendarManager({
       if (listView) listView.style.display = 'none';
       if (viewCalBtn) viewCalBtn.classList.add('active');
       if (viewListBtn) viewListBtn.classList.remove('active');
-      if (navControls) navControls.style.visibility = 'visible';
+      if (navControls) navControls.style.display = 'flex';
+      if (listNavControls) listNavControls.style.display = 'none';
     } else {
       if (calView) calView.style.display = 'none';
       if (listView) listView.style.display = '';
       if (viewCalBtn) viewCalBtn.classList.remove('active');
       if (viewListBtn) viewListBtn.classList.add('active');
-      if (navControls) navControls.style.visibility = 'hidden';
+      if (navControls) navControls.style.display = 'none';
+      if (listNavControls) listNavControls.style.display = 'flex';
       if (tabListEl && globalSchedules.length > 0) {
         renderScheduleList(tabListEl, globalSchedules);
       }
@@ -2348,6 +2356,25 @@ export function initCalendarManager({
     nextBtn.addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
       update();
+    });
+  }
+
+  if (todayMonthBtn) {
+    todayMonthBtn.addEventListener('click', () => {
+      currentDate = new Date();
+      update();
+    });
+  }
+
+  if (todayListBtn) {
+    todayListBtn.addEventListener('click', () => {
+      if (tabListEl && globalSchedules.length > 0) {
+        renderScheduleList(tabListEl, globalSchedules);
+        const activeItem = tabListEl.querySelector('.sched-list-item.nearest-active') || tabListEl.querySelector('.sched-list-item.today');
+        if (activeItem) {
+          activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     });
   }
 

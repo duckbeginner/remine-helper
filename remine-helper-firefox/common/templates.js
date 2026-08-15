@@ -135,6 +135,15 @@ export function createCalendarNavButtonsHTML(monthTitle = '2026년 스케줄') {
       <button class="cal-nav-btn" id="spNextMonthBtn" title="다음 달">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
+      <button class="cal-nav-btn cal-today-btn" id="spTodayMonthBtn" title="오늘 달력으로 이동">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>오늘
+      </button>
+    </div>
+    <div class="calendar-header-left" id="spScheduleListNavControls" style="display: none;">
+      <span class="schedule-list-header-title">스케줄 목록</span>
+      <button class="cal-nav-btn cal-today-btn" id="spTodayListBtn" title="지금 시점 일정으로 이동">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>지금
+      </button>
     </div>
     <div class="schedule-view-switcher" id="scheduleViewSwitcher">
       <button type="button" class="view-switch-btn active" id="spViewCalBtn" data-view="calendar" title="달력으로 보기">
