@@ -1,6 +1,6 @@
 // common/common.js - 공통 UI 로직, 동적 탭 엔진, 인터랙션 및 렌더러 모듈
-import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST, MEMBER_NICKNAME_MAP } from '../constants.js';
-import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML } from './templates.js';
+import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST, MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../constants.js';
+import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML, createScheduleModalHTML, createSettingsModalHTML } from './templates.js';
 
 export function getMemberDisplayName(rawNickname) {
   if (!rawNickname) return '멤버';
@@ -14,6 +14,18 @@ export function getMemberDisplayName(rawNickname) {
   return trimmed;
 }
 
+export function getMemberAvatarUrl(realName, fallbackImg) {
+  if (!realName) return fallbackImg || '';
+  const trimmed = String(realName).trim();
+  if (MEMBER_AVATAR_MAP && MEMBER_AVATAR_MAP[trimmed]) return MEMBER_AVATAR_MAP[trimmed];
+  if (MEMBER_AVATAR_MAP) {
+    for (const [name, url] of Object.entries(MEMBER_AVATAR_MAP)) {
+      if (trimmed.includes(name) || name.includes(trimmed)) return url;
+    }
+  }
+  return fallbackImg || '';
+}
+
 /* =========================================================================
    0. 3단계 순환 테마 엔진 (3-State Theme Engine: System -> Dark -> Light)
    ========================================================================= */
@@ -22,7 +34,14 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
   const bodyEl = document.body;
   const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-  function applyTheme(mode) {
+  function applyTheme(mode, { withTransition = false } = {}) {
+    if (withTransition) {
+      document.documentElement.classList.add('theme-transitioning');
+      setTimeout(() => {
+        document.documentElement.classList.remove('theme-transitioning');
+      }, 350);
+    }
+
     let isDark = false;
     if (mode === 'dark') {
       isDark = true;
@@ -32,8 +51,18 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
       isDark = systemThemeQuery.matches;
     }
 
-    if (isDark) bodyEl.classList.add('dark-mode');
-    else bodyEl.classList.remove('dark-mode');
+    try {
+      localStorage.setItem('themeMode', mode);
+    } catch (e) {}
+
+    const docEl = document.documentElement;
+    docEl.classList.toggle('dark-mode', isDark);
+    docEl.style.colorScheme = isDark ? 'dark' : 'light';
+    docEl.style.backgroundColor = isDark ? '#181520' : '#fff0f5';
+
+    if (bodyEl) {
+      bodyEl.classList.toggle('dark-mode', isDark);
+    }
 
     // 열려있는 임베드 iframe들의 테마 파라미터 실시간 업데이트
     const themeStr = isDark ? 'dark' : 'light';
@@ -93,24 +122,25 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
     }
   }
 
-  // 초기 테마 로드 (initialMode가 주어지면 즉시 적용하여 IPC 지연 제거)
-  if (initialMode) {
-    applyTheme(initialMode);
-  }
+  // 초기 테마 로드 (0ms 동기 즉시 적용 - 트랜지션 없음)
+  const syncCachedMode = initialMode || (function() {
+    try { return localStorage.getItem('themeMode'); } catch(e) { return null; }
+  })() || 'system';
+  applyTheme(syncCachedMode, { withTransition: false });
 
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    if (!initialMode) {
-      chrome.storage.local.get(['themeMode'], (res) => {
-        const currentMode = res.themeMode || 'system';
-        applyTheme(currentMode);
-      });
-    }
+    chrome.storage.local.get(['themeMode'], (res) => {
+      const currentMode = res.themeMode || 'system';
+      if (currentMode !== syncCachedMode) {
+        applyTheme(currentMode, { withTransition: false });
+      }
+    });
 
     // 다른 창(사이드패널 <-> 대시보드) 간 실시간 테마 변경 동기화
     if (chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName === 'local' && changes.themeMode) {
-          applyTheme(changes.themeMode.newValue || 'system');
+          applyTheme(changes.themeMode.newValue || 'system', { withTransition: true });
         }
       });
     }
@@ -120,7 +150,7 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
       chrome.storage.local.get(['themeMode'], (res) => {
         const currentMode = res.themeMode || 'system';
         if (currentMode === 'system') {
-          applyTheme('system');
+          applyTheme('system', { withTransition: true });
         }
       });
     });
@@ -140,13 +170,13 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
             else if (currentMode === 'light') nextMode = 'system';
 
             chrome.storage.local.set({ themeMode: nextMode });
-            applyTheme(nextMode);
+            applyTheme(nextMode, { withTransition: true });
           });
         }
       });
     }
   } else if (!initialMode) {
-    applyTheme('system');
+    applyTheme('system', { withTransition: false });
   }
 
   return { applyTheme };
@@ -573,7 +603,9 @@ export function normalizeTitle(title) {
     'dream concert': '드림콘서트',
     '맨시티': '맨체스터시티',
     'man city': '맨체스터시티',
-    'mancity': '맨체스터시티'
+    'mancity': '맨체스터시티',
+    'water music pool party': '워터뮤직풀파티',
+    'just makeup': '저스트메이크업',
   };
 
   for (let [en, ko] of Object.entries(synonyms)) {
@@ -587,7 +619,7 @@ export function normalizeTitle(title) {
 
 export function parseTitleStructure(title) {
   if (!title) return { main: '', sub: '' };
-  
+
   // 1. <메인> 서브 또는 [메인] 서브
   const bracketMatch = title.match(/^[<\[](.+?)[>\]]\s*(.*)$/);
   if (bracketMatch) {
@@ -637,7 +669,7 @@ export function areSchedulesDuplicate(item1, item2) {
   const s2 = parseTitleStructure(t2);
 
   if (s1.main && s2.main) {
-    const isSameMain = s1.main === s2.main || 
+    const isSameMain = s1.main === s2.main ||
       (Math.min(s1.main.length, s2.main.length) >= 4 && (s1.main.includes(s2.main) || s2.main.includes(s1.main)));
 
     if (isSameMain) {
@@ -674,7 +706,7 @@ export function areSchedulesDuplicate(item1, item2) {
 
   // 하나는 순수 방송(온라인/중계)이고 하나는 순수 현장 공연/행사인 경우 분리 보존
   if ((isBroadcasting1 && !isPhysicalEvent1 && isPhysicalEvent2 && !isBroadcasting2) ||
-      (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
+    (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
     return false;
   }
 
@@ -733,7 +765,22 @@ export function pickBestTitle(title1, title2) {
   return title1.length >= title2.length ? title1 : title2;
 }
 
+let _lastScheduleInputRef = null;
+let _lastScheduleCleanResult = null;
+
 export function deduplicateScheduleList(schedules = []) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return [];
+
+  // 참조 및 길이 기반 0ms 즉각 반환 메모이제이션
+  if (_lastScheduleInputRef === schedules && _lastScheduleCleanResult) {
+    return _lastScheduleCleanResult;
+  }
+  if (_lastScheduleInputRef && _lastScheduleInputRef.length === schedules.length && _lastScheduleCleanResult) {
+    if (_lastScheduleInputRef[0] === schedules[0] && _lastScheduleInputRef[schedules.length - 1] === schedules[schedules.length - 1]) {
+      return _lastScheduleCleanResult;
+    }
+  }
+
   const mergedList = [];
 
   // 직캠, 투표, 쇼츠, 포스터/응모/증정/공지 이벤트 정밀 필터링
@@ -835,6 +882,8 @@ export function deduplicateScheduleList(schedules = []) {
     }
   });
 
+  _lastScheduleInputRef = schedules;
+  _lastScheduleCleanResult = mergedList;
   return mergedList;
 }
 
@@ -1877,13 +1926,21 @@ export function parseMediaEmbeds(sources = [], isDark = false) {
 }
 
 export function showScheduleModal(scheduleData) {
-  const overlay = document.getElementById('scheduleModalOverlay');
-  const bodyContent = document.getElementById('modalBodyContent');
+  let overlay = document.getElementById('scheduleModalOverlay');
+  let bodyContent = document.getElementById('modalBodyContent');
+
+  if (!overlay || !bodyContent) {
+    const modalMount = document.getElementById('modalMount') || document.body;
+    modalMount.insertAdjacentHTML('beforeend', createScheduleModalHTML());
+    initScheduleModal();
+    overlay = document.getElementById('scheduleModalOverlay');
+    bodyContent = document.getElementById('modalBodyContent');
+    if (!overlay || !bodyContent) return;
+  }
+
   const modalTitle = document.getElementById('modalTitle');
   const embedCard = document.getElementById('modalEmbedCard');
   const embedBody = document.getElementById('modalEmbedBodyContent');
-
-  if (!overlay || !bodyContent) return;
 
   if (modalTitle) {
     const rawTitle = decodeHtmlEntities(scheduleData.title || '스케줄 상세 정보');
@@ -1913,14 +1970,16 @@ export function showScheduleModal(scheduleData) {
     html += `<span class="detail-time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>${escapeHtml(ext.key)}: ${escapeHtml(String(ext.value).trim())}</span>`;
   }
 
-  // Mnet / Blip 참석 멤버 정보 렌더링 (매핑 테이블 기반 활동명 및 툴팁 렌더링)
+  // Mnet / Blip 참석 멤버 정보 렌더링 (동일 멤버는 항상 동일한 대표 프로필 아이콘 및 활동명 렌더링)
   const attendees = scheduleData.starAttendees || scheduleData.members || [];
   if (Array.isArray(attendees) && attendees.length > 0) {
     const attendeesHtml = attendees.map(a => {
-      const avatar = a.avatarImgPath ? `<img src="${escapeHtml(a.avatarImgPath)}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; vertical-align:-2px; margin-right:4px; border:1px solid rgba(255,105,180,0.4);" alt="${escapeHtml(a.nickname || '')}">` : '';
-      const realName = getMemberDisplayName(a.nickname);
-      const isCustomNick = a.nickname && a.nickname !== realName;
-      const nickTitle = isCustomNick ? ` title="닉네임: ${escapeHtml(a.nickname)}"` : '';
+      const realName = getMemberDisplayName(a.nickname || a.name);
+      const avatarUrl = getMemberAvatarUrl(realName, a.avatarImgPath || a.profileImg);
+      const avatar = avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; vertical-align:-2px; margin-right:4px; border:1px solid rgba(255,105,180,0.4);" alt="${escapeHtml(realName)}">` : '';
+      const rawNick = a.nickname || a.name || '';
+      const isCustomNick = rawNick && rawNick !== realName;
+      const nickTitle = isCustomNick ? ` title="닉네임: ${escapeHtml(rawNick)}"` : '';
       return `<span style="display:inline-flex; align-items:center; background:rgba(255,105,180,0.1); border:1px solid rgba(255,105,180,0.25); border-radius:12px; padding:1px 7px; font-size:11px; font-weight:600; color:#d63384; margin:1px 2px;"${nickTitle}>${avatar}${escapeHtml(realName)}</span>`;
     }).join(' ');
     html += `<div style="display:flex; flex-wrap:wrap; align-items:center; margin:3px 0;"><span class="detail-time" style="display:inline-flex; align-items:center; margin:0; margin-right:4px; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>참석 멤버:</span><div style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:2px;">${attendeesHtml}</div></div>`;
@@ -2455,10 +2514,15 @@ export function initNavPosition(position = 'left') {
   }
 }
 
-// 모달 열기/닫기
 export function openSettingsModal() {
-  const currentOverlay = document.getElementById('settingsModalOverlay');
-  if (!currentOverlay) return;
+  let currentOverlay = document.getElementById('settingsModalOverlay');
+  if (!currentOverlay) {
+    const modalMount = document.getElementById('modalMount') || document.body;
+    modalMount.insertAdjacentHTML('beforeend', createSettingsModalHTML());
+    initSettingsModal();
+    currentOverlay = document.getElementById('settingsModalOverlay');
+    if (!currentOverlay) return;
+  }
   const openBtn = document.getElementById('openSettingsBtn');
   if (openBtn) {
     openBtn.click();

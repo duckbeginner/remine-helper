@@ -1,5 +1,4 @@
-/* dashboard_test.css - 공통 모듈 기반 대시보드 테스트 스타일 */
-@import './common/common.css';
+/* dashboard.css - 대시보드 전용 스타일 */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -14,10 +13,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: background 0.3s, color 0.3s;
-  font-size: clamp(0.9rem, 1.1vw, 1rem);
+  font-size: 15px;
   scrollbar-width: thin;
   scrollbar-color: #ffb6c1 transparent;
+  contain: layout;
 }
 
 body::-webkit-scrollbar {
@@ -33,6 +32,8 @@ body::-webkit-scrollbar-track {
   background: transparent;
 }
 
+html.dark-mode,
+html.dark-mode body,
 body.dark-mode {
   background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
   color: #f1f5f9 !important;

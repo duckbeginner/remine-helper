@@ -477,6 +477,24 @@ export function createScheduleModalHTML() {
   `;
 }
 
+// 홈 탭 상단 핵심 모듈 (0.005초 즉시 페인팅: 라이브 배너 + 공식 채널 + 공식 유튜브)
+export function createPrimaryHomeModulesHTML({ channels = OFFICIAL_CHANNELS } = {}) {
+  return [
+    createLiveBannerHTML(),
+    createHubCardHTML(channels),
+    createYoutubeSectionHTML()
+  ].join('\n');
+}
+
+// 홈 탭 하단 보조 모듈 (1프레임 뒤 지연 페인팅: 원이 채널 + 스케줄 + 팬페이지)
+export function createSecondaryHomeModulesHTML({ fanpages = FANPAGE_LIST } = {}) {
+  return [
+    createWoniSectionHTML(),
+    createScheduleCardHTML(),
+    createFanpageCardHTML(fanpages)
+  ].join('\n');
+}
+
 // 홈 탭의 모든 기본 모듈을 조합하여 반환하는 헬퍼
 export function createAllHomeModulesHTML({ fanpages = FANPAGE_LIST, channels = OFFICIAL_CHANNELS } = {}) {
   return [

@@ -11,6 +11,15 @@ export const MEMBER_NICKNAME_MAP = {
   'minami': '미나미'
 };
 
+// 멤버별 대표 프로필 아이콘 매핑 테이블 (동일 멤버는 항상 동일한 아이콘 표시)
+export const MEMBER_AVATAR_MAP = {
+  '원이': 'https://image.static.bstage.in/cdn-cgi/image/metadata=none/rescene-official/profile/24db0a65-386f-4428-be6f-01f91e0c95b7/c14d80f5-91ec-49f6-b518-c2552749a0a3/ori.jpeg',
+  '리브': 'https://image.static.bstage.in/cdn-cgi/image/metadata=none/rescene-official/profile/93798048-66e1-44b3-8f32-c8b509b1b572/0c54e3ec-ba2f-4359-96f0-d9fd146d339f/ori.jpeg',
+  '제나': 'https://image.static.bstage.in/cdn-cgi/image/metadata=none/rescene-official/profile/b68df7b7-f27d-4f2c-9026-40769feda4b5/1bc89a73-784b-4878-a433-c9bc4f575954/ori.jpeg',
+  '메이': 'https://image.static.bstage.in/cdn-cgi/image/metadata=none/rescene-official/profile/177216b4-1264-464f-940d-14bbbc0709ad/ee301242-f484-4d57-aa2a-7aa1124838eb/ori.jpeg',
+  '미나미': 'https://image.static.bstage.in/cdn-cgi/image/metadata=none/rescene-official/profile/1f1d52f4-9c30-4e46-a50a-b4aaf0e67846/f580583e-8c9c-4946-bce7-4c8f33f987cc/ori.jpeg'
+};
+
 export const CHANNEL_DATA_MAP = {
   youtube: {
     name: 'Rescene Official',

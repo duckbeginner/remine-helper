@@ -907,6 +907,55 @@ function pickBestTitle(title1, title2) {
   return title1.length >= title2.length ? title1 : title2;
 }
 
+// 스케줄 시작 전 임박 알림 (방송/영상/공연 시작 30분 이내 감지)
+function checkUpcomingScheduleAlerts(schedules = []) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return;
+
+  const now = Date.now();
+  const thirtyMinutesMs = 30 * 60 * 1000;
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['notifiedScheduleIds'], (res) => {
+      const notifiedMap = res && res.notifiedScheduleIds ? res.notifiedScheduleIds : {};
+      let hasNewNotification = false;
+
+      schedules.forEach(item => {
+        if (!item.startTime || item.isAllday) return;
+        const startTimeMs = parseSafeDate(item.startTime).getTime();
+        const diffMs = startTimeMs - now;
+
+        // 현재 시각 이후이며 30분 이내에 시작하는 스케줄
+        if (diffMs > 0 && diffMs <= thirtyMinutesMs) {
+          const id = item.id || `${item.title}_${item.startTime}`;
+          if (!notifiedMap[id]) {
+            notifiedMap[id] = now;
+            hasNewNotification = true;
+
+            const minutesLeft = Math.max(1, Math.round(diffMs / 60000));
+            const cleanTitle = cleanDisplayTitle(item.title);
+            sendNotification(
+              `⏰ [스케줄 임박] ${minutesLeft}분 후 시작 예정!`,
+              `${cleanTitle}\n📅 시작 시간: ${parseSafeDate(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+              'schedule'
+            );
+          }
+        }
+      });
+
+      // 24시간 지난 오래된 알림 ID 정리 및 저장
+      if (hasNewNotification) {
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        Object.keys(notifiedMap).forEach(key => {
+          if (now - notifiedMap[key] > oneDayMs) {
+            delete notifiedMap[key];
+          }
+        });
+        chrome.storage.local.set({ notifiedScheduleIds: notifiedMap });
+      }
+    });
+  }
+}
+
 function sendNotification(title, message, category = 'all') {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['userSettings'], (res) => {

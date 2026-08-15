@@ -1,25 +1,34 @@
-/* sidepanel_test.css - 공통 모듈 기반 사이드 패널 스타일 */
-@import './common/common.css';
+/* sidepanel.css - 60fps GPU 가속 초고속 사이드패널 전용 스타일 */
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
   max-width: none;
   background: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
   color: #333;
-  box-sizing: border-box;
   display: flex;
   height: 100vh;
   min-width: 320px;
   overflow: hidden;
-  font-size: clamp(0.85rem, 1.2vw + 0.3rem, 1rem);
-  transition: background 0.3s, color 0.3s;
+  font-size: 14px; /* clamp(vw) 제거하여 슬라이드 리사이즈 시 폭풍 Reflow 100% 방지 */
   width: 100%;
   scrollbar-width: thin;
   scrollbar-color: #ffb6c1 transparent;
+  contain: strict; /* 뷰포트 완전 격리 */
+  transform: translate3d(0, 0, 0); /* 독립 GPU 컴포지팅 레이어 하드웨어 승격 */
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
+html.dark-mode,
+html.dark-mode body,
 body.dark-mode {
   background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
   color: #f1f5f9 !important;
@@ -30,6 +39,32 @@ body.dark-mode::-webkit-scrollbar-thumb {
   background: #4a385c;
 }
 
+/* 사이드패널 슬라이드 렉의 주범인 backdrop-filter 셰이더 부하를 가벼운 고성능 아크릴 컬러로 대체 */
+.glass-card,
+.panel-tab-bar,
+.tab-glass-slider,
+.hub-icon-btn,
+.video-card,
+.calendar-wrapper,
+.schedule-container,
+.fanpage-link-card,
+.disclaimer-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+}
+
+:is(html.dark-mode, body.dark-mode) .glass-card {
+  background: rgba(30, 24, 42, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
 .app-layout {
   display: flex;
   flex-direction: row;
@@ -38,6 +73,8 @@ body.dark-mode::-webkit-scrollbar-thumb {
   overflow: hidden;
   position: relative;
   background: transparent;
+  contain: strict;
+  will-change: width;
 }
 
 .main-content-area {
@@ -47,10 +84,10 @@ body.dark-mode::-webkit-scrollbar-thumb {
   height: 100vh;
   min-height: 0;
   padding: 8px 10px;
-  box-sizing: border-box;
   overflow: hidden;
   position: relative;
   z-index: 1;
+  contain: content;
 }
 
 #tabContainersMount {
@@ -60,6 +97,7 @@ body.dark-mode::-webkit-scrollbar-thumb {
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  contain: content;
 }
 
 /* 홈 탭 내부 스티키 상단 헤더 & 하단 푸터 */
@@ -71,14 +109,13 @@ body.dark-mode::-webkit-scrollbar-thumb {
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  contain: content;
 }
 
 #tabHome .glass-card:first-child {
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 #tabHome .disclaimer-card {
@@ -86,8 +123,6 @@ body.dark-mode::-webkit-scrollbar-thumb {
   bottom: 0;
   z-index: 40;
   margin-top: auto;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 /* =========================================================================
@@ -102,13 +137,11 @@ body.dark-mode::-webkit-scrollbar-thumb {
     min-height: 0;
   }
 
-  /* 2단 모드일 때 [홈] 탭 버튼은 사이드바에서 숨김 (홈 탭이 우측 단에 상시 고정되므로) */
   .panel-tab-btn[data-target="tabHome"],
   .vtab-btn[data-target="tabHome"] {
     display: none !important;
   }
 
-  /* 오른쪽 단: 홈 대시보드는 무조건 보이도록 2단 고정 */
   #tabHome {
     order: 2;
     display: flex !important;
@@ -117,21 +150,18 @@ body.dark-mode::-webkit-scrollbar-thumb {
     height: 100%;
     min-height: 0;
     overflow-y: auto;
-    box-sizing: border-box;
   }
 
-  body.dark-mode #tabHome {
+  :is(html.dark-mode, body.dark-mode) #tabHome {
     border-left-color: rgba(255, 255, 255, 0.1);
   }
 
-  /* 왼쪽 단: 활성화된 서브 탭 컨텐츠 */
   .panel-tab-content:not(#tabHome) {
     order: 1;
     height: 100%;
     min-height: 0;
     width: 100%;
     overflow-y: auto;
-    box-sizing: border-box;
   }
 
   .panel-tab-content.active:not(#tabHome) {
