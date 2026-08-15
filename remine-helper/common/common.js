@@ -1674,7 +1674,7 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
 
   const themeStr = isDark ? 'dark' : 'light';
 
-  // 1. 수집된 틱톡 비디오 목록이 있으면 개별 숏폼 플레이어 카드로 렌더링 (325px 핏 + 동적 자동 높이)
+  // 1. 수집된 틱톡 비디오 목록이 있으면 개별 숏폼 플레이어 카드로 렌더링 (반응형 멀티 컬럼 그리드)
   if (feeds && feeds.length > 0) {
     container.innerHTML = '';
     feeds.forEach(feed => {
@@ -1682,9 +1682,6 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
       if (videoId) {
         const wrapper = document.createElement('div');
         wrapper.className = 'feed-iframe-wrapper tiktok-feed-item';
-        wrapper.style.width = '325px';
-        wrapper.style.maxWidth = '100%';
-        wrapper.style.margin = '0 auto 16px auto';
         wrapper.innerHTML = `
           <iframe src="https://www.tiktok.com/embed/v2/${videoId}" 
                   style="width: 325px; max-width: 100%; height: 740px; min-height: 580px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 
@@ -1702,9 +1699,9 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
     return;
   }
 
-  // 2. 피드가 아직 없으면 공식 프로필 위젯으로 폴백 렌더링 (325px 핏 + 동적 자동 높이)
+  // 2. 피드가 아직 없으면 공식 프로필 위젯으로 폴백 렌더링
   container.innerHTML = `
-    <div class="feed-iframe-wrapper tiktok-feed-item" style="width: 325px; max-width: 100%; height: calc(100vh - 120px); min-height: 500px; margin: 0 auto 16px auto;">
+    <div class="feed-iframe-wrapper tiktok-feed-item" style="height: calc(100vh - 120px); min-height: 500px;">
       <iframe src="https://www.tiktok.com/embed/@rescene_official?theme=${themeStr}" 
               title="TikTok" 
               style="width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 

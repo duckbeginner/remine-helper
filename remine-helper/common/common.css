@@ -1101,9 +1101,9 @@ body {
 }
 
 .tiktok-feed-item {
-  width: 325px;
-  max-width: 100%;
-  margin: 0 auto 16px auto;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
   box-sizing: border-box;
   background: transparent !important;
   border: none !important;
@@ -1111,6 +1111,8 @@ body {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   padding: 0 !important;
+  display: flex;
+  justify-content: center;
 }
 
 .tiktok-feed-item iframe {
@@ -1125,12 +1127,15 @@ body {
 }
 
 #tiktokFeedList {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  justify-items: center;
+  align-items: start;
   width: 100%;
   gap: 16px;
   padding: 0;
+  padding-bottom: 24px;
+  box-sizing: border-box;
 }
 
 .feed-iframe-wrapper iframe {
