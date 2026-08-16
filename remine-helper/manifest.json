@@ -8,8 +8,7 @@
     "alarms",
     "notifications",
     "sidePanel",
-    "tabs",
-    "declarativeNetRequest"
+    "tabs"
   ],
   "host_permissions": [
     "https://*.youtube.com/feeds/*",
@@ -42,14 +41,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://www.tiktok.com https://*.mnetplus.world https://blip.kr https://*.bstage.in https://*.x.com https://platform.twitter.com https://platform.x.com https://syndication.twitter.com;"
-  },
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "ruleset",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
   }
 }
