@@ -1,9 +1,10 @@
 // dashboard.js - 0.05초 초고속 대시보드 진입점 (Page Visibility Throttling & Lazy Mounting)
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS } from './constants.js';
+import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS, ICONS } from './constants.js';
 import {
   createTabBarHTML,
   createTabContainersHTML,
   createLiveBannerHTML,
+  createDashboardHeaderControlsHTML,
   createHubCardHTML,
   createYoutubeSectionHTML,
   createWoniSectionHTML,
@@ -211,8 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // Step 1: 0ms 동기식 즉시 마운트 (SWR Instant Mount)
+  // Step 1: 0ms 동기식 즉시 마운트 (SWR Instant Mount & Hydration)
   // =========================================================================
+  const headerControlsMount = document.getElementById('dashboardHeaderControls');
+  if (headerControlsMount) {
+    headerControlsMount.innerHTML = createDashboardHeaderControlsHTML();
+  }
+
   initNavPosition(initialSettings.navPosition || 'left');
   renderDashboardViews(initialSettings.tabList, initialSettings.fanpages, { cachedStorage: microCache });
 
@@ -222,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
     maximizeBtn.addEventListener('click', () => {
       const isMaximized = document.body.classList.toggle('calendar-maximized');
       maximizeBtn.innerHTML = isMaximized
-        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>축소`
-        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>최대화`;
+        ? `${ICONS.minimize}축소`
+        : `${ICONS.maximize}최대화`;
     });
   }
 
