@@ -21,6 +21,7 @@ x_timeline.html
 *dc_tab*
 *dcinside*
 asssets/
+archive/
 
 # IDE & Editor files
 .vscode/
@@ -32,6 +33,7 @@ asssets/
 node_modules/
 npm-debug.log*
 
+# Development
 # Test sandbox & developer playground
 test-sandbox.html
 test-sandbox.js
@@ -46,3 +48,6 @@ remine-helper/test.js
 
 # Capture scripts
 scripts/capture_screenshots.mjs
+scratch/
+CHROMEWEBSTORE.md
+shortcut_visual_guide.html

@@ -1,4 +1,12 @@
+// background.js 
+// background 전용 코드와 유틸리티 함수를 분리해야겠음
+// 유틸리티 함수는 test-sandbox.js 에서도 사용할 수 있도록 해야 함
+// 유틸리티 함수에 대한 테스트 코드도 별도로 작성해야 함
+// 채널 ID 등도 constants.js 로 이동해야 함
+
+
 const OFFICIAL_CHANNEL_ID = "UCtKtCiaWRz-d3EZn2xd1mdA";
+// const OFFICIAL_CHANNEL_ID = "UCQKQTgZJo3PlxA-9V1Z51XA"; //for live test
 const OFFICIAL_PLAYLIST_ID = "PL7zZDePsdYwPNu51o8b9MKQ_eGk520SFt";
 const WONI_CHANNEL_ID = "UCWpY0eSJtyO-qNAPbKFRSSg";
 
@@ -147,13 +155,28 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 async function fetchAllData() {
-  await fetchYouTubeVideos(OFFICIAL_CHANNEL_ID, "latestVideos", "공식 유튜브");
-  await fetchYouTubePlaylist(OFFICIAL_PLAYLIST_ID, "officialPlaylistVideos", "RESCENE Archive");
-  await fetchYouTubeVideos(WONI_CHANNEL_ID, "woniVideos", "안녕하세요원이입니다잘부탁드립니다");
+  await fetchYouTubeVideos(OFFICIAL_CHANNEL_ID, "latestVideos", "공식 유튜브", "@RESCENE_official");
+  // await fetchYouTubeVideos(OFFICIAL_CHANNEL_ID, "latestVideos", "공식 유튜브", "@DailySeoul"); //for live test
+  await fetchYouTubePlaylist(OFFICIAL_PLAYLIST_ID, "officialPlaylistVideos", "RESCENE Archive", "@RESCENE_official");
+  await fetchYouTubeVideos(WONI_CHANNEL_ID, "woniVideos", "안녕하세요원이입니다잘부탁드립니다", "@helloiamwoninicetomeetyou");
   await fetchAndMergeSchedules();
 }
 
-async function fetchYouTubeVideos(channelId, storageKey, channelName) {
+function decodeHtmlEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+    .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&amp;/g, '&'); // &amp;는 마지막에 디코딩하여 이중 디코딩 방지
+}
+
+async function fetchYouTubeVideos(channelId, storageKey, channelName, channelHandle) {
   try {
     const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
     const response = await fetch(rssUrl);
@@ -162,6 +185,69 @@ async function fetchYouTubeVideos(channelId, storageKey, channelName) {
     const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
     let match;
     let isLiveOnAir = false;
+    let liveVideoInfo = null;
+
+    // 라이브 온에어 여부 및 실제 라이브 영상 메타데이터 파싱
+    if (channelHandle) {
+      try {
+        const liveResponse = await fetch(`https://www.youtube.com/${channelHandle}/live`);
+        if (liveResponse.ok) {
+          const liveText = await liveResponse.text();
+          if (liveText.includes('"isLiveNow":true') || liveText.includes('"isLive":true')) {
+            isLiveOnAir = true;
+
+            // 1. 실제 라이브 videoId 추출
+            let liveVideoId = null;
+            const ogUrlMatch = liveText.match(/<meta property="og:url" content="([^"]+)"/i);
+            if (ogUrlMatch) {
+              const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
+              if (vMatch) liveVideoId = vMatch[1];
+            }
+            if (!liveVideoId) {
+              const videoIdMatch = liveText.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+              if (videoIdMatch) liveVideoId = videoIdMatch[1];
+            }
+
+            // 2. 실제 라이브 제목 추출
+            let liveTitle = '';
+            const ogTitleMatch = liveText.match(/<meta property="og:title" content="([^"]+)"/i);
+            if (ogTitleMatch) {
+              liveTitle = decodeHtmlEntities(ogTitleMatch[1]);
+            } else {
+              const titleTagMatch = liveText.match(/<title>(.*?)<\/title>/i);
+              if (titleTagMatch) {
+                liveTitle = decodeHtmlEntities(titleTagMatch[1].replace(/ - YouTube$/i, '').trim());
+              }
+            }
+
+            // 3. 실제 라이브 썸네일 추출
+            let liveThumbnail = '';
+            const ogImageMatch = liveText.match(/<meta property="og:image" content="([^"]+)"/i);
+            if (ogImageMatch) {
+              liveThumbnail = ogImageMatch[1];
+            } else if (liveVideoId) {
+              liveThumbnail = `https://img.youtube.com/vi/${liveVideoId}/hqdefault.jpg`;
+            }
+
+            if (liveVideoId && liveTitle) {
+              liveVideoInfo = {
+                id: liveVideoId,
+                title: liveTitle,
+                published: new Date().toISOString().split('T')[0],
+                publishedAt: new Date().toISOString(),
+                url: `https://www.youtube.com/watch?v=${liveVideoId}`,
+                thumbnail: liveThumbnail || `https://img.youtube.com/vi/${liveVideoId}/hqdefault.jpg`,
+                channelName: channelName,
+                isShorts: false,
+                isLive: true
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch live status:', err);
+      }
+    }
 
     while ((match = entryRegex.exec(xmlText)) !== null && videos.length < 25) {
       const entryContent = match[1];
@@ -172,15 +258,11 @@ async function fetchYouTubeVideos(channelId, storageKey, channelName) {
 
       if (videoIdMatch && titleMatch) {
         const videoId = videoIdMatch[1];
-        const title = titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        const title = decodeHtmlEntities(titleMatch[1]);
         const publishedIso = publishedMatch ? publishedMatch[1] : '';
         const published = publishedIso ? publishedIso.split('T')[0] : '';
         const rawUrl = linkMatch ? linkMatch[1] : (entryContent.includes('/shorts/') ? `https://www.youtube.com/shorts/${videoId}` : `https://www.youtube.com/watch?v=${videoId}`);
         const isShorts = entryContent.includes('/shorts/') || rawUrl.includes('/shorts/') || /shorts|#shorts|#Shorts|\[shorts\]|\(shorts\)|#쇼츠|#short\b/i.test(title + ' ' + entryContent);
-
-        if (channelId === OFFICIAL_CHANNEL_ID && videos.length === 0 && (title.includes("LIVE") || title.includes("라이브") || entryContent.includes("liveStream"))) {
-          isLiveOnAir = true;
-        }
 
         videos.push({
           id: videoId,
@@ -195,6 +277,16 @@ async function fetchYouTubeVideos(channelId, storageKey, channelName) {
       }
     }
 
+    // 라이브 방송 중인 경우 최상단에 실제 라이브 영상 객체 배치 (중복 방지)
+    if (liveVideoInfo) {
+      const existingIdx = videos.findIndex(v => v.id === liveVideoInfo.id);
+      if (existingIdx >= 0) {
+        videos[existingIdx] = { ...videos[existingIdx], ...liveVideoInfo };
+      } else {
+        videos.unshift(liveVideoInfo);
+      }
+    }
+
     if (videos.length > 0) {
       let updateData = { [storageKey]: videos };
       if (channelId === OFFICIAL_CHANNEL_ID) {
@@ -203,11 +295,68 @@ async function fetchYouTubeVideos(channelId, storageKey, channelName) {
       await new Promise(resolve => chrome.storage.local.set(updateData, resolve));
 
       if (channelId === OFFICIAL_CHANNEL_ID) {
-        chrome.storage.local.get(["lastVideoId"], (result) => {
-          if (result.lastVideoId !== videos[0].id) {
-            const alertTitle = isLiveOnAir ? "🔴 [RESCENE ON AIR] 실시간 라이브 방송 시작!" : "🔔 [RESCENE] 새로운 공식 유튜브 영상 업로드!";
-            sendNotification(alertTitle, videos[0].title, isLiveOnAir ? 'live' : 'youtube');
-            chrome.storage.local.set({ lastVideoId: videos[0].id });
+        chrome.storage.local.get(["notifiedVideoIds", "viewedVideoIds"], (result) => {
+          let notifiedMap = result.notifiedVideoIds;
+          const viewedMap = result.viewedVideoIds || {};
+
+          // 최초 설치/실행 시점: 기존 영상들은 알림 없이 이력에만 등록하여 불필요한 알림 방지
+          if (!notifiedMap) {
+            notifiedMap = {};
+            videos.forEach(v => {
+              notifiedMap[v.id] = Date.now();
+            });
+            if (liveVideoInfo) {
+              notifiedMap['live_' + liveVideoInfo.id] = Date.now();
+            }
+            chrome.storage.local.set({ notifiedVideoIds: notifiedMap });
+            return;
+          }
+
+          let hasNewNotification = false;
+
+          // 1. 실시간 라이브 방송 알림 (실제 라이브 영상 메타데이터로 1회 발송)
+          if (isLiveOnAir) {
+            const targetLive = liveVideoInfo || videos[0];
+            const liveKey = 'live_' + targetLive.id;
+            if (!notifiedMap[liveKey]) {
+              notifiedMap[liveKey] = Date.now();
+              hasNewNotification = true;
+              sendNotification(
+                "🔴 [RESCENE ON AIR] 실시간 라이브 방송 시작!",
+                targetLive.title,
+                'live',
+                targetLive.thumbnail,
+                targetLive.id
+              );
+            }
+          }
+
+          // 2. 신규 영상 업로드 알림 (알림 보낸 적 없고 사용자가 아직 브라우저에서 보지 않은 VOD 대상)
+          videos.slice(0, 3).forEach((video) => {
+            // 라이브 방송 영상은 별도 라이브 알림으로 처리되므로 일반 업로드 알림에서는 제외
+            if (!video.isLive && !notifiedMap[video.id] && !viewedMap[video.id]) {
+              notifiedMap[video.id] = Date.now();
+              hasNewNotification = true;
+              sendNotification(
+                "🔔 [RESCENE] 새로운 공식 유튜브 영상 업로드!",
+                video.title,
+                'youtube',
+                null,
+                video.id
+              );
+            }
+          });
+
+          // 3. 30일 지난 오래된 이력 정리 및 저장
+          if (hasNewNotification) {
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            Object.keys(notifiedMap).forEach(key => {
+              if (now - notifiedMap[key] > thirtyDaysMs) {
+                delete notifiedMap[key];
+              }
+            });
+            chrome.storage.local.set({ notifiedVideoIds: notifiedMap });
           }
         });
       }
@@ -236,7 +385,7 @@ async function fetchYouTubePlaylist(playlistId, storageKey, playlistName) {
 
       if (videoIdMatch && titleMatch) {
         const videoId = videoIdMatch[1];
-        const title = titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        const title = decodeHtmlEntities(titleMatch[1]);
         const publishedIso = publishedMatch ? publishedMatch[1] : '';
         const published = publishedIso ? publishedIso.split('T')[0] : '';
         const rawUrl = linkMatch ? linkMatch[1] : (entryContent.includes('/shorts/') ? `https://www.youtube.com/shorts/${videoId}` : `https://www.youtube.com/watch?v=${videoId}`);
@@ -317,7 +466,7 @@ async function fetchMonthRawSchedules(year, month) {
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return [];
   };
 
@@ -365,7 +514,7 @@ async function fetchMonthRawSchedules(year, month) {
           };
         });
       }
-    } catch (e) {}
+    } catch (e) { }
     return [];
   };
 
@@ -427,7 +576,7 @@ async function processAndMergeScheduleList(rawSchedules) {
         extField: { key: "채널", value: v.channelName || (v.isWoniYoutube ? "안녕하세요원이입니다잘부탁드립니다" : "공식 유튜브") }
       });
     });
-  } catch (e) {}
+  } catch (e) { }
 
   const exactExcludePatterns = [
     /직캠/i, /풀캠/i, /팬캠/i, /페이스캠/i, /입덕직캠/i, /최애직캠/i, /팔로우캠/i, /안방1열/i, /음중직캠/i, /음중풀캠/i, /음중팔로우캠/i,
@@ -726,7 +875,7 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules) {
           } else if (ytIds && ytIds.woniVideos && ytIds.woniVideos.some(v => v.id === vid)) {
             item.isWoniYoutube = true;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   }
@@ -801,7 +950,7 @@ function normalizeTitle(title) {
 // 제목 구조화 파서 (<메인 프로그램/대회명> 부제, [메인] 부제, 메인 - 부제 분해)
 function parseTitleStructure(title) {
   if (!title) return { main: '', sub: '' };
-  
+
   const bracketMatch = title.match(/^[<\[](.+?)[>\]]\s*(.*)$/);
   if (bracketMatch) {
     return {
@@ -850,7 +999,7 @@ function areSchedulesDuplicate(item1, item2) {
   const s2 = parseTitleStructure(t2);
 
   if (s1.main && s2.main) {
-    const isSameMain = s1.main === s2.main || 
+    const isSameMain = s1.main === s2.main ||
       (Math.min(s1.main.length, s2.main.length) >= 4 && (s1.main.includes(s2.main) || s2.main.includes(s1.main)));
 
     if (isSameMain) {
@@ -887,7 +1036,7 @@ function areSchedulesDuplicate(item1, item2) {
 
   // 하나는 순수 방송(온라인/중계)이고 하나는 순수 현장 공연/행사인 경우 분리 보존
   if ((isBroadcasting1 && !isPhysicalEvent1 && isPhysicalEvent2 && !isBroadcasting2) ||
-      (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
+    (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
     return false;
   }
 
@@ -976,7 +1125,7 @@ function checkUpcomingScheduleAlerts(schedules = []) {
             sendNotification(
               `⏰ [스케줄 임박] ${minutesLeft}분 후 시작 예정!`,
               `${cleanTitle}\n📅 시작 시간: ${parseSafeDate(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-              'schedule'
+              'schedule',
             );
           }
         }
@@ -996,7 +1145,69 @@ function checkUpcomingScheduleAlerts(schedules = []) {
   }
 }
 
-function sendNotification(title, message, category = 'all') {
+chrome.notifications.onClicked.addListener((notificationId) => {
+  // 영상 알림인 경우 notificationId 가 있음, 알림 클릭 시 해당 영상 열기
+  // 스케쥴 알림인 경우 notificationId 가 없음, 알림 클릭 시 스케쥴 모달 열기
+  // 클릭시 해당 알림 닫기
+  // 이미 열린 경우 해당 탭으로 
+  chrome.notifications.clear(notificationId);
+  if (notificationId) {
+    // 알림 클릭 시 시청/열람 이력에 기록
+    chrome.storage.local.get(['viewedVideoIds'], (res) => {
+      const viewed = res.viewedVideoIds || {};
+      viewed[notificationId] = Date.now();
+      chrome.storage.local.set({ viewedVideoIds: viewed });
+    });
+
+    chrome.tabs.query({ url: '*://*.youtube.com/watch?v=' + notificationId + '*' }, function (tabs) {
+      if (tabs && tabs.length > 0) {
+        chrome.tabs.update(tabs[0].id, { active: true });
+      } else {
+        if (notificationId.startsWith('http')) {
+          chrome.tabs.create({
+            url: notificationId
+          });
+        } else {
+          chrome.tabs.create({
+            url: 'https://www.youtube.com/watch?v=' + notificationId
+          });
+        }
+      }
+    });
+  } else {
+    showScheduleModal();
+  }
+});
+
+// 브라우저 탭에서 사용자가 직접 유튜브 영상을 열었을 때 실시간 감지 (추가 permission 없이 tabs 권한 활용)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  const targetUrl = changeInfo.url || tab.url;
+  if (!targetUrl) return;
+
+  let videoId = null;
+  if (targetUrl.includes('youtube.com/watch')) {
+    const match = targetUrl.match(/[?&]v=([^&#]+)/);
+    if (match) videoId = match[1];
+  } else if (targetUrl.includes('youtube.com/shorts/')) {
+    const match = targetUrl.match(/youtube\.com\/shorts\/([^?&#/]+)/);
+    if (match) videoId = match[1];
+  } else if (targetUrl.includes('youtu.be/')) {
+    const match = targetUrl.match(/youtu\.be\/([^?&#/]+)/);
+    if (match) videoId = match[1];
+  }
+
+  if (videoId) {
+    chrome.storage.local.get(['viewedVideoIds'], (res) => {
+      const viewed = res.viewedVideoIds || {};
+      if (!viewed[videoId]) {
+        viewed[videoId] = Date.now();
+        chrome.storage.local.set({ viewedVideoIds: viewed });
+      }
+    });
+  }
+});
+
+function sendNotification(title, message, category = 'all', iconUrl = null, notificationId = null) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['userSettings'], (res) => {
       const noti = res && res.userSettings && res.userSettings.notifications;
@@ -1007,12 +1218,34 @@ function sendNotification(title, message, category = 'all') {
         if (category === 'schedule' && noti.schedule === false) return;
       }
       if (chrome.notifications && chrome.notifications.create) {
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "icons/rescene-logo.png",
+        const defaultLogo = 'icons/rescene-logo.png';
+        const hasValidCustomImage = typeof iconUrl === 'string' && iconUrl.trim().length > 0 && iconUrl !== defaultLogo;
+
+        const notiOptions = {
+          type: hasValidCustomImage ? "image" : "basic",
+          iconUrl: defaultLogo,
           title: title,
           message: message,
           priority: 2
+        };
+
+        if (hasValidCustomImage) {
+          notiOptions.imageUrl = iconUrl;
+        }
+
+        chrome.notifications.create(notificationId, notiOptions, () => {
+          if (chrome.runtime.lastError) {
+            // 이미지 로드 실패 시 basic 알림으로 fallback 재시도
+            chrome.notifications.create(notificationId, {
+              type: "basic",
+              iconUrl: defaultLogo,
+              title: title,
+              message: message,
+              priority: 2
+            }, () => {
+              void chrome.runtime.lastError; // lastError 소모하여 Unchecked 에러 방지
+            });
+          }
         });
       }
     });
@@ -1306,3 +1539,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
+export { sendNotification, checkUpcomingScheduleAlerts };
