@@ -2489,16 +2489,14 @@ export function initAppStorageData({
     }
   };
 
-  // 이미 메모리에 로드된 캐시 데이터가 있으면 IPC 대기 없이 즉시 렌더링
+  // 1. 이미 메모리에 로드된 캐시 데이터가 있으면 즉시 0ms 렌더링
   if (cachedData) {
     processResult(cachedData);
-    return;
   }
 
-  if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
-
-  chrome.storage.local.get(
-    [
+  // 2. 비동기 백그라운드 스토리지 재검증 (SWR Revalidate)
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const storageKeys = [
       'latestVideos',
       'officialPlaylistVideos',
       'woniVideos',
@@ -2506,9 +2504,46 @@ export function initAppStorageData({
       'isLive',
       'themeMode',
       'channelOrder'
-    ],
-    processResult
-  );
+    ];
+
+    // 캐시가 있었더라도 최신 스토리지 데이터로 재검증
+    chrome.storage.local.get(storageKeys, (res) => {
+      if (res) processResult(res);
+    });
+
+    // 3. 실시간 스토리지 변경 감지 (라이브 시작/종료, 새 영상 등록 즉시 화면 반영)
+    if (!window.__remine_storage_listener_attached__) {
+      window.__remine_storage_listener_attached__ = true;
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+
+        // 라이브 상태 변경 시 배너 즉시 반영
+        if (changes.isLive) {
+          const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
+          if (liveBanner) {
+            if (changes.isLive.newValue) {
+              chrome.storage.local.get(['latestVideos'], (res) => {
+                if (res && res.latestVideos && res.latestVideos.length > 0) {
+                  liveBanner.style.display = 'block';
+                  liveBanner.href = res.latestVideos[0].url || '#';
+                }
+              });
+            } else {
+              liveBanner.style.display = 'none';
+            }
+          }
+        }
+
+        // 관련 데이터 변경 시 전체 재검증
+        const hasRelevantChanges = Object.keys(changes).some(k => storageKeys.includes(k));
+        if (hasRelevantChanges) {
+          chrome.storage.local.get(storageKeys, (res) => {
+            if (res) processResult(res);
+          });
+        }
+      });
+    }
+  }
 }
 
 /* =========================================================================

@@ -586,7 +586,7 @@ async function processAndMergeScheduleList(rawSchedules) {
     /덕애드/i, /스타패스/i, /아이돌챔프/i, /뮤빗/i, /팬플러스/i, /포도알/i, /케이돌/i, /엠넷플러스\s*투표/i,
     /포스터\s*이벤트/i, /사인\s*.*이벤트/i, /싸인\s*.*이벤트/i, /이벤트\s*안내/i, /안내\s*\(Notice\)/i,
     /\[빅크/i, /\bBIGC\b/i, /응모\s*이벤트/i, /증정\s*이벤트/i, /특전\s*이벤트/i, /구매자\s*이벤트/i,
-    /럭키드로우/i, /\b럭드\b/i, /UCWpY0eSJtyO-qNAPbKFRSSg/i, /UCtKtCiaWRz-d3EZn2xd1mdA/i, /tiktok/i
+    /럭키드로우/i, /\b럭드\b/i, /UCWpY0eSJtyO-qNAPbKFRSSg/i, /UCtKtCiaWRz-d3EZn2xd1mdA/i, /tiktok/i, /youtube.com\/@rescene_official/i, /아티스트 공식 채널에 올라온 콘텐츠입니다/i
   ];
 
   const filteredSchedules = rawSchedules.filter(item => {

@@ -310,9 +310,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 대시보드 탭으로 다시 돌아왔을 때 보류된 동기화 실행
+  // 대시보드 탭으로 다시 돌아왔을 때 즉시 최신 상태 재동기화
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && isSyncPending) {
+    if (!document.hidden) {
       syncTask();
     }
   });

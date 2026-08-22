@@ -330,6 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(syncTask, 30);
   }
 
+  // 사용자가 사이드패널로 돌아올 때(Focus/Visibility) 즉시 최신 상태 재동기화
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      syncTask();
+    }
+  });
+
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('#openDashboardBtn');
     if (btn) {
