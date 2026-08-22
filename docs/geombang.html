@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>갤러리 검방 헬퍼 (Geombang Helper)</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --sheets-green: #0f9d58;
+      --sheets-bg: #e6f4ea;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", Roboto, "Noto Sans KR", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-top: 8px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #0f172a;
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .gallery-badge-wrapper {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .gallery-tag {
+      font-size: 0.8rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sheet-sync-tag {
+      font-size: 0.78rem;
+      background: var(--sheets-bg);
+      color: var(--sheets-green);
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border: 1px solid #ceead6;
+    }
+
+    .sheet-sync-tag:hover {
+      background: #d2edd9;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .badge-danger {
+      background-color: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+    }
+
+    .badge-success {
+      background-color: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #6ee7b7;
+    }
+
+    .textarea-wrapper {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 135px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.95rem;
+      resize: vertical;
+      color: var(--text);
+      background: #fbfcfe;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #ffffff;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    button.btn-secondary {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    button.btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    button.btn-sheets {
+      background: #0f9d58;
+      color: #ffffff;
+    }
+
+    button.btn-sheets:hover {
+      background: #0b8043;
+    }
+
+    button.btn-admin {
+      background: #fdf4ff;
+      color: #9333ea;
+      border: 1px solid #f0abfc;
+    }
+
+    button.btn-admin:hover {
+      background: #fae8ff;
+    }
+
+    .mode-select {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .mode-btn {
+      padding: 8px 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active {
+      background: #eff6ff;
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .lint-results {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-size: 0.78rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+    }
+
+    .tag-chip .count {
+      background: var(--danger);
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 10px;
+      margin-left: 4px;
+    }
+
+    /* Dictionary Settings Section */
+    .dict-section details {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: #ffffff;
+      margin-bottom: 10px;
+    }
+
+    .dict-section summary {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dict-content {
+      margin-top: 12px;
+    }
+
+    .dict-list {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 6px 0;
+    }
+
+    .dict-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+    }
+
+    .dict-item .del-btn {
+      color: #94a3b8;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 2px;
+    }
+
+    .dict-item .del-btn:hover {
+      color: var(--danger);
+    }
+
+    .dict-input-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dict-input-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.82rem;
+    }
+
+    .admin-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .admin-box.sheets {
+      background: #f6fbf8;
+      border-color: #a8dab5;
+    }
+
+    .admin-box h4 {
+      font-size: 0.85rem;
+      color: #1e293b;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(15, 23, 42, 0.92);
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 1000;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🛡️ 갤러리 검방 헬퍼</h1>
+    <p>실시간 민감어 감지 및 원클릭 검색 방지(검방) 치환기</p>
+    <div class="gallery-badge-wrapper">
+      <span id="galleryTag" class="gallery-tag" style="display: none;"></span>
+      <span id="sheetSyncTag" class="sheet-sync-tag" style="display: none;" onclick="syncGoogleSheet(true)">
+        🔄 구글 시트 동기화 (<span id="lastSyncTime">방금</span>)
+      </span>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="card-title">
+      <span>📝 원본 텍스트 입력</span>
+      <span id="statusBadge" class="badge badge-success">검방 안전</span>
+    </div>
+
+    <div class="textarea-wrapper">
+      <textarea id="inputText" placeholder="디시 갤러리에 작성할 제목 또는 본문 내용을 입력하세요..."></textarea>
+    </div>
+
+    <div id="lintArea" class="lint-results" style="display: none;"></div>
+
+    <div style="display: flex; gap: 6px; margin-top: 10px;">
+      <button class="btn-secondary" onclick="pasteFromClipboard()">📋 붙여넣기</button>
+      <button class="btn-secondary" onclick="clearInput()">🗑️ 지우기</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>⚙️ 검방 치환 방식 선택</span>
+    </div>
+
+    <div class="mode-select">
+      <div class="mode-btn active" data-mode="dot" onclick="setMode('dot')">기호 삽입 (.)<br><small style="color:gray;">예:
+          트.위.터</small></div>
+      <div class="mode-btn" data-mode="slash" onclick="setMode('slash')">기호 삽입 (/)<br><small style="color:gray;">예:
+          트/위/터</small></div>
+      <!-- <div class="mode-btn" data-mode="zwsp" onclick="setMode('zwsp')">투명 공백<br><small style="color:gray;">눈에 안 보임</small></div> -->
+    </div>
+
+    <button class="btn-primary" style="width: 100%; font-size: 0.95rem; padding: 12px;" onclick="processTransform()">
+      ✨ 검방 적용 및 복사하기
+    </button>
+  </div>
+
+  <!-- 사전 설정 & 관리자 도구 -->
+  <div class="dict-section">
+    <!-- 1. 현재 적용된 단어 목록 -->
+    <details id="dictDetails">
+      <summary>⚙️ 현재 사전 목록 (<span id="dictCount">0</span>개 단어)</summary>
+      <div class="dict-content">
+        <div id="dictList" class="dict-list"></div>
+        <div class="dict-input-row">
+          <input type="text" id="newKeyword" placeholder="개인 단어 추가 (예: 타돌이름)">
+          <input type="text" id="newReplace" placeholder="대체어 (선택사항)">
+          <button class="btn-secondary" onclick="addCustomWord()">추가</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- 2. 구글 시트 연동 및 관리자 배포 도구 -->
+    <details id="adminDetails" open>
+      <summary>📊 구글 스프레드시트 연동 & 관리자(완장) 배포 도구</summary>
+      <div class="dict-content">
+
+        <!-- 구글 시트 연동 -->
+        <div class="admin-box sheets">
+          <h4 style="color: #0f9d58;">📊 1. 구글 스프레드시트 사전 연동</h4>
+          <p style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">
+            구글 시트의 <strong>A열(검방 단어), B열(대체어)</strong>을 실시간으로 가져옵니다.<br>
+            * 시트 공유 설정을 <code>링크가 있는 모든 사용자(뷰어)</code>로 설정해주세요.
+          </p>
+          <div class="dict-input-row" style="margin-bottom: 8px;">
+            <input type="text" id="sheetUrlInput" placeholder="구글 시트 URL 전체 또는 Sheet ID 입력">
+            <button class="btn-sheets" onclick="applySheetInput()">연동 및 동기화</button>
+          </div>
+        </div>
+
+        <!-- 갤러리 공지 링크 생성 -->
+        <div class="admin-box" style="background: #faf5ff; border-color: #d8b4fe;">
+          <h4 style="color: #7e22ce;">🔗 2. 갤러리 공지 배포용 원클릭 링크 생성</h4>
+          <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">
+            구글 시트 연동 정보와 갤러리명이 포함된 <strong>공지 링크</strong>를 복사합니다. 유저가 이 링크를 누르면 사전이 자동 연동됩니다.
+          </p>
+          <div class="dict-input-row">
+            <input type="text" id="galleryNameInput" placeholder="갤러리명 입력 (예: OO갤러리)">
+            <button class="btn-admin" onclick="generateShareUrl()">🔗 공지 링크 복사</button>
+          </div>
+        </div>
+
+        <!-- 일괄 텍스트 가져오기/내보내기 -->
+        <div class="admin-box">
+          <h4>📝 3. 텍스트 일괄 복사 / 붙여넣기 (오프라인용)</h4>
+          <textarea id="bulkText" style="height: 80px; font-size: 0.8rem;"
+            placeholder="한 줄에 하나씩 입력:&#10;트위터,틧&#10;인스타그램,인별&#10;타아이돌이름"></textarea>
+          <div style="display: flex; gap: 6px; margin-top: 6px;">
+            <button class="btn-secondary" onclick="exportToBulk()">📤 현재 사전 추출</button>
+            <button class="btn-primary" onclick="importFromBulk()">📥 일괄 적용하기</button>
+          </div>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <div id="toast">메시지</div>
+
+  <script>
+    const DEFAULT_DICT = [
+      { word: '트위터', replace: '틧' },
+      { word: '인스타그램', replace: '인별' },
+      { word: '유튜브', replace: '튭' },
+      { word: '버블', replace: 'ㅂㅂ' },
+      { word: '프롬', replace: 'ㅍㄹ' },
+      { word: '위버스', replace: '위벗' }
+    ];
+
+    let currentMode = 'dot';
+    let dictionary = [];
+    let galleryName = '';
+    let currentSheetId = '';
+
+    // Sheet ID 추출 정규식
+    function extractSheetId(input) {
+      if (!input) return '';
+      const trimmed = input.trim();
+      const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) return match[1];
+      if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
+      return trimmed;
+    }
+
+    // CSV 파서 (따옴표 및 쉼표 처리)
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/);
+      const parsed = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // CSV 분리
+        const cols = [];
+        let inQuotes = false;
+        let buffer = '';
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"' || char === "'") {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            cols.push(buffer.trim().replace(/^["']|["']$/g, ''));
+            buffer = '';
+          } else {
+            buffer += char;
+          }
+        }
+        cols.push(buffer.trim().replace(/^["']|["']$/g, ''));
+
+        const word = cols[0] || '';
+        const replace = cols[1] || null;
+
+        // 첫 번째 행이 헤더인 경우 건너뛰기
+        if (i === 0 && ['단어', '키워드', 'word', 'keyword', '민감어', '검방'].includes(word.toLowerCase())) {
+          continue;
+        }
+
+        if (word) {
+          parsed.push({ word, replace: replace || null });
+        }
+      }
+      return parsed;
+    }
+
+    // 구글 시트 데이터 Fetch
+    async function fetchGoogleSheetData(sheetId) {
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`시트를 불러올 수 없습니다 (상태코드: ${response.status})`);
+      }
+      const text = await response.text();
+      return parseCSV(text);
+    }
+
+    // 구글 시트 실시간 동기화
+    async function syncGoogleSheet(showToastAlert = false) {
+      if (!currentSheetId) return;
+
+      try {
+        if (showToastAlert) showToast('구글 시트에서 최신 사전을 가져오는 중...');
+        const sheetDict = await fetchGoogleSheetData(currentSheetId);
+
+        if (sheetDict && sheetDict.length > 0) {
+          dictionary = sheetDict;
+          localStorage.setItem('geombang_dict', JSON.stringify(dictionary));
+          localStorage.setItem('geombang_sheet_id', currentSheetId);
+          renderDict();
+          checkText();
+
+          const now = new Date();
+          const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+          document.getElementById('lastSyncTime').innerText = timeStr;
+
+          if (showToastAlert) {
+            showToast(`✅ 시트 동기화 완료 (${sheetDict.length}개 단어)`);
+          }
+        } else {
+          if (showToastAlert) showToast('시트에 등록된 단어가 없습니다.');
+        }
+      } catch (err) {
+        console.error(err);
+        if (showToastAlert) {
+          showToast('⚠️ 시트 동기화 실패: 시트가 공개(뷰어) 상태인지 확인해주세요.');
+        }
+      }
+    }
+
+    // 수동으로 시트 URL 입력했을 때
+    async function applySheetInput() {
+      const input = document.getElementById('sheetUrlInput').value.trim();
+      const extractedId = extractSheetId(input);
+
+      if (!extractedId) {
+        showToast('유효한 구글 시트 URL 또는 ID를 입력해주세요.');
+        return;
+      }
+
+      currentSheetId = extractedId;
+      document.getElementById('sheetSyncTag').style.display = 'inline-flex';
+      await syncGoogleSheet(true);
+    }
+
+    // 앱 초기화 로직 (URL 파라미터 파싱)
+    async function initApp() {
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash.substring(1);
+
+      // 1. 갤러리명 파라미터 (?g=...)
+      const gParam = params.get('g') || localStorage.getItem('geombang_gallery_name');
+      if (gParam) {
+        galleryName = decodeURIComponent(gParam);
+        localStorage.setItem('geombang_gallery_name', galleryName);
+        document.getElementById('galleryNameInput').value = galleryName;
+        const tag = document.getElementById('galleryTag');
+        tag.innerText = `🏷️ ${galleryName}`;
+        tag.style.display = 'inline-block';
+      }
+
+      // 2. 구글 시트 파라미터 (?sheet=...)
+      const sheetParam = params.get('sheet') || localStorage.getItem('geombang_sheet_id');
+      if (sheetParam) {
+        currentSheetId = extractSheetId(sheetParam);
+        document.getElementById('sheetUrlInput').value = currentSheetId;
+        document.getElementById('sheetSyncTag').style.display = 'inline-flex';
+        await syncGoogleSheet(false);
+      } else {
+        // 3. Fallback: Base64 파라미터 or LocalStorage
+        const dataParam = params.get('d') || (hash.startsWith('d=') ? hash.replace('d=', '') : null);
+        if (dataParam) {
+          try {
+            const decoded = JSON.parse(decodeURIComponent(escape(atob(dataParam))));
+            if (Array.isArray(decoded)) {
+              dictionary = decoded;
+              localStorage.setItem('geombang_dict', JSON.stringify(dictionary));
+            }
+          } catch (e) {
+            console.error('Data param decode error:', e);
+          }
+        } else {
+          const saved = localStorage.getItem('geombang_dict');
+          dictionary = saved ? JSON.parse(saved) : DEFAULT_DICT;
+        }
+        renderDict();
+      }
+    }
+
+    function saveDict() {
+      localStorage.setItem('geombang_dict', JSON.stringify(dictionary));
+      renderDict();
+      checkText();
+    }
+
+    function renderDict() {
+      const listEl = document.getElementById('dictList');
+      const countEl = document.getElementById('dictCount');
+      listEl.innerHTML = '';
+      countEl.innerText = dictionary.length;
+
+      dictionary.forEach((item, index) => {
+        const span = document.createElement('span');
+        span.className = 'dict-item';
+        span.innerHTML = `<strong>${item.word}</strong>${item.replace ? ' ➔ ' + item.replace : ''} <span class="del-btn" onclick="removeDict(${index})">&times;</span>`;
+        listEl.appendChild(span);
+      });
+    }
+
+    function addCustomWord() {
+      const kwInput = document.getElementById('newKeyword');
+      const repInput = document.getElementById('newReplace');
+      const word = kwInput.value.trim();
+      const replace = repInput.value.trim();
+
+      if (!word) return;
+
+      dictionary.push({ word, replace: replace || null });
+      kwInput.value = '';
+      repInput.value = '';
+      saveDict();
+      showToast('단어가 추가되었습니다.');
+    }
+
+    function removeDict(index) {
+      dictionary.splice(index, 1);
+      saveDict();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+    }
+
+    const inputEl = document.getElementById('inputText');
+    const statusBadge = document.getElementById('statusBadge');
+    const lintArea = document.getElementById('lintArea');
+
+    inputEl.addEventListener('input', checkText);
+
+    function checkText() {
+      const text = inputEl.value;
+      if (!text.trim()) {
+        statusBadge.className = 'badge badge-success';
+        statusBadge.innerText = '검방 안전';
+        lintArea.style.display = 'none';
+        return;
+      }
+
+      let detected = [];
+      dictionary.forEach(item => {
+        const reg = new RegExp(escapeRegExp(item.word), 'gi');
+        const matches = text.match(reg);
+        if (matches) {
+          detected.push({ word: item.word, count: matches.length });
+        }
+      });
+
+      if (detected.length > 0) {
+        statusBadge.className = 'badge badge-danger';
+        statusBadge.innerText = `검방 필요 (${detected.length}건)`;
+        lintArea.style.display = 'flex';
+        lintArea.innerHTML = detected.map(d => `<span class="tag-chip">${d.word}<span class="count">${d.count}</span></span>`).join('');
+      } else {
+        statusBadge.className = 'badge badge-success';
+        statusBadge.innerText = '검방 안전';
+        lintArea.style.display = 'none';
+      }
+    }
+
+    function transformText(text) {
+      let result = text;
+      dictionary.forEach(item => {
+        const reg = new RegExp(escapeRegExp(item.word), 'gi');
+        result = result.replace(reg, (match) => {
+          if (item.replace) return item.replace;
+          if (currentMode === 'dot') return match.split('').join('.');
+          if (currentMode === 'slash') return match.split('').join('/');
+          if (currentMode === 'zwsp') return match.split('').join('\u200B');
+          return match;
+        });
+      });
+      return result;
+    }
+
+    async function processTransform() {
+      const rawText = inputEl.value;
+      if (!rawText.trim()) {
+        showToast('텍스트를 먼저 입력해주세요.');
+        return;
+      }
+
+      const converted = transformText(rawText);
+      inputEl.value = converted;
+      checkText();
+
+      try {
+        await navigator.clipboard.writeText(converted);
+        showToast('🛡️ 검방 치환 후 클립보드에 복사되었습니다!');
+      } catch (err) {
+        showToast('치환 완료! (수동으로 복사해주세요)');
+      }
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        inputEl.value = text;
+        checkText();
+        showToast('붙여넣기 완료');
+      } catch (err) {
+        inputEl.focus();
+        showToast('텍스트를 직접 붙여넣어주세요.');
+      }
+    }
+
+    function clearInput() {
+      inputEl.value = '';
+      checkText();
+    }
+
+    // 관리자 기능 1: 배포 URL 생성
+    async function generateShareUrl() {
+      const gName = document.getElementById('galleryNameInput').value.trim() || galleryName || '갤러리';
+      const sheetInput = document.getElementById('sheetUrlInput').value.trim();
+      const sheetId = extractSheetId(sheetInput) || currentSheetId;
+
+      const baseUrl = window.location.origin + window.location.pathname;
+      let shareUrl = '';
+
+      if (sheetId) {
+        // 구글 시트 연동형 URL 생성
+        shareUrl = `${baseUrl}?g=${encodeURIComponent(gName)}&sheet=${encodeURIComponent(sheetId)}`;
+      } else {
+        // 내장 Base64 URL 생성
+        const jsonStr = JSON.stringify(dictionary);
+        const encodedData = btoa(unescape(encodeURIComponent(jsonStr)));
+        shareUrl = `${baseUrl}?g=${encodeURIComponent(gName)}&d=${encodedData}`;
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('🔗 공지용 배포 링크가 복사되었습니다!');
+      } catch (e) {
+        prompt('아래 링크를 복사하여 공지에 등록하세요:', shareUrl);
+      }
+    }
+
+    // 관리자 기능 2: Bulk Export
+    function exportToBulk() {
+      const lines = dictionary.map(d => d.replace ? `${d.word},${d.replace}` : d.word);
+      document.getElementById('bulkText').value = lines.join('\n');
+      showToast('사전 텍스트를 추출했습니다.');
+    }
+
+    // 관리자 기능 3: Bulk Import
+    function importFromBulk() {
+      const text = document.getElementById('bulkText').value.trim();
+      if (!text) {
+        showToast('입력란이 비어있습니다.');
+        return;
+      }
+
+      const parsed = parseCSV(text);
+      if (parsed.length > 0) {
+        dictionary = parsed;
+        saveDict();
+        showToast(`총 ${parsed.length}개의 단어가 사전으로 적용되었습니다.`);
+      }
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // 실행
+    initApp();
+  </script>
+</body>
+
+</html>
