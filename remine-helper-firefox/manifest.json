@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Remine Helper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Shortcuts and Notifications for Rescene Fans, Remine.",
   "permissions": [
     "storage",
