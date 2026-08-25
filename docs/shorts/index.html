@@ -357,11 +357,18 @@
     };
 
     function renderFeed(shorts = []) {
-      currentShortsList = shorts;
       if (!shorts || shorts.length === 0) {
         feedContainer.innerHTML = '<div class="empty-state">등록된 Shorts 영상이 없습니다.</div>';
+        feedContainer.__renderedIds = '';
         return;
       }
+
+      const newIds = shorts.map(s => s.id).join(',');
+      if (feedContainer.__renderedIds === newIds && feedContainer.querySelectorAll('.shorts-embed-item').length > 0) {
+        return; // 동일한 영상 목록이면 새로고침을 방지하여 재생 유지
+      }
+      feedContainer.__renderedIds = newIds;
+      currentShortsList = shorts;
 
       feedContainer.innerHTML = shorts.map((video, idx) => {
         const title = escapeHtml(video.title || 'Shorts');
