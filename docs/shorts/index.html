@@ -30,8 +30,11 @@
       height: 100%;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: transparent !important;
+      background: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%) !important;
       user-select: none;
+    }
+    :is(html.dark-mode, body.dark-mode) {
+      background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
     }
     
     /* 피드 컨테이너 */
