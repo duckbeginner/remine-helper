@@ -228,7 +228,7 @@
     let isApiReady = false;
 
     // 전역 상태 동기화 관리자 (Volume, Mute, Rate, AutoPlay, Captions, Quality)
-    const globalState = {
+    let globalState = {
       isMuted: null,
       volume: null,
       playbackRate: 1,
@@ -236,6 +236,23 @@
       captions: null,
       playbackQuality: null
     };
+
+    // 로컬 스토리지에서 이전 상태 복원
+    try {
+      const saved = localStorage.getItem('remine_shorts_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          globalState = { ...globalState, ...parsed };
+        }
+      }
+    } catch (e) { }
+
+    function saveGlobalState() {
+      try {
+        localStorage.setItem('remine_shorts_state', JSON.stringify(globalState));
+      } catch (e) { }
+    }
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -303,6 +320,7 @@
             if (quality) globalState.playbackQuality = quality;
           } catch (e) { }
         }
+        saveGlobalState();
       } catch (e) { }
     }
 
@@ -437,7 +455,13 @@
               onReady: (event) => {
                 const p = event.target;
                 shortsPlayersMap.set(idx, p);
-                applyPlayerState(p, { isCurrentActive: false });
+                const isFirst = idx === 0 && !lastActiveItem;
+                if (isFirst) {
+                  lastActiveItem = items[0];
+                  applyPlayerState(p, { isCurrentActive: true });
+                } else {
+                  applyPlayerState(p, { isCurrentActive: false });
+                }
               },
               onStateChange: (event) => {
                 const p = event.target;
