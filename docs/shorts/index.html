@@ -10,7 +10,8 @@
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const theme = urlParams.get('theme');
-        if (theme === 'dark' || (theme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        const isDark = theme === 'dark' || (theme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
           document.documentElement.classList.add('dark-mode');
         }
       } catch (e) { }
