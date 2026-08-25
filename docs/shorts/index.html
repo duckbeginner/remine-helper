@@ -533,6 +533,9 @@
           document.documentElement.classList.toggle('dark-mode', data.isDark);
           document.body.classList.toggle('dark-mode', data.isDark);
         }
+        if (data.muteOnLoad === true) {
+          globalState.isMuted = true;
+        }
         renderFeed(data.shorts || []);
       } else if (data.type === 'PAUSE_ALL') {
         pauseAll();
@@ -540,6 +543,16 @@
         const isDark = Boolean(data.isDark);
         document.documentElement.classList.toggle('dark-mode', isDark);
         document.body.classList.toggle('dark-mode', isDark);
+      } else if (data.type === 'SET_MUTE_SETTING') {
+        globalState.isMuted = Boolean(data.muteOnLoad);
+        if (lastActiveItem) {
+          const idx = parseInt(lastActiveItem.getAttribute('data-index') || '0', 10);
+          const p = shortsPlayersMap.get(idx);
+          if (p && typeof p.mute === 'function' && typeof p.unMute === 'function') {
+            if (globalState.isMuted) p.mute();
+            else p.unMute();
+          }
+        }
       }
     });
 
