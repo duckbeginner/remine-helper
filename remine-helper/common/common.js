@@ -53,7 +53,7 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
 
     try {
       localStorage.setItem('themeMode', mode);
-    } catch (e) {}
+    } catch (e) { }
 
     const docEl = document.documentElement;
     docEl.classList.toggle('dark-mode', isDark);
@@ -76,6 +76,14 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
         }
       }
     });
+
+    // Shorts 원격 Iframe에 실시간 테마 변경 알림
+    const shortsFrame = document.getElementById('shortsTabFrame');
+    if (shortsFrame && shortsFrame.contentWindow) {
+      try {
+        shortsFrame.contentWindow.postMessage({ type: 'SET_THEME', isDark }, '*');
+      } catch (e) { }
+    }
 
     // 문서 내 모든 테마 토글 버튼 상태 업데이트 (사이드바 및 대시보드)
     const allThemeBtns = document.querySelectorAll('#themeToggleBtn');
@@ -123,8 +131,8 @@ export function initThemeEngine(themeToggleBtn, { onThemeChange, initialMode } =
   }
 
   // 초기 테마 로드 (0ms 동기 즉시 적용 - 트랜지션 없음)
-  const syncCachedMode = initialMode || (function() {
-    try { return localStorage.getItem('themeMode'); } catch(e) { return null; }
+  const syncCachedMode = initialMode || (function () {
+    try { return localStorage.getItem('themeMode'); } catch (e) { return null; }
   })() || 'system';
   applyTheme(syncCachedMode, { withTransition: false });
 
@@ -207,12 +215,13 @@ export function updateGlassSlider(targetBtn, sliderEl) {
 export function stopAllIframeMedia(container = document, forceReset = false) {
   if (!container) return;
 
-  // 1. iframe 일시정지 명령 전송 및 옵션에 따른 리셋
+  // 1. 모든 iframe (유튜브, 인스타, 틱톡, X 등) 일시정지 postMessage 전송
   const iframes = container.querySelectorAll('iframe');
   iframes.forEach(iframe => {
     try {
       if (iframe.contentWindow) {
         iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        iframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
         iframe.contentWindow.postMessage('{"method":"pause"}', '*');
         iframe.contentWindow.postMessage({ method: 'pause' }, '*');
         iframe.contentWindow.postMessage({ type: 'pause' }, '*');
@@ -228,7 +237,7 @@ export function stopAllIframeMedia(container = document, forceReset = false) {
     }
   });
 
-  // 2. HTML5 비디오/오디오 정지
+  // 3. HTML5 비디오/오디오 정지
   const html5Medias = container.querySelectorAll('video, audio');
   html5Medias.forEach(media => {
     try {
@@ -283,14 +292,28 @@ export function initTabEngine(tabBarEl, sliderEl, tabList = TAB_CONFIG_LIST, { o
       btn.classList.add('active');
       if (sliderEl) updateGlassSlider(btn, sliderEl);
 
-      // 컨텐츠 뷰 전환 및 비활성화되는 탭의 미디어 재생 즉시 중지
+      // 컨텐츠 뷰 전환 및 비활성화되는 모든 이전 탭의 미디어 재생 즉시 중지 (src 임시 언로드)
       tabContents.forEach(content => {
         if (content.id === targetId) {
           content.classList.add('active');
+          // 활성화된 탭의 iframe src 복원
+          const savedIframes = content.querySelectorAll('iframe[data-saved-src]');
+          savedIframes.forEach(iframe => {
+            iframe.src = iframe.getAttribute('data-saved-src');
+            iframe.removeAttribute('data-saved-src');
+          });
         } else {
-          if (content.classList.contains('active')) {
-            stopAllIframeMedia(content);
-          }
+          // 비활성화된 탭의 iframe src를 about:blank로 전환하여 소리/재생 100% 즉시 중지
+          const iframes = content.querySelectorAll('iframe');
+          iframes.forEach(iframe => {
+            if (iframe.src && iframe.src !== 'about:blank' && !iframe.getAttribute('data-saved-src')) {
+              iframe.setAttribute('data-saved-src', iframe.src);
+              iframe.src = 'about:blank';
+            }
+          });
+          // HTML5 미디어도 일시정지
+          const medias = content.querySelectorAll('video, audio');
+          medias.forEach(m => { try { m.pause(); } catch (e) { } });
           content.classList.remove('active');
         }
       });
@@ -560,6 +583,132 @@ export function renderWoniYoutubeList(container, videos = []) {
   } else {
     container.innerHTML = cardsHtml;
   }
+}
+
+/**
+ * 스토리지 내 모든 비디오 풀에서 Shorts 영상만 추출하여 최신순 정렬
+ */
+export function extractAllShortsVideos(data = {}) {
+  const pool = [
+    ...(data.latestVideos || []),
+    ...(data.officialPlaylistVideos || []),
+    ...(data.woniVideos || [])
+  ];
+  const seen = new Set();
+  const shorts = [];
+  for (const v of pool) {
+    if (!v || !v.id) continue;
+    if (seen.has(v.id)) continue;
+    seen.add(v.id);
+    const isShort = v.isShorts || (v.url && v.url.includes('/shorts/')) || /shorts|#shorts|#Shorts|\[shorts\]|\(shorts\)|#쇼츠|#short\b/i.test((v.title || '') + ' ' + (v.url || ''));
+    if (isShort) {
+      shorts.push(v);
+    }
+  }
+  // 최신순 정렬
+  shorts.sort((a, b) => {
+    const tA = (a.publishedAt || a.published) ? new Date(a.publishedAt || a.published).getTime() : 0;
+    const tB = (b.publishedAt || b.published) ? new Date(b.publishedAt || b.published).getTime() : 0;
+    return tB - tA;
+  });
+  return shorts;
+}
+
+// --- YouTube Iframe Player API SDK 공식 로더 ---
+let isYTReady = false;
+/**
+ * YouTube iframe 제어 명령 전송 (공식 규격)
+ */
+export function sendYouTubeCommand(iframe, func, args = []) {
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    const payload = JSON.stringify({
+      event: 'command',
+      func: func,
+      args: Array.isArray(args) ? args : [args]
+    });
+    iframe.contentWindow.postMessage(payload, '*');
+  } catch (e) { }
+}
+
+let cachedShortsData = null;
+
+/**
+ * 모든 Shorts 비디오 일시 정지 (샌드박스 Iframe에 전달)
+ */
+export function pauseAllShortsVideos() {
+  const iframe = document.getElementById('shortsTabFrame');
+  if (iframe && iframe.contentWindow) {
+    try {
+      iframe.contentWindow.postMessage({ type: 'PAUSE_ALL' }, '*');
+    } catch (e) { }
+  }
+}
+
+let cachedShortsIds = '';
+
+function getMuteOnLoadSetting() {
+  try {
+    // 1. 메모리 캐시 또는 localStorage 확인
+    const raw = localStorage.getItem('userSettings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.sound && typeof parsed.sound.muteOnLoad === 'boolean') {
+        return parsed.sound.muteOnLoad;
+      }
+    }
+  } catch (e) { }
+  return false;
+}
+
+/**
+ * Shorts 탭 전용 렌더러 (샌드박스/원격 Iframe에 데이터 전송)
+ */
+export function renderShortsList(container, shorts = []) {
+  cachedShortsData = shorts;
+  const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+  const iframe = document.getElementById('shortsTabFrame');
+  const newIds = (shorts || []).map(s => s.id).join(',');
+  const muteOnLoad = getMuteOnLoadSetting();
+
+  if (iframe && iframe.contentWindow) {
+    try {
+      if (cachedShortsIds === newIds && newIds.length > 0) {
+        // 이미 렌더링된 동일한 비디오 목록이면 테마만 실시간 반영 (영상 재로딩 방지)
+        iframe.contentWindow.postMessage({
+          type: 'SET_THEME',
+          isDark
+        }, '*');
+      } else {
+        cachedShortsIds = newIds;
+        iframe.contentWindow.postMessage({
+          type: 'INIT_SHORTS_DATA',
+          shorts: shorts || [],
+          isDark,
+          muteOnLoad
+        }, '*');
+      }
+    } catch (e) { }
+  }
+}
+
+// 샌드박스 Iframe이 로드 완료 신호(SHORTS_SANDBOX_READY)를 보내면 최신 데이터 즉시 주입
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SHORTS_SANDBOX_READY') {
+      const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+      const iframe = document.getElementById('shortsTabFrame');
+      const muteOnLoad = getMuteOnLoadSetting();
+      if (iframe && iframe.contentWindow && cachedShortsData) {
+        iframe.contentWindow.postMessage({
+          type: 'INIT_SHORTS_DATA',
+          shorts: cachedShortsData,
+          isDark,
+          muteOnLoad
+        }, '*');
+      }
+    }
+  });
 }
 
 /* =========================================================================
@@ -1107,8 +1256,8 @@ export function getChannelIconHTML(item, { isSmall = false } = {}) {
 
   // 1. 원이 개인 채널
   const isWoni = Boolean(item.isWoniYoutube) ||
-                 channelName === '안녕하세요원이입니다잘부탁드립니다' ||
-                 item.channelKey === 'helloiamwoni';
+    channelName === '안녕하세요원이입니다잘부탁드립니다' ||
+    item.channelKey === 'helloiamwoni';
 
   if (isWoni) {
     return `<img src="icons/hellowoni_profile.jpg" class="sched-channel-icon woni" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="원이채널" title="안녕하세요원이입니다잘부탁드립니다">`;
@@ -1116,8 +1265,8 @@ export function getChannelIconHTML(item, { isSmall = false } = {}) {
 
   // 2. RESCENE 공식 채널
   const isOfficial = Boolean(item.isOfficialYoutube) ||
-                     (item.source === 'youtube' && (channelName === '공식 유튜브' || channelName === 'RESCENE')) ||
-                     channelName === '공식 유튜브';
+    (item.source === 'youtube' && (channelName === '공식 유튜브' || channelName === 'RESCENE')) ||
+    channelName === '공식 유튜브';
 
   if (isOfficial) {
     return `<img src="icons/rescene_official_profile.jpg" class="sched-channel-icon official" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="공식채널" title="RESCENE 공식 유튜브 채널">`;
@@ -2401,6 +2550,7 @@ export function initAppStorageData({
   youtubeListId = 'youtubeList',
   playlistId = 'playlistYoutubeList',
   woniListId = 'woniYoutubeList',
+  shortsListId = 'shortsGridList',
   scheduleListId = 'scheduleList',
   onSchedulesLoaded,
   onDataLoaded,
@@ -2413,6 +2563,7 @@ export function initAppStorageData({
     const ytEl = typeof youtubeListId === 'string' ? document.getElementById(youtubeListId) : youtubeListId;
     const plyEl = typeof playlistId === 'string' ? document.getElementById(playlistId) : playlistId;
     const woniEl = typeof woniListId === 'string' ? document.getElementById(woniListId) : woniListId;
+    const shortsEl = typeof shortsListId === 'string' ? document.getElementById(shortsListId) : shortsListId;
 
     if (ytEl && result.latestVideos) {
       renderOfficialYoutubeList(ytEl, result.latestVideos);
@@ -2425,6 +2576,11 @@ export function initAppStorageData({
     if (woniEl && result.woniVideos) {
       renderWoniYoutubeList(woniEl, result.woniVideos);
       setupHorizontalScroller(woniEl);
+    }
+    if (document.getElementById('shortsTabFrame')) {
+      const targetShortsEl = shortsEl || document.getElementById('tabShorts');
+      const shorts = extractAllShortsVideos(result);
+      renderShortsList(targetShortsEl, shorts);
     }
 
     // 2. 실시간 라이브 배너 연동
@@ -2595,6 +2751,9 @@ export function loadUserSettings(callback) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['userSettings'], (res) => {
       const settings = parseUserSettings(res.userSettings);
+      try {
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+      } catch (e) { }
       if (typeof callback === 'function') callback(settings);
     });
   } else {
@@ -2604,6 +2763,10 @@ export function loadUserSettings(callback) {
 
 // 2. 사용자 설정 저장
 export function saveUserSettings(newSettings, callback) {
+  try {
+    localStorage.setItem('userSettings', JSON.stringify(newSettings));
+  } catch (e) { }
+
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.set({ userSettings: newSettings }, () => {
       if (typeof callback === 'function') callback(newSettings);
@@ -3110,6 +3273,16 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       currentSettings.sound = currentSettings.sound || {};
       currentSettings.sound.muteOnLoad = e.target.checked;
       saveUserSettings(currentSettings, () => showSaveNotice());
+
+      const iframe = document.getElementById('shortsTabFrame');
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage({
+            type: 'SET_MUTE_SETTING',
+            muteOnLoad: e.target.checked
+          }, '*');
+        } catch (err) { }
+      }
     });
   }
 
@@ -3197,7 +3370,7 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       if (areaName === 'local' && changes.userSettings && changes.userSettings.newValue) {
         const updated = changes.userSettings.newValue;
         const old = changes.userSettings.oldValue || {};
-        
+
         if (updated.navPosition && updated.navPosition !== old.navPosition) {
           initNavPosition(updated.navPosition);
         }

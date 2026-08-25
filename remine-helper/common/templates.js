@@ -53,7 +53,9 @@ export function createTabButtonHTML(tab, channelMap = CHANNEL_DATA_MAP) {
   const activeClass = tab.defaultActive ? ' active' : '';
   let iconHtml = '';
 
-  if (tab.channelKey && channelMap[tab.channelKey]) {
+  if (tab.id === 'tabShorts') {
+    iconHtml = `<span class="tab-icon-wrap">${ICONS.shorts}</span>`;
+  } else if (tab.channelKey && channelMap[tab.channelKey]) {
     const chData = channelMap[tab.channelKey];
     if (chData.svg) {
       iconHtml = `<span class="tab-icon-wrap">${chData.svg}</span>`;
@@ -302,6 +304,15 @@ export function createTabContainersHTML(tabs = TAB_CONFIG_LIST, activeTabId = 't
       return `
       <div class="panel-tab-content${activeClass}" id="${tab.id}">
         ${createCalendarWrapperHTML()}
+      </div>`;
+    }
+
+    if (tab.type === 'shorts' || tab.id === 'tabShorts') {
+      const isDark = (typeof document !== 'undefined') && (document.documentElement.classList.contains('dark-mode') || document.body?.classList.contains('dark-mode'));
+      const themeParam = isDark ? '?theme=dark' : '?theme=light';
+      return `
+      <div class="panel-tab-content${activeClass}" id="${tab.id}">
+        <iframe id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>`;
     }
 

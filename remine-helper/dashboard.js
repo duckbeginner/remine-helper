@@ -72,7 +72,7 @@ function setMicroCache(data) {
       channelOrder: data.channelOrder
     };
     localStorage.setItem(MICRO_CACHE_KEY, JSON.stringify(micro));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentFanpages = fanpages;
     const effectiveStorage = cachedStorage || fullStorageData || microCache;
 
-    const dashboardTabs = tabList.filter(t => t.id !== 'tabHome').map(t => ({
+    const dashboardTabs = tabList.filter(t => t.id !== 'tabHome' && t.id !== 'tabShorts').map(t => ({
       ...t,
       defaultActive: t.id === 'tabSchedule'
     }));

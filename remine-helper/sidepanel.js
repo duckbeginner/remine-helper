@@ -22,7 +22,10 @@ import {
   renderInstaEmbeds,
   renderXEmbeds,
   renderTiktokEmbeds,
-  requestBackgroundRefresh
+  requestBackgroundRefresh,
+  extractAllShortsVideos,
+  renderShortsList,
+  pauseAllShortsVideos
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -214,8 +217,19 @@ document.addEventListener('DOMContentLoaded', () => {
       onTabChange: (targetId, tabConfig, loadedMap) => {
         const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
 
+        if (targetId !== 'tabShorts') {
+          pauseAllShortsVideos();
+        }
+
         if (targetId === 'tabSchedule') {
           ensureCalendarManager();
+        } else if (targetId === 'tabShorts') {
+          const shortsContainer = document.getElementById('tabShorts');
+          const effectiveStorage = fullStorageData || microCache;
+          if (shortsContainer && effectiveStorage) {
+            const shorts = extractAllShortsVideos(effectiveStorage);
+            renderShortsList(shortsContainer, shorts);
+          }
         } else if (targetId === 'tabInsta' && !loadedMap[targetId]) {
           loadedMap[targetId] = true;
           if (feedCache.insta) {
@@ -295,6 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (res.tiktokFeeds && res.tiktokFeeds.length > 0) feedCache.tiktok = res.tiktokFeeds;
 
           const settings = parseUserSettings(res.userSettings);
+          try {
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+          } catch (e) { }
           if (settings.navPosition) {
             initNavPosition(settings.navPosition);
           }
