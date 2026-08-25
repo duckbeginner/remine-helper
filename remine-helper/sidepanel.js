@@ -21,7 +21,8 @@ import {
   initNavPosition,
   renderInstaEmbeds,
   renderXEmbeds,
-  renderTiktokEmbeds
+  renderTiktokEmbeds,
+  requestBackgroundRefresh
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -325,9 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(syncTask, { timeout: 100 });
+    window.requestIdleCallback(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, { timeout: 100 });
   } else {
-    setTimeout(syncTask, 30);
+    setTimeout(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, 30);
   }
 
   // 사용자가 사이드패널로 돌아올 때(Focus/Visibility) 즉시 최신 상태 재동기화

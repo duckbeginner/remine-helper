@@ -1427,10 +1427,39 @@ async function fetchFeedsFromMnet() {
   }
 }
 
+let lastBackgroundRefreshTime = 0;
+let backgroundRefreshPromise = null;
+
+async function executeAllBackgroundRefreshes() {
+  if (backgroundRefreshPromise) {
+    return backgroundRefreshPromise;
+  }
+  backgroundRefreshPromise = (async () => {
+    try {
+      await Promise.allSettled([
+        fetchAllData(),
+        fetchFeedsFromMnet()
+      ]);
+      lastBackgroundRefreshTime = Date.now();
+    } finally {
+      backgroundRefreshPromise = null;
+    }
+  })();
+  return backgroundRefreshPromise;
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "REFRESH_ALL_DATA" || request.action === "FORCE_REFRESH") {
-    fetchAllData().then(() => {
-      fetchFeedsFromMnet();
+    const force = request.action === "FORCE_REFRESH" || request.force === true;
+    const now = Date.now();
+
+    // 강제 새로고침이 아니고 30초 이내에 이미 조회가 수행되었으며 진행 중인 요청도 없다면 스킵
+    if (!force && !backgroundRefreshPromise && (now - lastBackgroundRefreshTime < 30000)) {
+      sendResponse({ success: true, skipped: true });
+      return true;
+    }
+
+    executeAllBackgroundRefreshes().then(() => {
       sendResponse({ success: true });
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });

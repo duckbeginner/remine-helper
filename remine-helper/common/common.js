@@ -3211,3 +3211,22 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     });
   }
 }
+
+/**
+ * 사이드패널 또는 보드(대시보드) 진입 시 백그라운드 데이터 1회 갱신 요청
+ */
+export function requestBackgroundRefresh(force = false) {
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    try {
+      chrome.runtime.sendMessage({ action: "REFRESH_ALL_DATA", force }, (response) => {
+        if (chrome.runtime.lastError) {
+          // 백그라운드 서비스 워커 준비 중이거나 응답 채널 종료 시 에러 무시
+          console.debug('[RemineHelper] Background refresh message skipped:', chrome.runtime.lastError.message);
+        }
+      });
+    } catch (e) {
+      console.debug('[RemineHelper] Failed to send refresh message:', e);
+    }
+  }
+}
+

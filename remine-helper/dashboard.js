@@ -25,7 +25,8 @@ import {
   initNavPosition,
   renderInstaEmbeds,
   renderXEmbeds,
-  renderTiktokEmbeds
+  renderTiktokEmbeds,
+  requestBackgroundRefresh
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -318,8 +319,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(syncTask, { timeout: 100 });
+    window.requestIdleCallback(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, { timeout: 100 });
   } else {
-    setTimeout(syncTask, 30);
+    setTimeout(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, 30);
   }
 });
+
