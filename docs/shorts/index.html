@@ -4,6 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RESCENE Shorts - Remine Helper</title>
+  <!-- 초기 다크모드 깜빡임 방지 즉시 실행 스크립트 -->
+  <script>
+    (function () {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const theme = urlParams.get('theme');
+        if (theme === 'dark' || (theme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark-mode');
+        }
+      } catch (e) { }
+    })();
+  </script>
   <!-- 구글 공식 원격 YouTube Iframe Player API SDK -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
@@ -17,7 +29,7 @@
       height: 100%;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: transparent;
+      background: transparent !important;
       user-select: none;
     }
     
@@ -35,6 +47,7 @@
       flex-direction: column;
       gap: 14px;
       -webkit-overflow-scrolling: touch;
+      background: transparent !important;
     }
     .shorts-feed-container::-webkit-scrollbar {
       width: 5px;
@@ -43,7 +56,7 @@
       background: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
     }
-    body.dark-mode .shorts-feed-container::-webkit-scrollbar-thumb {
+    :is(html.dark-mode, body.dark-mode) .shorts-feed-container::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.2);
     }
 
@@ -69,12 +82,12 @@
       border-color: rgba(255, 0, 0, 0.35);
       box-shadow: 0 8px 24px rgba(255, 0, 0, 0.12);
     }
-    body.dark-mode .shorts-embed-item {
-      background: #14101c;
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-item {
+      background: #14101c !important;
       border-color: rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     }
-    body.dark-mode .shorts-embed-item:hover {
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-item:hover {
       border-color: rgba(255, 0, 0, 0.45);
       box-shadow: 0 10px 28px rgba(255, 0, 0, 0.22);
     }
@@ -89,7 +102,7 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       flex-shrink: 0;
     }
-    body.dark-mode .shorts-embed-header {
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-header {
       background: rgba(255, 255, 255, 0.03);
       border-bottom-color: rgba(255, 255, 255, 0.06);
     }
@@ -101,7 +114,7 @@
       font-weight: 700;
       color: #334155;
     }
-    body.dark-mode .shorts-embed-channel {
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-channel {
       color: #cbd5e1;
     }
     .shorts-badge-dot {
@@ -128,11 +141,11 @@
       background: rgba(255, 0, 0, 0.12);
       color: #ff0000;
     }
-    body.dark-mode .shorts-external-link {
+    :is(html.dark-mode, body.dark-mode) .shorts-external-link {
       color: #94a3b8;
       background: rgba(255, 255, 255, 0.08);
     }
-    body.dark-mode .shorts-external-link:hover {
+    :is(html.dark-mode, body.dark-mode) .shorts-external-link:hover {
       background: rgba(255, 0, 0, 0.25);
       color: #ff6666;
     }
@@ -171,7 +184,7 @@
       flex-shrink: 0;
       gap: 10px;
     }
-    body.dark-mode .shorts-embed-footer {
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-footer {
       background: rgba(255, 255, 255, 0.03);
       border-top-color: rgba(255, 255, 255, 0.06);
       color: #e2e8f0;
@@ -189,7 +202,7 @@
       flex-shrink: 0;
       font-weight: 500;
     }
-    body.dark-mode .shorts-embed-date {
+    :is(html.dark-mode, body.dark-mode) .shorts-embed-date {
       color: #94a3b8;
     }
 
@@ -510,13 +523,16 @@
 
       if (data.type === 'INIT_SHORTS_DATA') {
         if (typeof data.isDark === 'boolean') {
+          document.documentElement.classList.toggle('dark-mode', data.isDark);
           document.body.classList.toggle('dark-mode', data.isDark);
         }
         renderFeed(data.shorts || []);
       } else if (data.type === 'PAUSE_ALL') {
         pauseAll();
       } else if (data.type === 'SET_THEME') {
-        document.body.classList.toggle('dark-mode', Boolean(data.isDark));
+        const isDark = Boolean(data.isDark);
+        document.documentElement.classList.toggle('dark-mode', isDark);
+        document.body.classList.toggle('dark-mode', isDark);
       }
     });
 
