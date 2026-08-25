@@ -327,6 +327,11 @@
     function applyPlayerState(player, { isCurrentActive = false } = {}) {
       if (!player) return;
       try {
+        // 1. 볼륨 먼저 적용 (setVolume 호출 시 기본 음소거 해제 방지)
+        if (globalState.volume !== null && typeof player.setVolume === 'function') {
+          player.setVolume(globalState.volume);
+        }
+        // 2. 음소거 적용 (볼륨 적용 후 최종 확정)
         if (globalState.isMuted !== null) {
           if (globalState.isMuted) {
             if (typeof player.mute === 'function') player.mute();
@@ -334,18 +339,18 @@
             if (typeof player.unMute === 'function') player.unMute();
           }
         }
-        if (globalState.volume !== null && typeof player.setVolume === 'function') {
-          player.setVolume(globalState.volume);
-        }
+        // 3. 배속 적용
         if (globalState.playbackRate && typeof player.setPlaybackRate === 'function') {
           player.setPlaybackRate(globalState.playbackRate);
         }
+        // 4. 자막 & 화질 적용
         if (globalState.captions && typeof player.setOption === 'function') {
           try { player.setOption('captions', 'track', globalState.captions); } catch (e) { }
         }
         if (globalState.playbackQuality && typeof player.setPlaybackQuality === 'function') {
           try { player.setPlaybackQuality(globalState.playbackQuality); } catch (e) { }
         }
+        // 5. 활성 재생 상태 적용
         if (isCurrentActive) {
           if (globalState.shouldAutoPlay) {
             if (typeof player.playVideo === 'function') player.playVideo();
