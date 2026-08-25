@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RESCENE Shorts - Remine Helper</title>
+  <!-- 구글 공식 원격 YouTube Iframe Player API SDK -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: transparent;
+      user-select: none;
+    }
+    
+    /* 피드 컨테이너 */
+    .shorts-feed-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      scroll-padding-top: 4px;
+      scroll-behavior: smooth;
+      padding: 4px 4px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .shorts-feed-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .shorts-feed-container::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+    body.dark-mode .shorts-feed-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 쇼츠 카드 */
+    .shorts-embed-item {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      height: calc(100% - 6px);
+      min-height: 460px;
+      max-height: 820px;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      flex-shrink: 0;
+      position: relative;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .shorts-embed-item:hover {
+      border-color: rgba(255, 0, 0, 0.35);
+      box-shadow: 0 8px 24px rgba(255, 0, 0, 0.12);
+    }
+    body.dark-mode .shorts-embed-item {
+      background: #14101c;
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    body.dark-mode .shorts-embed-item:hover {
+      border-color: rgba(255, 0, 0, 0.45);
+      box-shadow: 0 10px 28px rgba(255, 0, 0, 0.22);
+    }
+
+    /* 카드 상단 헤더 */
+    .shorts-embed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 12px;
+      background: rgba(0, 0, 0, 0.02);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
+    }
+    body.dark-mode .shorts-embed-header {
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+    }
+    .shorts-embed-channel {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #334155;
+    }
+    body.dark-mode .shorts-embed-channel {
+      color: #cbd5e1;
+    }
+    .shorts-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff0000;
+      box-shadow: 0 0 6px rgba(255, 0, 0, 0.6);
+    }
+    .shorts-external-link {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-decoration: none;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.04);
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .shorts-external-link:hover {
+      background: rgba(255, 0, 0, 0.12);
+      color: #ff0000;
+    }
+    body.dark-mode .shorts-external-link {
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    body.dark-mode .shorts-external-link:hover {
+      background: rgba(255, 0, 0, 0.25);
+      color: #ff6666;
+    }
+
+    /* 카드 중앙 플레이어 */
+    .shorts-player-box {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      background: #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .shorts-player-box iframe,
+    .shorts-iframe-target {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      border: none;
+    }
+
+    /* 카드 하단 정보 */
+    .shorts-embed-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.02);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      font-size: 11.5px;
+      color: #1e293b;
+      flex-shrink: 0;
+      gap: 10px;
+    }
+    body.dark-mode .shorts-embed-footer {
+      background: rgba(255, 255, 255, 0.03);
+      border-top-color: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+    }
+    .shorts-embed-title {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .shorts-embed-date {
+      font-size: 10.5px;
+      color: #64748b;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+    body.dark-mode .shorts-embed-date {
+      color: #94a3b8;
+    }
+
+    /* 빈 상태 안내 */
+    .empty-state {
+      text-align: center;
+      color: #888;
+      padding: 50px 10px;
+      width: 100%;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shorts-feed-container" id="feedContainer">
+    <div class="empty-state">쇼츠 영상을 불러오는 중...</div>
+  </div>
+
+  <script>
+    const feedContainer = document.getElementById('feedContainer');
+    const shortsPlayersMap = new Map();
+    let currentShortsList = [];
+    let isApiReady = false;
+
+    // 전역 상태 동기화 관리자 (Volume, Mute, Rate, AutoPlay, Captions, Quality)
+    const globalState = {
+      isMuted: null,
+      volume: null,
+      playbackRate: 1,
+      shouldAutoPlay: true,
+      captions: null,
+      playbackQuality: null
+    };
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const now = new Date();
+        const diffMs = now - d;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+
+        if (diffDay > 30) return `${Math.floor(diffDay / 30)}달 전`;
+        if (diffDay > 0) return `${diffDay}일 전`;
+        if (diffHour > 0) return `${diffHour}시간 전`;
+        if (diffMin > 0) return `${diffMin}분 전`;
+        return '방금 전';
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    function capturePlayerState(player) {
+      if (!player) return;
+      try {
+        if (typeof player.isMuted === 'function') {
+          globalState.isMuted = player.isMuted();
+        }
+        if (typeof player.getVolume === 'function') {
+          const vol = player.getVolume();
+          if (typeof vol === 'number') globalState.volume = vol;
+        }
+        if (typeof player.getPlaybackRate === 'function') {
+          const rate = player.getPlaybackRate();
+          if (rate) globalState.playbackRate = rate;
+        }
+        if (typeof player.getPlayerState === 'function') {
+          const state = player.getPlayerState();
+          if (state === 1 || state === 3) {
+            globalState.shouldAutoPlay = true;
+          } else if (state === 2) {
+            globalState.shouldAutoPlay = false;
+          }
+        }
+        if (typeof player.getOption === 'function') {
+          try {
+            const track = player.getOption('captions', 'track') || player.getOption('cc', 'track');
+            if (track) globalState.captions = track;
+          } catch (e) { }
+        }
+        if (typeof player.getPlaybackQuality === 'function') {
+          try {
+            const quality = player.getPlaybackQuality();
+            if (quality) globalState.playbackQuality = quality;
+          } catch (e) { }
+        }
+      } catch (e) { }
+    }
+
+    function applyPlayerState(player, { isCurrentActive = false } = {}) {
+      if (!player) return;
+      try {
+        if (globalState.isMuted !== null) {
+          if (globalState.isMuted) {
+            if (typeof player.mute === 'function') player.mute();
+          } else {
+            if (typeof player.unMute === 'function') player.unMute();
+          }
+        }
+        if (globalState.volume !== null && typeof player.setVolume === 'function') {
+          player.setVolume(globalState.volume);
+        }
+        if (globalState.playbackRate && typeof player.setPlaybackRate === 'function') {
+          player.setPlaybackRate(globalState.playbackRate);
+        }
+        if (globalState.captions && typeof player.setOption === 'function') {
+          try { player.setOption('captions', 'track', globalState.captions); } catch (e) { }
+        }
+        if (globalState.playbackQuality && typeof player.setPlaybackQuality === 'function') {
+          try { player.setPlaybackQuality(globalState.playbackQuality); } catch (e) { }
+        }
+        if (isCurrentActive) {
+          if (globalState.shouldAutoPlay) {
+            if (typeof player.playVideo === 'function') player.playVideo();
+          } else {
+            if (typeof player.pauseVideo === 'function') player.pauseVideo();
+          }
+        }
+      } catch (e) { }
+    }
+
+    function pauseAll() {
+      shortsPlayersMap.forEach(player => {
+        try {
+          if (player && typeof player.pauseVideo === 'function') {
+            player.pauseVideo();
+          }
+        } catch (e) { }
+      });
+    }
+
+    // 유튜브 공식 Iframe API 준비 완료 콜백
+    window.onYouTubeIframeAPIReady = function () {
+      isApiReady = true;
+      if (currentShortsList && currentShortsList.length > 0) {
+        initYTPlayers();
+      }
+    };
+
+    function renderFeed(shorts = []) {
+      currentShortsList = shorts;
+      if (!shorts || shorts.length === 0) {
+        feedContainer.innerHTML = '<div class="empty-state">등록된 Shorts 영상이 없습니다.</div>';
+        return;
+      }
+
+      feedContainer.innerHTML = shorts.map((video, idx) => {
+        const title = escapeHtml(video.title || 'Shorts');
+        const rawDate = video.published || video.date;
+        const dateStr = rawDate ? (getTimeAgo(rawDate) || rawDate) : '';
+        const videoId = video.id;
+        const youtubeShortsUrl = videoId ? `https://www.youtube.com/shorts/${videoId}` : '#';
+        const channel = escapeHtml(video.channelName || 'RESCENE');
+
+        return `
+          <div class="shorts-embed-item" data-index="${idx}">
+            <div class="shorts-embed-header">
+              <div class="shorts-embed-channel">
+                <span class="shorts-badge-dot"></span>
+                <span>${channel}</span>
+              </div>
+              <a href="${youtubeShortsUrl}" target="_blank" rel="noopener noreferrer" class="shorts-external-link" title="YouTube에서 열기">
+                <span>YouTube ↗</span>
+              </a>
+            </div>
+            <div class="shorts-player-box">
+              ${videoId ? `<div id="ytShortsPlayer_${idx}" class="shorts-iframe-target" data-video-id="${videoId}"></div>` : '<div class="empty-state">영상을 불러올 수 없습니다.</div>'}
+            </div>
+            <div class="shorts-embed-footer">
+              <span class="shorts-embed-title" title="${title}">${title}</span>
+              ${dateStr ? `<span class="shorts-embed-date">${escapeHtml(dateStr)}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (isApiReady || (window.YT && window.YT.Player)) {
+        initYTPlayers();
+      }
+    }
+
+    let lastActiveItem = null;
+
+    function initYTPlayers() {
+      if (!window.YT || !window.YT.Player) {
+        setTimeout(initYTPlayers, 100);
+        return;
+      }
+      shortsPlayersMap.clear();
+      const items = Array.from(feedContainer.querySelectorAll('.shorts-embed-item'));
+      const placeholders = feedContainer.querySelectorAll('.shorts-iframe-target');
+
+      placeholders.forEach((el, idx) => {
+        const videoId = el.getAttribute('data-video-id');
+        if (!videoId) return;
+
+        try {
+          const pId = el.id || `ytShortsPlayer_${idx}`;
+          const player = new window.YT.Player(pId, {
+            videoId: videoId,
+            playerVars: {
+              autoplay: 0,
+              controls: 1,
+              playsinline: 1,
+              rel: 0,
+              loop: 1,
+              enablejsapi: 1,
+              modestbranding: 1
+            },
+            events: {
+              onReady: (event) => {
+                const p = event.target;
+                shortsPlayersMap.set(idx, p);
+                applyPlayerState(p, { isCurrentActive: false });
+              },
+              onStateChange: (event) => {
+                const p = event.target;
+                if (event.data === 1) { // PLAYING
+                  lastActiveItem = items[idx];
+                  capturePlayerState(p);
+                  globalState.shouldAutoPlay = true;
+
+                  shortsPlayersMap.forEach((otherPlayer, otherIdx) => {
+                    if (otherIdx !== idx && otherPlayer && typeof otherPlayer.pauseVideo === 'function') {
+                      try { otherPlayer.pauseVideo(); } catch (e) { }
+                    }
+                  });
+                } else if (event.data === 2) { // PAUSED
+                  if (lastActiveItem === items[idx]) {
+                    globalState.shouldAutoPlay = false;
+                  }
+                }
+              }
+            }
+          });
+          shortsPlayersMap.set(idx, player);
+        } catch (e) { }
+      });
+
+      setTimeout(updateActivePlayback, 500);
+    }
+
+    function updateActivePlayback() {
+      const items = Array.from(feedContainer.querySelectorAll('.shorts-embed-item'));
+      if (!items.length) return;
+
+      const targetRect = feedContainer.getBoundingClientRect();
+      const targetCenterY = targetRect.top + targetRect.height / 2;
+
+      let closestItem = null;
+      let closestIndex = -1;
+      let minDistance = Infinity;
+
+      items.forEach((item, idx) => {
+        const rect = item.getBoundingClientRect();
+        const itemCenterY = rect.top + rect.height / 2;
+        const distance = Math.abs(targetCenterY - itemCenterY);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestItem = item;
+          closestIndex = idx;
+        }
+      });
+
+      if (closestItem && closestItem !== lastActiveItem && minDistance < targetRect.height * 0.45) {
+        if (lastActiveItem) {
+          const prevIdx = items.indexOf(lastActiveItem);
+          if (prevIdx !== -1) {
+            const prevPlayer = shortsPlayersMap.get(prevIdx);
+            capturePlayerState(prevPlayer);
+          }
+        }
+
+        shortsPlayersMap.forEach((player, pIdx) => {
+          if (pIdx !== closestIndex && player && typeof player.pauseVideo === 'function') {
+            try { player.pauseVideo(); } catch (e) { }
+          }
+        });
+
+        const curPlayer = shortsPlayersMap.get(closestIndex);
+        if (curPlayer) {
+          applyPlayerState(curPlayer, { isCurrentActive: true });
+        }
+
+        lastActiveItem = closestItem;
+      }
+    }
+
+    let scrollTimer = null;
+    feedContainer.addEventListener('scroll', () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(updateActivePlayback, 60);
+    }, { passive: true });
+
+    if ('onscrollend' in window) {
+      feedContainer.addEventListener('scrollend', updateActivePlayback, { passive: true });
+    }
+
+    // 부모 창(Sidepanel / Dashboard)으로부터 메시지 수신
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data || !data.type) return;
+
+      if (data.type === 'INIT_SHORTS_DATA') {
+        if (typeof data.isDark === 'boolean') {
+          document.body.classList.toggle('dark-mode', data.isDark);
+        }
+        renderFeed(data.shorts || []);
+      } else if (data.type === 'PAUSE_ALL') {
+        pauseAll();
+      } else if (data.type === 'SET_THEME') {
+        document.body.classList.toggle('dark-mode', Boolean(data.isDark));
+      }
+    });
+
+    // 부모에게 준비 완료 신호 전송
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'SHORTS_SANDBOX_READY' }, '*');
+    }
+  </script>
+</body>
+</html>
