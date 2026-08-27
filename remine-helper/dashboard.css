@@ -30,24 +30,6 @@ body {
       background: transparent;
     }
   }
-}
-
-html.dark-mode body,
-body.dark-mode {
-  background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
-  color: #f1f5f9 !important;
-  scrollbar-color: #4a385c transparent;
-
-  &::-webkit-scrollbar-thumb {
-    background: #4a385c;
-  }
-
-  .maximize-btn {
-      background: rgba(255, 255, 255, 0.06) !important;
-      border-color: rgba(255, 255, 255, 0.12) !important;
-      color: #cbd5e1 !important;
-    }
-  }
 
   /* 최대화 모드 */
   &.calendar-maximized {
@@ -111,6 +93,23 @@ body.dark-mode {
     .feed-list-container {
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
     }
+  }
+}
+
+html.dark-mode body,
+body.dark-mode {
+  background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
+  color: #f1f5f9 !important;
+  scrollbar-color: #4a385c transparent;
+
+  &::-webkit-scrollbar-thumb {
+    background: #4a385c;
+  }
+
+  .maximize-btn {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
   }
 }
 
