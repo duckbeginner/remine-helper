@@ -308,12 +308,7 @@ export function createTabContainersHTML(tabs = TAB_CONFIG_LIST, activeTabId = 't
     }
 
     if (tab.type === 'shorts' || tab.id === 'tabShorts') {
-      const isDark = (typeof document !== 'undefined') && (document.documentElement.classList.contains('dark-mode') || document.body?.classList.contains('dark-mode'));
-      const themeParam = isDark ? '?theme=dark' : '?theme=light';
-      return `
-      <div class="panel-tab-content${activeClass}" id="${tab.id}">
-        <iframe id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      </div>`;
+      return `<div class="panel-tab-content${activeClass}" id="${tab.id}"></div>`;
     }
 
     if (tab.type === 'embed-list') {
