@@ -22,6 +22,9 @@ x_timeline.html
 *dcinside*
 asssets/
 archive/
+guide/
+scripts/capture*
+scripts/sync*
 
 # IDE & Editor files
 .vscode/
