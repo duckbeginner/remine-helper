@@ -660,12 +660,39 @@ async function processAndMergeScheduleList(rawSchedules) {
   });
 
   youtubeScheduleItems.forEach(ytItem => {
-    mergedList.push(ytItem);
+    const ytD = parseSafeDate(ytItem.startTime);
+    const ytDateStr = `${ytD.getFullYear()}-${String(ytD.getMonth() + 1).padStart(2, '0')}-${String(ytD.getDate()).padStart(2, '0')}`;
+    let matchIdx = -1;
+    for (let i = 0; i < mergedList.length; i++) {
+      const existD = parseSafeDate(mergedList[i].startTime);
+      const existDateStr = `${existD.getFullYear()}-${String(existD.getMonth() + 1).padStart(2, '0')}-${String(existD.getDate()).padStart(2, '0')}`;
+      if (ytDateStr === existDateStr && areSchedulesDuplicate(mergedList[i], ytItem)) {
+        matchIdx = i;
+        break;
+      }
+    }
+    if (matchIdx !== -1) {
+      mergedList[matchIdx].title = pickBestTitle(mergedList[matchIdx].title, ytItem.title);
+      if (!mergedList[matchIdx].url && ytItem.url) mergedList[matchIdx].url = ytItem.url;
+    } else {
+      mergedList.push(ytItem);
+    }
   });
 
   await enrichSchedulesWithYouTubeOEmbed(mergedList);
   mergedList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
   return mergedList;
+}
+
+// 스케줄 항목이 유튜브/영상 관련 일정인지 판별
+function isVideoSchedule(item) {
+  if (!item) return false;
+  if (item.source === 'youtube' || item.typeText === '영상') return true;
+  const combined = `${item.title || ""} ${item.message || ""} ${item.url || ""} ${item.link || ""}`.toLowerCase();
+  return (
+    /youtu\.be|youtube\.com|shorts|쇼츠|자컨|비하인드|vlog|브이로그|릴리즈|m\/v|mv|뮤비|teaser|티저|ep\.\d+/i.test(combined) ||
+    /안녕하세요원이입니다|안원잘부|@helloiamwoninicetomeetyou/i.test(combined)
+  );
 }
 
 // 당일 푸시 알림 발송 헬퍼 함수 (설정 시각 도달/경과 시 발송 + 남은/지난 일정 지능형 분기)
@@ -720,12 +747,21 @@ function checkDailyScheduleNotification(schedules) {
       } else {
         const itemTimeMs = parseSafeDate(item.startTime).getTime();
         if (itemTimeMs < nowMs) {
-          pastSchedules.push(item);
+          // 영상 일정 중 이미 시간이 지난 것은 유튜브 게시 이후에 등록된 일정이므로 종합 알림의 지난 일정에서 제외
+          if (!isVideoSchedule(item)) {
+            pastSchedules.push(item);
+          }
         } else {
           remainingSchedules.push(item);
         }
       }
     });
+
+    // 오늘 알림으로 보낼 남은 일정이나 의미 있는 지난 일정이 없으면 알림 발송 생략
+    if (remainingSchedules.length === 0 && pastSchedules.length === 0) {
+      chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
+      return;
+    }
 
     const formatLine = (item, isPast = false) => {
       const cleanTitle = cleanDisplayTitle(item.title);
@@ -742,48 +778,56 @@ function checkDailyScheduleNotification(schedules) {
     let notificationTitle = '';
     const bodyLines = [];
 
-    // [케이스 1] 지난 일정이 없는 경우 (설정 시각 직후 등 정상 시간대)
-    if (pastSchedules.length === 0) {
-      notificationTitle = `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`;
-      todaySchedules.slice(0, 5).forEach(item => {
+    // [케이스 1] 남은 일정이 있고 지난 일정이 없는 경우 (정상 아침/낮 시간대)
+    if (remainingSchedules.length > 0 && pastSchedules.length === 0) {
+      notificationTitle = `📅 오늘 예정된 RESCENE 스케줄 (${remainingSchedules.length}건)`;
+      remainingSchedules.slice(0, 5).forEach(item => {
         bodyLines.push(formatLine(item, false));
       });
-      if (todaySchedules.length > 5) {
-        bodyLines.push(`• ...외 ${todaySchedules.length - 5}건`);
+      if (remainingSchedules.length > 5) {
+        bodyLines.push(`• ...외 ${remainingSchedules.length - 5}건`);
       }
     }
-    // [케이스 2] 이미 지난 일정이 섞여 있는 경우 (설정 시각이 지난 후 늦게 켰을 때)
-    else {
-      notificationTitle = `📅 오늘 RESCENE 스케줄 요약 (총 ${todaySchedules.length}건)`;
+    // [케이스 2] 남은 일정과 지난 일정이 둘 다 있는 경우 (중간 시간대에 켰을 때)
+    else if (remainingSchedules.length > 0 && pastSchedules.length > 0) {
+      const totalCount = remainingSchedules.length + pastSchedules.length;
+      notificationTitle = `📅 오늘 RESCENE 스케줄 요약 (총 ${totalCount}건)`;
 
-      if (remainingSchedules.length > 0) {
-        bodyLines.push(`[남은 일정 ${remainingSchedules.length}건]`);
-        remainingSchedules.slice(0, 3).forEach(item => {
-          bodyLines.push(formatLine(item, false));
-        });
-        if (remainingSchedules.length > 3) {
-          bodyLines.push(`• ...외 ${remainingSchedules.length - 3}건`);
-        }
-      } else {
-        bodyLines.push(`[오늘 예정되었던 일정 - 모두 종료]`);
+      bodyLines.push(`[남은 일정 ${remainingSchedules.length}건]`);
+      remainingSchedules.slice(0, 3).forEach(item => {
+        bodyLines.push(formatLine(item, false));
+      });
+      if (remainingSchedules.length > 3) {
+        bodyLines.push(`• ...외 ${remainingSchedules.length - 3}건`);
       }
 
-      if (pastSchedules.length > 0) {
-        if (bodyLines.length > 0) bodyLines.push('');
-        bodyLines.push(`[지난 일정 ${pastSchedules.length}건]`);
-        pastSchedules.slice(0, 2).forEach(item => {
-          bodyLines.push(formatLine(item, true));
-        });
-        if (pastSchedules.length > 2) {
-          bodyLines.push(`• ...외 ${pastSchedules.length - 2}건`);
-        }
+      bodyLines.push('');
+      bodyLines.push(`[지난 일정 ${pastSchedules.length}건]`);
+      pastSchedules.slice(0, 2).forEach(item => {
+        bodyLines.push(formatLine(item, true));
+      });
+      if (pastSchedules.length > 2) {
+        bodyLines.push(`• ...외 ${pastSchedules.length - 2}건`);
+      }
+    }
+    // [케이스 3] 남은 일정은 없고 지난 일정(방송/행사 등)만 있는 경우 (밤 늦게 켰을 때)
+    else if (remainingSchedules.length === 0 && pastSchedules.length > 0) {
+      notificationTitle = `📅 오늘 RESCENE 스케줄 요약 (총 ${pastSchedules.length}건)`;
+      bodyLines.push(`[오늘 예정되었던 일정 - 모두 종료]`);
+      pastSchedules.slice(0, 3).forEach(item => {
+        bodyLines.push(formatLine(item, true));
+      });
+      if (pastSchedules.length > 3) {
+        bodyLines.push(`• ...외 ${pastSchedules.length - 3}건`);
       }
     }
 
     sendNotification(
       notificationTitle,
       bodyLines.join('\n'),
-      'schedule'
+      'schedule',
+      null,
+      `sched_daily_${todayStr}`
     );
     chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
   });
@@ -1202,6 +1246,8 @@ function checkUpcomingScheduleAlerts(schedules = []) {
               `⏰ [스케줄 임박] ${minutesLeft}분 후 시작 예정!`,
               `${cleanTitle}\n📅 시작 시간: ${parseSafeDate(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
               'schedule',
+              null,
+              `sched_upcoming_${id}`
             );
           }
         }
@@ -1222,36 +1268,57 @@ function checkUpcomingScheduleAlerts(schedules = []) {
 }
 
 chrome.notifications.onClicked.addListener((notificationId) => {
-  // 영상 알림인 경우 notificationId 가 있음, 알림 클릭 시 해당 영상 열기
-  // 스케쥴 알림인 경우 notificationId 가 없음, 알림 클릭 시 스케쥴 모달 열기
-  // 클릭시 해당 알림 닫기
-  // 이미 열린 경우 해당 탭으로 
   chrome.notifications.clear(notificationId);
-  if (notificationId) {
+  if (!notificationId) return;
+
+  // 1. 유튜브 / 라이브 영상 알림인지 명확하게 판별 (yt_ 접두사, live_ 접두사, 또는 11자리 유튜브 ID)
+  const isYoutube = notificationId.startsWith('yt_') ||
+    notificationId.startsWith('live_') ||
+    (!notificationId.startsWith('sched_') && !notificationId.includes('schedule') && /^[a-zA-Z0-9_-]{11}$/.test(notificationId));
+
+  if (isYoutube) {
+    let targetVideoId = notificationId;
+    if (targetVideoId.startsWith('yt_')) targetVideoId = targetVideoId.replace('yt_', '');
+    else if (targetVideoId.startsWith('live_')) targetVideoId = targetVideoId.replace('live_', '');
+
     // 알림 클릭 시 시청/열람 이력에 기록
     chrome.storage.local.get(['viewedVideoIds'], (res) => {
       const viewed = res.viewedVideoIds || {};
-      viewed[notificationId] = Date.now();
+      viewed[targetVideoId] = Date.now();
       chrome.storage.local.set({ viewedVideoIds: viewed });
     });
 
-    chrome.tabs.query({ url: '*://*.youtube.com/watch?v=' + notificationId + '*' }, function (tabs) {
+    // URL 형태인 경우 바로 브라우저 새 탭으로 오픈
+    if (targetVideoId.startsWith('http')) {
+      chrome.tabs.create({ url: targetVideoId });
+      return;
+    }
+
+    // 이미 열린 유튜브 탭이 있으면 해당 탭으로 전환, 없으면 새 탭 오픈
+    chrome.tabs.query({ url: '*://*.youtube.com/watch?v=' + targetVideoId + '*' }, function (tabs) {
       if (tabs && tabs.length > 0) {
         chrome.tabs.update(tabs[0].id, { active: true });
       } else {
-        if (notificationId.startsWith('http')) {
-          chrome.tabs.create({
-            url: notificationId
-          });
-        } else {
-          chrome.tabs.create({
-            url: 'https://www.youtube.com/watch?v=' + notificationId
-          });
-        }
+        chrome.tabs.create({
+          url: 'https://www.youtube.com/watch?v=' + targetVideoId
+        });
       }
     });
-  } else {
-    showScheduleModal();
+    return;
+  }
+
+  // 2. 그 외 모든 알림(스케줄 종합 요약, 스케줄 임박 알림 등) 클릭 시: 사이드패널 오픈 (또는 대시보드 탭)
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs && tabs[0];
+      if (currentTab && chrome.sidePanel && chrome.sidePanel.open) {
+        chrome.sidePanel.open({ windowId: currentTab.windowId }).catch(() => {
+          chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+        });
+      } else {
+        chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+      }
+    });
   }
 });
 
@@ -1309,10 +1376,12 @@ function sendNotification(title, message, category = 'all', iconUrl = null, noti
           notiOptions.imageUrl = iconUrl;
         }
 
-        chrome.notifications.create(notificationId, notiOptions, () => {
+        const finalNotiId = notificationId || (category === 'schedule' ? `sched_${Date.now()}` : (category === 'youtube' ? `yt_${Date.now()}` : `noti_${Date.now()}`));
+
+        chrome.notifications.create(finalNotiId, notiOptions, () => {
           if (chrome.runtime.lastError) {
             // 이미지 로드 실패 시 basic 알림으로 fallback 재시도
-            chrome.notifications.create(notificationId, {
+            chrome.notifications.create(finalNotiId, {
               type: "basic",
               iconUrl: defaultLogo,
               title: title,
