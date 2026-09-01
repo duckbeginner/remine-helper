@@ -1350,24 +1350,28 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-function sendNotification(title, message, category = 'all', iconUrl = null, notificationId = null) {
+function sendNotification(title, message, category = 'all', iconUrl = null, notificationId = null, callback = null) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['userSettings'], (res) => {
       const noti = res && res.userSettings && res.userSettings.notifications;
       if (noti) {
-        if (noti.enabled === false) return; // 알림 마스터 OFF
-        if (category === 'youtube' && noti.youtube === false) return;
-        if (category === 'live' && noti.live === false) return;
-        if (category === 'schedule' && noti.schedule === false) return;
+        if (noti.enabled === false) { if (callback) callback(false, "알림 마스터 OFF"); return; }
+        if (category === 'youtube' && noti.youtube === false) { if (callback) callback(false, "유튜브 알림 OFF"); return; }
+        if (category === 'live' && noti.live === false) { if (callback) callback(false, "라이브 알림 OFF"); return; }
+        if (category === 'schedule' && noti.schedule === false) { if (callback) callback(false, "스케줄 알림 OFF"); return; }
       }
       if (chrome.notifications && chrome.notifications.create) {
         const defaultLogo = 'icons/rescene-logo.png';
         const hasValidCustomImage = typeof iconUrl === 'string' && iconUrl.trim().length > 0 && iconUrl !== defaultLogo;
 
+        // 크롬 웹스토어 배포본이 아닌 로컬 개발/테스트 로드 환경인지 자동 감지
+        const isDev = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest && !('update_url' in chrome.runtime.getManifest());
+        const displayTitle = isDev ? `[DEV] ${title}` : title;
+
         const notiOptions = {
           type: hasValidCustomImage ? "image" : "basic",
           iconUrl: defaultLogo,
-          title: title,
+          title: displayTitle,
           message: message,
           priority: 2
         };
@@ -1378,22 +1382,29 @@ function sendNotification(title, message, category = 'all', iconUrl = null, noti
 
         const finalNotiId = notificationId || (category === 'schedule' ? `sched_${Date.now()}` : (category === 'youtube' ? `yt_${Date.now()}` : `noti_${Date.now()}`));
 
-        chrome.notifications.create(finalNotiId, notiOptions, () => {
+        chrome.notifications.create(finalNotiId, notiOptions, (id) => {
           if (chrome.runtime.lastError) {
             // 이미지 로드 실패 시 basic 알림으로 fallback 재시도
             chrome.notifications.create(finalNotiId, {
               type: "basic",
               iconUrl: defaultLogo,
-              title: title,
+              title: displayTitle,
               message: message,
               priority: 2
-            }, () => {
+            }, (fallbackId) => {
               void chrome.runtime.lastError; // lastError 소모하여 Unchecked 에러 방지
+              if (callback) callback(true, fallbackId || finalNotiId);
             });
+          } else {
+            if (callback) callback(true, id || finalNotiId);
           }
         });
+      } else {
+        if (callback) callback(false, "chrome.notifications not available");
       }
     });
+  } else {
+    if (callback) callback(false, "chrome.storage not available");
   }
 }
 
@@ -1609,6 +1620,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });
     });
+    return true;
+  }
+
+  if (request.action === "SEND_NOTIFICATION" || request.action === "sendNotification") {
+    sendNotification(
+      request.title,
+      request.message,
+      request.category || 'all',
+      request.iconUrl || null,
+      request.notificationId || null,
+      (success, notiIdOrReason) => {
+        sendResponse({ success: success, id: notiIdOrReason });
+      }
+    );
     return true;
   }
 
