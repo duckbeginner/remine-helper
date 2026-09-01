@@ -221,15 +221,28 @@ export const REFRESH_INTERVAL_OPTIONS = [
   { value: 360, label: "6시간마다" }
 ];
 
+export const DAILY_SCHEDULE_TIME_OPTIONS = [
+  { value: "06:00", label: "오전 06:00" },
+  { value: "07:00", label: "오전 07:00" },
+  { value: "08:00", label: "오전 08:00" },
+  { value: "09:00", label: "오전 09:00 (기본값)" },
+  { value: "10:00", label: "오전 10:00" },
+  { value: "11:00", label: "오전 11:00" },
+  { value: "12:00", label: "오후 12:00 (정오)" },
+  { value: "13:00", label: "오후 01:00" },
+  { value: "14:00", label: "오후 02:00" }
+];
+
 // 6. 기본 사용자 설정 (User Settings Default)
 export const DEFAULT_USER_SETTINGS = {
   navPosition: 'left', // 'left' | 'right'
   refreshInterval: 15, // 분 단위 (기본 15분)
   notifications: {
-    enabled: true,     // 푸시 알림 전체
-    youtube: true,     // 유튜브 새 영상
-    live: true,        // 실시간 라이브 감지
-    schedule: true     // 스케줄 알림
+    enabled: true,               // 푸시 알림 전체
+    youtube: true,               // 유튜브 새 영상
+    live: true,                  // 실시간 라이브 감지
+    schedule: true,              // 스케줄 알림
+    dailyScheduleTime: "09:00"   // 당일 종합 스케줄 알림 기준 시각
   },
   sound: {
     muteOnLoad: false  // 임베드 로드 시 자동 음소거

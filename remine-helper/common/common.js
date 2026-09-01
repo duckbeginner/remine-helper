@@ -2903,12 +2903,16 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     const notiYoutube = document.getElementById('settingNotiYoutube');
     const notiLive = document.getElementById('settingNotiLive');
     const notiSchedule = document.getElementById('settingNotiSchedule');
+    const dailyScheduleTimeSelect = document.getElementById('settingDailyScheduleTime');
+    const dailyScheduleTimeRow = document.getElementById('dailyScheduleTimeRow');
     const subOpts = document.getElementById('notiSubOptions');
 
     if (notiMaster) notiMaster.checked = noti.enabled !== false;
     if (notiYoutube) notiYoutube.checked = noti.youtube !== false;
     if (notiLive) notiLive.checked = noti.live !== false;
     if (notiSchedule) notiSchedule.checked = noti.schedule !== false;
+    if (dailyScheduleTimeSelect) dailyScheduleTimeSelect.value = noti.dailyScheduleTime || "09:00";
+    if (dailyScheduleTimeRow) dailyScheduleTimeRow.style.opacity = (noti.schedule !== false && noti.enabled !== false) ? '1' : '0.4';
     if (subOpts) subOpts.style.opacity = notiMaster && notiMaster.checked ? '1' : '0.4';
 
     // 4. 탭 순서 & 활성화 목록
@@ -3291,6 +3295,8 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
   const notiYoutube = document.getElementById('settingNotiYoutube');
   const notiLive = document.getElementById('settingNotiLive');
   const notiSchedule = document.getElementById('settingNotiSchedule');
+  const dailyScheduleTimeSelect = document.getElementById('settingDailyScheduleTime');
+  const dailyScheduleTimeRow = document.getElementById('dailyScheduleTimeRow');
   const subOpts = document.getElementById('notiSubOptions');
 
   function syncNotiSettings() {
@@ -3298,9 +3304,11 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       enabled: notiMaster ? notiMaster.checked : true,
       youtube: notiYoutube ? notiYoutube.checked : true,
       live: notiLive ? notiLive.checked : true,
-      schedule: notiSchedule ? notiSchedule.checked : true
+      schedule: notiSchedule ? notiSchedule.checked : true,
+      dailyScheduleTime: dailyScheduleTimeSelect ? dailyScheduleTimeSelect.value : "09:00"
     };
     if (subOpts) subOpts.style.opacity = currentSettings.notifications.enabled ? '1' : '0.4';
+    if (dailyScheduleTimeRow) dailyScheduleTimeRow.style.opacity = (currentSettings.notifications.schedule && currentSettings.notifications.enabled) ? '1' : '0.4';
     saveUserSettings(currentSettings, () => showSaveNotice());
   }
 
@@ -3308,6 +3316,7 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
   if (notiYoutube) notiYoutube.addEventListener('change', syncNotiSettings);
   if (notiLive) notiLive.addEventListener('change', syncNotiSettings);
   if (notiSchedule) notiSchedule.addEventListener('change', syncNotiSettings);
+  if (dailyScheduleTimeSelect) dailyScheduleTimeSelect.addEventListener('change', syncNotiSettings);
 
   // 신규 팬페이지 추가 버튼
   const addFpBtn = document.getElementById('addNewFanpageBtn');

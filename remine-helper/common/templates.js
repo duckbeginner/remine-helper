@@ -1,5 +1,5 @@
 // common/templates.js - 원자/분자/섹션 계층형 HTML 컴포넌트 팩토리
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, REFRESH_INTERVAL_OPTIONS, ICONS } from '../constants.js';
+import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, REFRESH_INTERVAL_OPTIONS, DAILY_SCHEDULE_TIME_OPTIONS, ICONS } from '../constants.js';
 
 // --- 유틸리티 ---
 export function escapeHtml(str) {
@@ -645,13 +645,31 @@ export function createSettingsModalHTML() {
                 <div class="setting-desc">
                   <span>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    당일 스케줄 요약 및 방송/영상 시작 전(30분 이내) 임박 알림
+                    스케줄 알림 (당일 종합 요약 + 30분 전 임박)
                   </span>
                 </div>
                 <label class="setting-switch small">
                   <input type="checkbox" id="settingNotiSchedule" checked>
                   <span class="slider round"></span>
                 </label>
+              </div>
+
+              <!-- 당일 스케줄 요약 알림 발송 시각 설정 -->
+              <div class="setting-item-row sub" id="dailyScheduleTimeRow" style="padding-left: 20px; border-top: 1px dashed rgba(255, 105, 180, 0.2);">
+                <div class="setting-desc">
+                  <span style="font-size: 12px; color: #475569; font-weight: 600;">
+                    ⏰ 당일 스케줄 종합 알림 시간
+                  </span>
+                  <p style="font-size: 11px; color: #888; margin-top: 3px; line-height: 1.4;">
+                    설정된 시각(또는 해당 시각 이후 첫 브라우저 실행 시)에 오늘의 스케줄 요약 알림이 발송됩니다.<br>
+                    설정 시각이 지난 후 켰을 때는 <strong>[남은 일정]</strong>과 <strong>[지난 일정]</strong>으로 구분되어 표시됩니다.
+                  </p>
+                </div>
+                <div class="setting-select-wrap">
+                  <select id="settingDailyScheduleTime" class="setting-select" style="font-size: 12px; padding: 4px 8px; min-width: 130px;">
+                    ${DAILY_SCHEDULE_TIME_OPTIONS.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`).join('\n')}
+                  </select>
+                </div>
               </div>
             </div>
           </div>

@@ -668,48 +668,124 @@ async function processAndMergeScheduleList(rawSchedules) {
   return mergedList;
 }
 
-// 당일 푸시 알림 발송 헬퍼 함수
+// 당일 푸시 알림 발송 헬퍼 함수 (설정 시각 도달/경과 시 발송 + 남은/지난 일정 지능형 분기)
 function checkDailyScheduleNotification(schedules) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return;
+
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  chrome.storage.local.get(['lastScheduleNotiDate'], (res) => {
+
+  chrome.storage.local.get(['lastScheduleNotiDate', 'userSettings'], (res) => {
     const lastNotiDate = res && res.lastScheduleNotiDate;
-    if (lastNotiDate !== todayStr) {
-      const todaySchedules = schedules.filter(item => {
-        const d = parseSafeDate(item.startTime);
-        const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        return itemDateStr === todayStr;
-      });
+    if (lastNotiDate === todayStr) return; // 오늘 이미 발송함
 
-      if (todaySchedules.length > 0) {
-        todaySchedules.sort((a, b) => {
-          const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
-          const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
-          return tA - tB;
-        });
+    const notiSettings = (res && res.userSettings && res.userSettings.notifications) || {};
+    if (notiSettings.enabled === false || notiSettings.schedule === false) return;
 
-        const scheduleLines = todaySchedules.slice(0, 5).map(item => {
-          const cleanTitle = cleanDisplayTitle(item.title);
-          let timePrefix = '';
-          if (item.startTime && !item.isAllday && item.startTime.includes('T')) {
-            const d = parseSafeDate(item.startTime);
-            timePrefix = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}] `;
-          }
-          return `• ${timePrefix}${cleanTitle}`;
-        });
+    // 1. 설정된 알림 시각 확인 (기본값 "09:00")
+    const targetTimeStr = notiSettings.dailyScheduleTime || "09:00";
+    const [targetHour, targetMinute] = targetTimeStr.split(':').map(val => parseInt(val, 10) || 0);
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMinute, 0);
 
-        if (todaySchedules.length > 5) {
-          scheduleLines.push(`• ...외 ${todaySchedules.length - 5}건`);
+    // 아직 설정 시각에 도달하지 않았으면 대기 (해당 시각 이후 백그라운드 주기에서 발송)
+    if (now.getTime() < targetDate.getTime()) {
+      return;
+    }
+
+    // 2. 오늘 날짜의 스케줄 필터링
+    const todaySchedules = schedules.filter(item => {
+      const d = parseSafeDate(item.startTime);
+      const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return itemDateStr === todayStr;
+    });
+
+    if (todaySchedules.length === 0) return;
+
+    // 시간 순 정렬
+    todaySchedules.sort((a, b) => {
+      const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
+      const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
+      return tA - tB;
+    });
+
+    // 3. 남은 일정 vs 지난 일정 분리
+    const nowMs = now.getTime();
+    const remainingSchedules = [];
+    const pastSchedules = [];
+
+    todaySchedules.forEach(item => {
+      if (item.isAllday || !item.startTime || !item.startTime.includes('T')) {
+        // 종일 일정이거나 시간이 없는 일정은 하루 종일 유효하므로 남은 일정에 포함
+        remainingSchedules.push(item);
+      } else {
+        const itemTimeMs = parseSafeDate(item.startTime).getTime();
+        if (itemTimeMs < nowMs) {
+          pastSchedules.push(item);
+        } else {
+          remainingSchedules.push(item);
         }
+      }
+    });
 
-        sendNotification(
-          `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`,
-          scheduleLines.join('\n'),
-          'schedule'
-        );
-        chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
+    const formatLine = (item, isPast = false) => {
+      const cleanTitle = cleanDisplayTitle(item.title);
+      let timePrefix = '';
+      if (item.startTime && !item.isAllday && item.startTime.includes('T')) {
+        const d = parseSafeDate(item.startTime);
+        timePrefix = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}] `;
+      } else if (item.isAllday) {
+        timePrefix = `[종일] `;
+      }
+      return `• ${timePrefix}${cleanTitle}${isPast ? ' (종료)' : ''}`;
+    };
+
+    let notificationTitle = '';
+    const bodyLines = [];
+
+    // [케이스 1] 지난 일정이 없는 경우 (설정 시각 직후 등 정상 시간대)
+    if (pastSchedules.length === 0) {
+      notificationTitle = `📅 오늘 예정된 RESCENE 스케줄 (${todaySchedules.length}건)`;
+      todaySchedules.slice(0, 5).forEach(item => {
+        bodyLines.push(formatLine(item, false));
+      });
+      if (todaySchedules.length > 5) {
+        bodyLines.push(`• ...외 ${todaySchedules.length - 5}건`);
       }
     }
+    // [케이스 2] 이미 지난 일정이 섞여 있는 경우 (설정 시각이 지난 후 늦게 켰을 때)
+    else {
+      notificationTitle = `📅 오늘 RESCENE 스케줄 요약 (총 ${todaySchedules.length}건)`;
+
+      if (remainingSchedules.length > 0) {
+        bodyLines.push(`[남은 일정 ${remainingSchedules.length}건]`);
+        remainingSchedules.slice(0, 3).forEach(item => {
+          bodyLines.push(formatLine(item, false));
+        });
+        if (remainingSchedules.length > 3) {
+          bodyLines.push(`• ...외 ${remainingSchedules.length - 3}건`);
+        }
+      } else {
+        bodyLines.push(`[오늘 예정되었던 일정 - 모두 종료]`);
+      }
+
+      if (pastSchedules.length > 0) {
+        if (bodyLines.length > 0) bodyLines.push('');
+        bodyLines.push(`[지난 일정 ${pastSchedules.length}건]`);
+        pastSchedules.slice(0, 2).forEach(item => {
+          bodyLines.push(formatLine(item, true));
+        });
+        if (pastSchedules.length > 2) {
+          bodyLines.push(`• ...외 ${pastSchedules.length - 2}건`);
+        }
+      }
+    }
+
+    sendNotification(
+      notificationTitle,
+      bodyLines.join('\n'),
+      'schedule'
+    );
+    chrome.storage.local.set({ lastScheduleNotiDate: todayStr });
   });
 }
 
@@ -1289,10 +1365,10 @@ async function fetchInstagramDirect() {
       };
     });
 
-    console.log("📸 인스타그램 공식 API 직접 수집 성공 (최신 게시물):", feeds.length);
+    // console.log("📸 인스타그램 공식 API 직접 수집 성공 (최신 게시물):", feeds.length);
     return feeds;
   } catch (err) {
-    console.warn("⚠️ 인스타그램 직접 수집 지연 (Mnet 백업 사용):", err.message);
+    // console.warn("⚠️ 인스타그램 직접 수집 지연 (Mnet 백업 사용):", err.message);
     return null;
   }
 }
@@ -1323,7 +1399,7 @@ async function fetchTikTokDirect() {
             playCount: v.playCount || 0,
             author: v.authorUniqueId || "rescene_official"
           }));
-          console.log("🎵 틱톡 공식 피드 직접 수집 성공 (최신 비디오):", feeds.length);
+          // console.log("🎵 틱톡 공식 피드 직접 수집 성공 (최신 비디오):", feeds.length);
           return feeds;
         }
       }
@@ -1381,7 +1457,7 @@ async function fetchFeedsFromMnet() {
       }
     }
 
-    console.log("🔍 동적 추출된 Dataset IDs:", { X: xDatasetId, INSTA: instaDatasetId });
+    // console.log("🔍 동적 추출된 Dataset IDs:", { X: xDatasetId, INSTA: instaDatasetId });
 
     // 2️⃣ 추출된 ID가 있다면 X 피드 가져오기
     let xFeeds = [];
@@ -1463,6 +1539,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });
+    });
+    return true;
+  }
+
+  if (request.action === "TRIGGER_DAILY_SCHEDULE_CHECK") {
+    chrome.storage.local.get(['blipSchedules'], (res) => {
+      if (res && res.blipSchedules) {
+        checkDailyScheduleNotification(res.blipSchedules);
+        sendResponse({ success: true, count: res.blipSchedules.length });
+      } else {
+        sendResponse({ success: false, reason: "No schedules found" });
+      }
     });
     return true;
   }
