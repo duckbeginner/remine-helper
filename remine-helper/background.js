@@ -1,9 +1,16 @@
-// background.js 
-// background 전용 코드와 유틸리티 함수를 분리해야겠음
-// 유틸리티 함수는 test-sandbox.js 에서도 사용할 수 있도록 해야 함
-// 유틸리티 함수에 대한 테스트 코드도 별도로 작성해야 함
-// 채널 ID 등도 constants.js 로 이동해야 함
-
+// =========================================================================
+// 환경 감지 & 콘솔 로깅 제어 (로컬 개발/테스트 모드에서만 console.log 활성화)
+// =========================================================================
+(function initConsoleGuard() {
+  const isDev = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest && !('update_url' in chrome.runtime.getManifest());
+  if (!isDev) {
+    const noop = () => {};
+    console.log = noop;
+    console.info = noop;
+    console.debug = noop;
+    console.warn = noop;
+  }
+})();
 
 const OFFICIAL_CHANNEL_ID = "UCtKtCiaWRz-d3EZn2xd1mdA";
 // const OFFICIAL_CHANNEL_ID = "UCQKQTgZJo3PlxA-9V1Z51XA"; //for live test
@@ -1416,8 +1423,14 @@ async function fetchInstagramDirect() {
     const res = await fetch("https://www.instagram.com/api/v1/users/web_profile_info/?username=rescene_official", {
       headers: {
         "X-IG-App-ID": "936619743392459",
+        "X-ASBD-ID": "129477",
+        "X-IG-WWW-Claim": "0",
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "*/*",
         "Referer": "https://www.instagram.com/rescene_official/",
-        "Sec-Fetch-Site": "same-origin"
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty"
       }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1445,10 +1458,9 @@ async function fetchInstagramDirect() {
       };
     });
 
-    // console.log("📸 인스타그램 공식 API 직접 수집 성공 (최신 게시물):", feeds.length);
     return feeds;
   } catch (err) {
-    // console.warn("⚠️ 인스타그램 직접 수집 지연 (Mnet 백업 사용):", err.message);
+    console.warn("⚠️ 인스타그램 직접 수집 지연 (Mnet 백업과 병합):", err.message);
     return null;
   }
 }
@@ -1555,20 +1567,44 @@ async function fetchFeedsFromMnet() {
       }));
     }
 
-    // 3️⃣ 인스타그램 피드: 직접 수집 데이터 우선 사용, 실패 시 Mnet 백업 사용
+    // 3️⃣ 인스타그램 피드: 직접 수집 데이터 최우선 + Mnet 백업 데이터 하이브리드 병합
     let instaFeeds = directInstaFeeds || [];
-    if (instaFeeds.length === 0 && instaDatasetId) {
-      const instaApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${instaDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
-      const instaRes = await fetch(instaApiUrl, fetchOptions);
-      const instaData = await instaRes.json();
-      instaFeeds = (instaData.items || []).map(item => ({
-        id: item.typeId,
-        link: item.link,
-        desc: item.description || "내용 없음",
-        thumb: item.thumbnails && item.thumbnails.length > 0 ? item.thumbnails[0].url : "icons/rescene-logo.png",
-        profile: item.userProfile?.url || "",
-        author: item.userName || "Instagram User"
-      }));
+    if (instaDatasetId) {
+      try {
+        const instaApiUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/home/api/v1/datasets/${instaDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`;
+        const instaRes = await fetch(instaApiUrl, fetchOptions);
+        if (instaRes.ok) {
+          const instaData = await instaRes.json();
+          const mnetInstaItems = (instaData.items || []).map(item => ({
+            id: item.typeId,
+            link: item.link,
+            desc: item.description || "내용 없음",
+            thumb: item.thumbnails && item.thumbnails.length > 0 ? item.thumbnails[0].url : "icons/rescene-logo.png",
+            profile: item.userProfile?.url || "",
+            author: item.userName || "Instagram User"
+          }));
+
+          if (instaFeeds.length === 0) {
+            instaFeeds = mnetInstaItems;
+          } else {
+            const existingShortcodes = new Set(instaFeeds.map(f => {
+              const m = (f.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
+              return m ? m[1] : (f.shortcode || f.id);
+            }));
+
+            mnetInstaItems.forEach(mItem => {
+              const m = (mItem.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
+              const code = m ? m[1] : mItem.id;
+              if (code && !existingShortcodes.has(code)) {
+                instaFeeds.push(mItem);
+                existingShortcodes.add(code);
+              }
+            });
+          }
+        }
+      } catch (mErr) {
+        console.warn("Mnet 인스타 백업 수집 실패:", mErr);
+      }
     }
 
     // 4️⃣ 틱톡 피드

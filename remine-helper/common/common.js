@@ -2,6 +2,20 @@
 import { TAB_CONFIG_LIST, CHANNEL_DATA_MAP, DEFAULT_USER_SETTINGS, FANPAGE_LIST, MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../constants.js';
 import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML, createScheduleModalHTML, createSettingsModalHTML } from './templates.js';
 
+// =========================================================================
+// 환경 감지 & 콘솔 로깅 제어 (로컬 개발/테스트 모드에서만 console.log 활성화)
+// =========================================================================
+(function initConsoleGuard() {
+  const isDev = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest && !('update_url' in chrome.runtime.getManifest());
+  if (!isDev) {
+    const noop = () => {};
+    console.log = noop;
+    console.info = noop;
+    console.debug = noop;
+    console.warn = noop;
+  }
+})();
+
 export function getMemberDisplayName(rawNickname) {
   if (!rawNickname) return '멤버';
   const trimmed = String(rawNickname).trim();

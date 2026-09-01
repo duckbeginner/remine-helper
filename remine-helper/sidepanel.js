@@ -237,33 +237,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const shorts = extractAllShortsVideos(effectiveStorage);
             renderShortsList(shortsContainer, shorts);
           }
-        } else if (targetId === 'tabInsta' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.insta) {
-            renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
-          } else {
-            chrome.storage.local.get(['instaFeeds'], (res) => {
-              if (res && res.instaFeeds) {
-                feedCache.insta = res.instaFeeds;
-                renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
+        } else if (targetId === 'tabInsta') {
+          chrome.storage.local.get(['instaFeeds'], (res) => {
+            const feeds = (res && res.instaFeeds) || feedCache.insta;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.shortcode || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.insta = feeds;
+                renderInstaEmbeds(document.getElementById('instaFeedList'), feeds, isDark);
               }
-            });
-          }
-        } else if (targetId === 'tabX' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.x) {
-            renderXEmbeds(document.getElementById('xFeedList'), feedCache.x, isDark);
-          } else {
-            chrome.storage.local.get(['xFeeds'], (res) => {
-              if (res && res.xFeeds) {
-                feedCache.x = res.xFeeds;
-                renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
+            }
+          });
+        } else if (targetId === 'tabX') {
+          chrome.storage.local.get(['xFeeds'], (res) => {
+            const feeds = (res && res.xFeeds) || feedCache.x;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.x = feeds;
+                renderXEmbeds(document.getElementById('xFeedList'), feeds, isDark);
               }
-            });
-          }
-        } else if (targetId === 'tabTiktok' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feedCache.tiktok || DEFAULT_TIKTOK_FEEDS, isDark);
+            }
+          });
+        } else if (targetId === 'tabTiktok') {
+          chrome.storage.local.get(['tiktokFeeds'], (res) => {
+            const feeds = (res && res.tiktokFeeds) || feedCache.tiktok || DEFAULT_TIKTOK_FEEDS;
+            const hash = JSON.stringify((feeds || []).map(f => f.id || f.link));
+            if (loadedMap[targetId] !== hash) {
+              loadedMap[targetId] = hash;
+              feedCache.tiktok = feeds;
+              renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feeds, isDark);
+            }
+          });
         }
       }
     });
