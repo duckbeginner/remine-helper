@@ -1617,8 +1617,11 @@ async function fetchFeedsFromMnet() {
 }
 
 // =========================================================================
-// 중앙 데이터 허브 (Central Data Hub) 연동 엔진 (1순위 초고속 조회)
+// 중앙 데이터 허브 (Central Data Hub) 연동 엔진
 // =========================================================================
+// 중앙 데이터 허브 단독 동작 검증을 위해 로컬 직접 크롤링 백업을 임시 비활성화 (false)
+const ENABLE_LOCAL_FALLBACK = false;
+
 const CENTRAL_DATA_HUB_URLS = [
   "https://duckbeginner.github.io/remine-helper/api/v1/data.json",
   "https://cdn.jsdelivr.net/gh/duckbeginner/remine-helper@main/docs/api/v1/data.json"
@@ -1717,13 +1720,17 @@ async function executeAllBackgroundRefreshes() {
         }
       }
 
-      // 2️⃣ 2순위 (Fallback 백업): 중앙 허브 접근 실패/오프라인 시 기존 클라이언트 직접 크롤링 수집 가동
-      console.warn("⚠️ 중앙 데이터 허브 응답 지연 -> 클라이언트 직접 수집(Fallback 백업) 가동");
-      await Promise.allSettled([
-        fetchAllData(),
-        fetchFeedsFromMnet()
-      ]);
-      lastBackgroundRefreshTime = Date.now();
+      // 2️⃣ 2순위 (Fallback 백업): 중앙 허브 접근 실패 시 로컬 크롤링 (ENABLE_LOCAL_FALLBACK이 true일 때만 동작)
+      if (ENABLE_LOCAL_FALLBACK) {
+        console.warn("⚠️ 중앙 데이터 허브 응답 지연 -> 클라이언트 직접 수집(Fallback 백업) 가동");
+        await Promise.allSettled([
+          fetchAllData(),
+          fetchFeedsFromMnet()
+        ]);
+        lastBackgroundRefreshTime = Date.now();
+      } else {
+        console.warn("⚠️ [Central Hub Only Test] 중앙 데이터 허브 동기화 실패 (로컬 수집 비활성화 모드)");
+      }
     } finally {
       backgroundRefreshPromise = null;
     }
