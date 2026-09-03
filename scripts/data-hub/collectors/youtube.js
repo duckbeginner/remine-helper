@@ -117,7 +117,7 @@ async function fetchRssFeed(url, channelName = "", retries = 2) {
 }
 
 // 실시간 라이브 방송 On-Air 감지
-async function checkLiveStream(channelId) {
+async function checkLiveStream(channelId, latestOfficialVideo = null) {
   const urlsToTry = [
     `https://www.youtube.com/@RESCENE_official/live`,
     `https://www.youtube.com/channel/${channelId}/live`
