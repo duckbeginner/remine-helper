@@ -1835,28 +1835,59 @@ export function enableIframeScrollGuard(container = document) {
 
 const FEED_PAGE_SIZE = 12;
 
-// 공통 무한 스크롤 바인딩 유틸 (패널 탭 컨테이너 또는 부모 스크롤 감지)
+// 공통 무한 스크롤 바인딩 유틸 (IntersectionObserver 네이티브 뷰포트 감지 + 2중 폴백)
 function bindFeedInfiniteScroll(container, loadMoreFn) {
-  const scrollParent = container.closest(".panel-tab-content") || container.parentElement;
-  if (!scrollParent) return;
+  if (!container) return;
 
-  let isLoadingMore = false;
-  const scrollHandler = () => {
-    if (isLoadingMore) return;
-    const threshold = 300;
-    const isNearBottom = (scrollParent.scrollTop + scrollParent.clientHeight) >= (scrollParent.scrollHeight - threshold);
-    if (isNearBottom) {
-      isLoadingMore = true;
-      const hasMore = loadMoreFn();
-      if (!hasMore) {
-        scrollParent.removeEventListener("scroll", scrollHandler);
-      } else {
-        setTimeout(() => { isLoadingMore = false; }, 100);
-      }
+  // 기존 센티넬이 있으면 제거
+  const oldSentinel = container.querySelector(".feed-scroll-sentinel");
+  if (oldSentinel) oldSentinel.remove();
+
+  const sentinel = document.createElement("div");
+  sentinel.className = "feed-scroll-sentinel";
+  sentinel.style.cssText = "width: 100%; height: 50px; grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; color: #888; font-size: 12px; pointer-events: none; opacity: 0.6;";
+  sentinel.textContent = "피드를 추가로 불러오는 중...";
+  container.appendChild(sentinel);
+
+  let isLoading = false;
+  const triggerLoad = () => {
+    if (isLoading) return;
+    isLoading = true;
+    const hasMore = loadMoreFn();
+    if (!hasMore) {
+      if (observer) observer.disconnect();
+      sentinel.remove();
+    } else {
+      container.appendChild(sentinel);
+      setTimeout(() => { isLoading = false; }, 250);
     }
   };
 
-  scrollParent.addEventListener("scroll", scrollHandler, { passive: true });
+  const observer = new IntersectionObserver((entries) => {
+    const entry = entries[0];
+    if (entry && entry.isIntersecting) {
+      triggerLoad();
+    }
+  }, {
+    rootMargin: "450px"
+  });
+
+  observer.observe(sentinel);
+
+  // 2중 방어 스크롤 리스너 (패널 탭, 컨테이너, 윈도우 스크롤 모두 지원)
+  const scrollParent = container.closest(".panel-tab-content") || container.parentElement;
+  if (scrollParent) {
+    scrollParent.addEventListener("scroll", () => {
+      if (scrollParent.scrollHeight - scrollParent.scrollTop - scrollParent.clientHeight < 450) {
+        triggerLoad();
+      }
+    }, { passive: true });
+  }
+  container.addEventListener("scroll", () => {
+    if (container.scrollHeight - container.scrollTop - container.clientHeight < 450) {
+      triggerLoad();
+    }
+  }, { passive: true });
 }
 
 export function renderInstaEmbeds(container, feeds = [], isDark = false) {
@@ -1869,10 +1900,22 @@ export function renderInstaEmbeds(container, feeds = [], isDark = false) {
   const themeStr = isDark ? "dark" : "light";
   container.innerHTML = "";
 
-  const validFeeds = feeds.filter(feed => {
-    if (feed.shortcode) return true;
+  // 동일한 shortcode/id 중복 원천 제거
+  const seenInstaKeys = new Set();
+  const validFeeds = [];
+  feeds.forEach(feed => {
+    let type = (feed.type || "p").toLowerCase();
+    let id = feed.shortcode || feed.id;
     const link = feed.link || feed.permalink || feed.url || "";
-    return Boolean(link.match(/\/(p|reel|reels)\/([^\/?#]+)/i));
+    const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+    if (m) {
+      type = (m[1] || "p").toLowerCase();
+      id = m[2];
+    }
+    if (id && !seenInstaKeys.has(id)) {
+      seenInstaKeys.add(id);
+      validFeeds.push({ ...feed, id, type });
+    }
   });
 
   let loadedCount = 0;
@@ -1922,7 +1965,16 @@ export function renderXEmbeds(container, feeds = [], isDark = false) {
   const themeStr = isDark ? "dark" : "light";
   container.innerHTML = "";
 
-  const validFeeds = feeds.filter(feed => Boolean(feed.id));
+  // 동일한 tweetId 중복 원천 제거
+  const seenXIds = new Set();
+  const validFeeds = [];
+  feeds.forEach(feed => {
+    const id = String(feed.id || "");
+    if (id && !seenXIds.has(id)) {
+      seenXIds.add(id);
+      validFeeds.push(feed);
+    }
+  });
   let loadedCount = 0;
 
   function appendNextBatch() {
@@ -1958,7 +2010,16 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
 
   if (feeds && feeds.length > 0) {
     container.innerHTML = "";
-    const validFeeds = feeds.filter(feed => Boolean(feed.id));
+    // 동일한 videoId 중복 원천 제거
+    const seenTiktokIds = new Set();
+    const validFeeds = [];
+    feeds.forEach(feed => {
+      const id = String(feed.id || "");
+      if (id && !seenTiktokIds.has(id)) {
+        seenTiktokIds.add(id);
+        validFeeds.push(feed);
+      }
+    });
     let loadedCount = 0;
 
     function appendNextBatch() {

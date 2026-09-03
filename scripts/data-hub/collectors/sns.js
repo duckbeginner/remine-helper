@@ -188,29 +188,33 @@ export async function collectSnsData() {
     }
   } catch (e) {}
 
+  function getInstaKey(item) {
+    if (!item) return '';
+    if (item.shortcode) return item.shortcode;
+    const link = item.link || item.permalink || item.url || '';
+    const m = link.match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
+    if (m) return m[1];
+    return String(item.id || '');
+  }
+
   // 1. Instagram 병합
   let instagram = directInsta;
   if (instagram.length === 0) {
     instagram = mnetSns.instaFeeds;
   } else if (mnetSns.instaFeeds.length > 0) {
-    const existingCodes = new Set(instagram.map(f => {
-      const m = (f.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
-      return m ? m[1] : (f.shortcode || f.id);
-    }));
-
+    const existingCodes = new Set(instagram.map(f => getInstaKey(f)).filter(Boolean));
     mnetSns.instaFeeds.forEach(mItem => {
-      const m = (mItem.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
-      const code = m ? m[1] : mItem.id;
+      const code = getInstaKey(mItem);
       if (code && !existingCodes.has(code)) {
         instagram.push(mItem);
         existingCodes.add(code);
       }
     });
   }
-  // 이전 Instagram 피드 누적 보강
-  const instaCodeSet = new Set(instagram.map(f => (f.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i)?.[1] || f.id));
+  // 이전 Instagram 피드 누적 보강 (동일 게시물 완벽 중복 제거)
+  const instaCodeSet = new Set(instagram.map(f => getInstaKey(f)).filter(Boolean));
   prevInstagram.forEach(pItem => {
-    const code = (pItem.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i)?.[1] || pItem.id;
+    const code = getInstaKey(pItem);
     if (code && !instaCodeSet.has(code)) {
       instagram.push(pItem);
       instaCodeSet.add(code);
