@@ -197,6 +197,44 @@ async function checkLiveStream(channelId) {
     }
   }
 
+  // 3. 만약 /live 엔드포인트가 차단되더라도, 공식 채널 최신 영상 직통 라이브 검증
+  if (latestOfficialVideo && latestOfficialVideo.id) {
+    try {
+      const videoUrl = `https://www.youtube.com/watch?v=${latestOfficialVideo.id}`;
+      const vRes = await fetch(videoUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Cookie": "CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg"
+        }
+      });
+      if (vRes.ok) {
+        const vHtml = await vRes.text();
+        const isVideoLive = vHtml.includes('"isLive":true') || 
+                            vHtml.includes('"isLiveNow":true') || 
+                            vHtml.includes('"status":"LIVE"') ||
+                            vHtml.includes('"isLiveContent":true');
+        console.log(`[YouTube Debug] Latest video live check (${latestOfficialVideo.id}): isLive=${isVideoLive}`);
+        if (isVideoLive) {
+          console.log(`🔴 [YouTube] 공식 채널 최신 영상 라이브 확인 성공! (ID: ${latestOfficialVideo.id}, Title: ${latestOfficialVideo.title})`);
+          return {
+            isLive: true,
+            liveInfo: {
+              id: latestOfficialVideo.id,
+              title: latestOfficialVideo.title,
+              url: `https://www.youtube.com/watch?v=${latestOfficialVideo.id}`,
+              thumbnail: `https://i.ytimg.com/vi/${latestOfficialVideo.id}/hqdefault.jpg`,
+              isShorts: false,
+              isLive: true
+            }
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`[YouTube] Latest video check failed:`, err.message);
+    }
+  }
+
   return { isLive: false, liveInfo: null };
 }
 
@@ -208,12 +246,13 @@ export async function collectYouTubeData() {
   const playlistRssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${OFFICIAL_PLAYLIST_ID}`;
   const woniRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${WONI_CHANNEL_ID}`;
 
-  const [officialVideos, playlistVideos, woniVideos, liveStatus] = await Promise.all([
+  const [officialVideos, playlistVideos, woniVideos] = await Promise.all([
     fetchRssFeed(officialRssUrl, "공식 유튜브"),
     fetchRssFeed(playlistRssUrl, "RESCENE Archive"),
-    fetchRssFeed(woniRssUrl, "안녕하세요원이입니다잘부탁드립니다"),
-    checkLiveStream(OFFICIAL_CHANNEL_ID)
+    fetchRssFeed(woniRssUrl, "안녕하세요원이입니다잘부탁드립니다")
   ]);
+
+  const liveStatus = await checkLiveStream(OFFICIAL_CHANNEL_ID, officialVideos[0]);
 
   const allShorts = [...officialVideos, ...playlistVideos, ...woniVideos].filter(v => v.isShorts);
   console.log(`✓ [YouTube] 완료: 공식 ${officialVideos.length}건, 재생목록 ${playlistVideos.length}건, 원이 ${woniVideos.length}건 (쇼츠 총 ${allShorts.length}건 감지), 라이브: ${liveStatus.isLive ? '🔴 ON AIR' : 'OFF'}`);
