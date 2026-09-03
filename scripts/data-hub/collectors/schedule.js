@@ -1,5 +1,39 @@
-// scripts/data-hub/collectors/schedule.js
-// 블립(Blip) & Mnet Plus 스케줄 수집, 정제, 지능형 중복 병합 및 YouTube oEmbed 사전 보강 엔진
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CACHE_DIR = path.resolve(__dirname, '../../../.cache');
+const OEMBED_CACHE_FILE = path.join(CACHE_DIR, 'oembed-cache.json');
+
+// 캐시 디렉터리 준비
+function ensureCacheDir() {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  }
+}
+
+// 로컬 oEmbed 캐시 로드
+function loadOembedCache() {
+  try {
+    if (fs.existsSync(OEMBED_CACHE_FILE)) {
+      const raw = fs.readFileSync(OEMBED_CACHE_FILE, 'utf8');
+      const obj = JSON.parse(raw);
+      return new Map(Object.entries(obj));
+    }
+  } catch (e) { }
+  return new Map();
+}
+
+// 로컬 oEmbed 캐시 저장
+function saveOembedCache(cacheMap) {
+  try {
+    ensureCacheDir();
+    const obj = Object.fromEntries(cacheMap);
+    fs.writeFileSync(OEMBED_CACHE_FILE, JSON.stringify(obj), 'utf8');
+  } catch (e) { }
+}
 
 // 날짜 파싱 헬퍼
 function parseSafeDate(dateStr) {
@@ -56,7 +90,9 @@ function isTvMainBroadcast(item, channel) {
 // 유튜브 링크가 있는 일정 항목들을 YouTube oEmbed API로 사전 일괄 보강
 async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   if (!Array.isArray(schedules) || schedules.length === 0) return;
-  const oembedCache = new Map();
+  const oembedCache = loadOembedCache();
+  let cacheHitCount = 0;
+  let newFetchCount = 0;
 
   const officialIdSet = new Set((allYtVideos || []).map(v => v.id).filter(Boolean));
 
@@ -70,8 +106,6 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
     }
   });
 
-  console.log(`  🔍 [Schedule oEmbed] 유튜브 연계 일정 ${targetItems.length}건 감지 -> oEmbed 일괄 메타데이터 보강 중...`);
-
   // 병렬 10개씩 청크 처리로 초고속 조회
   const CHUNK_SIZE = 10;
   for (let i = 0; i < targetItems.length; i += CHUNK_SIZE) {
@@ -84,8 +118,11 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
           if (res.ok) {
             oeData = await res.json();
             oembedCache.set(vid, oeData);
+            newFetchCount++;
           }
         } catch (e) { }
+      } else {
+        cacheHitCount++;
       }
 
       if (oeData) {
@@ -126,6 +163,9 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       }
     }));
   }
+
+  saveOembedCache(oembedCache);
+  console.log(`  🔍 [Schedule oEmbed] 총 ${targetItems.length}건 보강 (캐시 적중: ${cacheHitCount}건, 신규 조회: ${newFetchCount}건)`);
 }
 
 // 순수 텍스트 정규화
@@ -373,10 +413,37 @@ export async function collectScheduleData(allYtVideos = []) {
   // 날짜 순 정렬
   mergedList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
 
-  console.log(`✓ [Schedule] 완료: 총 ${allRaw.length}건 중 ${mergedList.length}건 병합 및 oEmbed 보강 완료`);
+  // [초강력 데이터 다이어트] 불필요한 공백, 빈 배열, 중복 필드 제거
+  const slimmedList = mergedList.map(item => {
+    const slim = {
+      title: item.title,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      isAllday: Boolean(item.isAllday),
+      typeId: item.typeId,
+      url: item.url || item.link || undefined,
+      typeText: item.typeText || undefined,
+      channel: item.channel || undefined,
+      location: item.location || undefined,
+      source: item.source || undefined,
+      thumbnail: item.thumbnail || undefined,
+      isOfficialYoutube: item.isOfficialYoutube || undefined,
+      extField: item.extField || undefined
+    };
+
+    // 무의미한 줄바꿈/공백이 아닌 유효한 메시지만 포함 (120KB+ 절감)
+    const trimmedMsg = (item.message || '').trim();
+    if (trimmedMsg && trimmedMsg !== '\n') {
+      slim.message = trimmedMsg;
+    }
+
+    return slim;
+  });
+
+  console.log(`✓ [Schedule] 완료: 총 ${allRaw.length}건 중 ${slimmedList.length}건 병합 및 슬림화 완료`);
 
   return {
-    totalCount: mergedList.length,
-    items: mergedList
+    totalCount: slimmedList.length,
+    items: slimmedList
   };
 }

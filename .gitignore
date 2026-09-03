@@ -36,6 +36,7 @@ docs/api/
 # Node / npm
 node_modules/
 npm-debug.log*
+.cache/
 
 # Development
 # Test sandbox & developer playground
