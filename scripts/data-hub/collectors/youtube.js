@@ -122,13 +122,30 @@ async function checkLiveStream(channelId) {
     if (!res.ok) return { isLive: false, liveInfo: null };
 
     const html = await res.text();
-    const isLiveOnAir = html.includes('"isLive":true') || html.includes('"status":"LIVE"') || html.includes('"liveStreamability"');
+    const isLiveOnAir = html.includes('"isLive":true') || html.includes('"isLiveNow":true') || html.includes('"status":"LIVE"');
 
     if (isLiveOnAir) {
-      const vidMatch = html.match(/"videoId":"([^"]+)"/) || html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([^"]+)">/);
-      const titleMatch = html.match(/<meta name="title" content="([^"]+)">/) || html.match(/"title":{"runs":\[{"text":"([^"]+)"}\]/);
-      const videoId = vidMatch ? vidMatch[1] : null;
-      const title = titleMatch ? decodeXml(titleMatch[1]) : "RESCENE 실시간 라이브";
+      // 1. 실제 라이브 videoId 정밀 추출 (og:url 및 canonical 최우선)
+      let videoId = null;
+      const ogUrlMatch = html.match(/<meta property="og:url" content="([^"]+)"/i) || html.match(/<link rel="canonical" href="([^"]+)"/i);
+      if (ogUrlMatch) {
+        const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
+        if (vMatch) videoId = vMatch[1];
+      }
+      if (!videoId) {
+        const liveVideoMatch = html.match(/"liveStreamability"[\s\S]*?"videoId":"([a-zA-Z0-9_-]{11})"/);
+        if (liveVideoMatch) videoId = liveVideoMatch[1];
+      }
+
+      // 2. 실제 라이브 제목 정밀 추출
+      let title = "RESCENE 실시간 라이브";
+      const ogTitleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<meta name="title" content="([^"]+)"/i);
+      if (ogTitleMatch) {
+        title = decodeXml(ogTitleMatch[1]);
+      } else {
+        const titleRunMatch = html.match(/"title":{"runs":\[{"text":"([^"]+)"}\]/);
+        if (titleRunMatch) title = decodeXml(titleRunMatch[1]);
+      }
 
       if (videoId) {
         return {

@@ -1648,12 +1648,26 @@ async function fetchFromCentralDataHub() {
 async function applyCentralDataToStorage(data) {
   if (!data) return false;
 
+  const isLive = Boolean(data.youtube?.isLive);
+  const liveInfo = data.youtube?.liveInfo || null;
+
+  let latestVideos = [...(data.youtube?.officialVideos || [])];
+  if (isLive && liveInfo) {
+    const existingIdx = latestVideos.findIndex(v => v.id === liveInfo.id);
+    if (existingIdx >= 0) {
+      latestVideos[existingIdx] = { ...latestVideos[existingIdx], ...liveInfo };
+    } else {
+      latestVideos.unshift(liveInfo);
+    }
+  }
+
   const storagePayload = {
-    latestVideos: data.youtube?.officialVideos || [],
+    latestVideos: latestVideos,
     officialPlaylistVideos: data.youtube?.playlistVideos || [],
     woniVideos: data.youtube?.woniVideos || [],
-    isLiveStreaming: Boolean(data.youtube?.isLive),
-    liveVideoInfo: data.youtube?.liveInfo || null,
+    isLive: isLive,
+    isLiveStreaming: isLive,
+    liveVideoInfo: liveInfo,
     blipSchedules: data.schedules?.items || [],
     xFeeds: data.sns?.x || [],
     instaFeeds: data.sns?.instagram || [],

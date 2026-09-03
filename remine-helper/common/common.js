@@ -2615,11 +2615,17 @@ export function initAppStorageData({
     // 2. 실시간 라이브 배너 연동
     const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
     if (liveBanner) {
-      if (result.isLive && result.latestVideos && result.latestVideos.length > 0) {
+      if ((result.isLive || result.isLiveStreaming) && (result.liveVideoInfo || (result.latestVideos && result.latestVideos.length > 0))) {
         liveBanner.style.display = 'block';
-        liveBanner.href = result.latestVideos[0].url || '#';
+        const liveUrl = (result.liveVideoInfo && result.liveVideoInfo.url) || 'https://www.youtube.com/@RESCENE_official/live';
+        liveBanner.href = liveUrl;
+        liveBanner.onclick = (e) => {
+          e.preventDefault();
+          window.open(liveUrl, '_blank');
+        };
       } else {
         liveBanner.style.display = 'none';
+        liveBanner.onclick = null;
       }
     }
 
@@ -2707,14 +2713,20 @@ export function initAppStorageData({
           const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
           if (liveBanner) {
             if (changes.isLive.newValue) {
-              chrome.storage.local.get(['latestVideos'], (res) => {
-                if (res && res.latestVideos && res.latestVideos.length > 0) {
+              chrome.storage.local.get(['latestVideos', 'liveVideoInfo'], (res) => {
+                if (res) {
                   liveBanner.style.display = 'block';
-                  liveBanner.href = res.latestVideos[0].url || '#';
+                  const liveUrl = (res.liveVideoInfo && res.liveVideoInfo.url) || 'https://www.youtube.com/@RESCENE_official/live';
+                  liveBanner.href = liveUrl;
+                  liveBanner.onclick = (e) => {
+                    e.preventDefault();
+                    window.open(liveUrl, '_blank');
+                  };
                 }
               });
             } else {
               liveBanner.style.display = 'none';
+              liveBanner.onclick = null;
             }
           }
         }

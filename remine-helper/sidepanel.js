@@ -312,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
           'woniVideos',
           'blipSchedules',
           'isLive',
+          'isLiveStreaming',
+          'liveVideoInfo',
           'channelOrder',
           'instaFeeds',
           'xFeeds',
