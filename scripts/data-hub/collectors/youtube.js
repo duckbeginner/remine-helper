@@ -1,5 +1,5 @@
 // scripts/data-hub/collectors/youtube.js
-// YouTube 공식 채널, 재생목록, 원이 채널, 라이브 On-Air 실시간 감지 엔진
+// YouTube 공식 채널, 재생목록, 원이 채널, Shorts 판별 및 라이브 On-Air 실시간 감지 엔진
 
 import { OFFICIAL_CHANNEL_ID, OFFICIAL_PLAYLIST_ID, WONI_CHANNEL_ID } from '../constants.js';
 
@@ -14,9 +14,31 @@ function decodeXml(str) {
     .replace(/&#39;/g, "'");
 }
 
+// 개별 영상이 쇼츠인지 정밀 판별
+async function isVideoShorts(videoId, title, entryXml) {
+  if (!videoId) return false;
+  // 1차: 제목 또는 XML 내용 내 쇼츠 키워드/링크 검사
+  if (entryXml.includes('/shorts/') || /shorts|#shorts|#Shorts|\[shorts\]|\(shorts\)|#쇼츠|#short\b/i.test(title + ' ' + entryXml)) {
+    return true;
+  }
+  // 2차: YouTube Shorts 엔드포인트 응답 상태 검사 (쇼츠: 200 OK, 일반 영상: 303 Redirect)
+  try {
+    const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
+      method: 'HEAD',
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      },
+      redirect: 'manual'
+    });
+    return res.status === 200;
+  } catch (e) {
+    return false;
+  }
+}
+
 // YouTube RSS XML 파싱
-function parseYouTubeRss(xmlText) {
-  const videos = [];
+async function parseYouTubeRss(xmlText, channelName = "") {
+  const rawEntries = [];
   const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
   let match;
 
@@ -32,23 +54,46 @@ function parseYouTubeRss(xmlText) {
 
     const pubMatch = entryXml.match(/<published>([^<]+)<\/published>/);
     const publishedAt = pubMatch ? pubMatch[1] : null;
+    const published = publishedAt ? publishedAt.split('T')[0] : "";
+
+    const linkMatch = entryXml.match(/<link rel="alternate" href="(.*?)"\s*\/?>/);
+    const rawUrl = linkMatch ? linkMatch[1] : `https://www.youtube.com/watch?v=${videoId}`;
 
     if (videoId && title) {
-      videos.push({
-        id: videoId,
-        title: title,
-        publishedAt: publishedAt,
-        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        isLive: false
+      rawEntries.push({
+        videoId,
+        title,
+        publishedAt,
+        published,
+        rawUrl,
+        entryXml
       });
     }
   }
+
+  // 쇼츠 여부 병렬 판별
+  const videos = await Promise.all(rawEntries.map(async (entry) => {
+    const isShort = await isVideoShorts(entry.videoId, entry.title, entry.entryXml);
+    const finalUrl = isShort ? `https://www.youtube.com/shorts/${entry.videoId}` : entry.rawUrl;
+
+    return {
+      id: entry.videoId,
+      title: entry.title,
+      published: entry.published,
+      publishedAt: entry.publishedAt,
+      url: finalUrl,
+      thumbnail: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
+      channelName: channelName,
+      isShorts: isShort,
+      isLive: false
+    };
+  }));
 
   return videos;
 }
 
 // RSS 피드 가져오기
-async function fetchRssFeed(url) {
+async function fetchRssFeed(url, channelName = "") {
   try {
     const res = await fetch(url, {
       headers: {
@@ -57,7 +102,7 @@ async function fetchRssFeed(url) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
-    return parseYouTubeRss(xml);
+    return await parseYouTubeRss(xml, channelName);
   } catch (err) {
     console.warn(`[YouTube] RSS Fetch failed (${url}):`, err.message);
     return [];
@@ -91,7 +136,9 @@ async function checkLiveStream(channelId) {
           liveInfo: {
             id: videoId,
             title: title,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
             thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            isShorts: false,
             isLive: true
           }
         };
@@ -107,20 +154,21 @@ async function checkLiveStream(channelId) {
 
 // 전체 유튜브 데이터 수집 진입점
 export async function collectYouTubeData() {
-  console.log("▶ [YouTube] 데이터 수집 시작...");
+  console.log("▶ [YouTube] 데이터 수집 시작 (Shorts 자동 판별 포함)...");
 
   const officialRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${OFFICIAL_CHANNEL_ID}`;
   const playlistRssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${OFFICIAL_PLAYLIST_ID}`;
   const woniRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${WONI_CHANNEL_ID}`;
 
   const [officialVideos, playlistVideos, woniVideos, liveStatus] = await Promise.all([
-    fetchRssFeed(officialRssUrl),
-    fetchRssFeed(playlistRssUrl),
-    fetchRssFeed(woniRssUrl),
+    fetchRssFeed(officialRssUrl, "공식 유튜브"),
+    fetchRssFeed(playlistRssUrl, "RESCENE Archive"),
+    fetchRssFeed(woniRssUrl, "안녕하세요원이입니다잘부탁드립니다"),
     checkLiveStream(OFFICIAL_CHANNEL_ID)
   ]);
 
-  console.log(`✓ [YouTube] 완료: 공식 ${officialVideos.length}건, 재생목록 ${playlistVideos.length}건, 원이 ${woniVideos.length}건, 라이브: ${liveStatus.isLive ? '🔴 ON AIR' : 'OFF'}`);
+  const allShorts = [...officialVideos, ...playlistVideos, ...woniVideos].filter(v => v.isShorts);
+  console.log(`✓ [YouTube] 완료: 공식 ${officialVideos.length}건, 재생목록 ${playlistVideos.length}건, 원이 ${woniVideos.length}건 (쇼츠 총 ${allShorts.length}건 감지), 라이브: ${liveStatus.isLive ? '🔴 ON AIR' : 'OFF'}`);
 
   return {
     isLive: liveStatus.isLive,

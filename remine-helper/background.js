@@ -141,8 +141,7 @@ function setupRefreshAlarms(intervalMinutes = 15) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  fetchAllData();
-  fetchFeedsFromMnet();
+  executeAllBackgroundRefreshes();
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
     chrome.storage.sync.get(['userSettings'], (res) => {
       const settings = res && res.userSettings ? res.userSettings : {};
@@ -1780,8 +1779,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "UPDATE_REFRESH_INTERVAL") {
     const minutes = parseInt(request.intervalMinutes, 10) || 15;
     setupRefreshAlarms(minutes);
-    fetchAllData();
-    fetchFeedsFromMnet();
+    executeAllBackgroundRefreshes();
     sendResponse({ success: true, intervalMinutes: minutes });
     return true;
   }
