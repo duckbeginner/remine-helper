@@ -1833,106 +1833,162 @@ export function enableIframeScrollGuard(container = document) {
   });
 }
 
+const FEED_PAGE_SIZE = 12;
+
+// 공통 무한 스크롤 바인딩 유틸 (패널 탭 컨테이너 또는 부모 스크롤 감지)
+function bindFeedInfiniteScroll(container, loadMoreFn) {
+  const scrollParent = container.closest(".panel-tab-content") || container.parentElement;
+  if (!scrollParent) return;
+
+  let isLoadingMore = false;
+  const scrollHandler = () => {
+    if (isLoadingMore) return;
+    const threshold = 300;
+    const isNearBottom = (scrollParent.scrollTop + scrollParent.clientHeight) >= (scrollParent.scrollHeight - threshold);
+    if (isNearBottom) {
+      isLoadingMore = true;
+      const hasMore = loadMoreFn();
+      if (!hasMore) {
+        scrollParent.removeEventListener("scroll", scrollHandler);
+      } else {
+        setTimeout(() => { isLoadingMore = false; }, 100);
+      }
+    }
+  };
+
+  scrollParent.addEventListener("scroll", scrollHandler, { passive: true });
+}
+
 export function renderInstaEmbeds(container, feeds = [], isDark = false) {
   if (!container) return;
   if (!feeds || feeds.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">인스타그램 피드가 없습니다.</p>';
+    container.innerHTML = "<p style=\"text-align: center; color: #888; padding: 20px;\">인스타그램 피드가 없습니다.</p>";
     return;
   }
 
-  const themeStr = isDark ? 'dark' : 'light';
-  container.innerHTML = '';
+  const themeStr = isDark ? "dark" : "light";
+  container.innerHTML = "";
 
-  feeds.forEach(feed => {
-    const link = feed.link || (feed.shortcode ? `https://www.instagram.com/p/${feed.shortcode}/` : '') || feed.permalink || feed.url || '';
-    const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
-    if (!m) return;
-    const type = (m[1] || 'p').toLowerCase();
-    const id = m[2];
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'feed-iframe-wrapper';
-    wrapper.innerHTML = `
-      <iframe src="https://www.instagram.com/${type}/${id}/embed/captioned/?theme=${themeStr}" 
-              style="width: 100%; height: 650px; min-height: 650px; transition: height 0.3s ease;" 
-              frameborder="0" 
-              scrolling="no" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-              loading="lazy">
-      </iframe>
-    `;
-    container.appendChild(wrapper);
+  const validFeeds = feeds.filter(feed => {
+    if (feed.shortcode) return true;
+    const link = feed.link || feed.permalink || feed.url || "";
+    return Boolean(link.match(/\/(p|reel|reels)\/([^\/?#]+)/i));
   });
 
-  enableIframeScrollGuard(container);
+  let loadedCount = 0;
+
+  function appendNextBatch() {
+    const nextBatch = validFeeds.slice(loadedCount, loadedCount + FEED_PAGE_SIZE);
+    if (nextBatch.length === 0) return false;
+
+    const fragment = document.createDocumentFragment();
+    nextBatch.forEach(feed => {
+      let type = (feed.type || "p").toLowerCase();
+      let id = feed.shortcode || feed.id;
+      const link = feed.link || feed.permalink || feed.url || "";
+      const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+      if (m) {
+        type = (m[1] || "p").toLowerCase();
+        id = m[2];
+      }
+      if (!id) return;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "feed-iframe-wrapper";
+      wrapper.innerHTML = "<iframe src=\"https://www.instagram.com/" + type + "/" + id + "/embed/captioned/?theme=" + themeStr + "\" style=\"width: 100%; height: 650px; min-height: 650px; transition: height 0.3s ease;\" frameborder=\"0\" scrolling=\"no\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" loading=\"lazy\"></iframe>";
+      fragment.appendChild(wrapper);
+    });
+
+    container.appendChild(fragment);
+    loadedCount += nextBatch.length;
+    enableIframeScrollGuard(container);
+    return loadedCount < validFeeds.length;
+  }
+
+  appendNextBatch();
+
+  if (loadedCount < validFeeds.length) {
+    bindFeedInfiniteScroll(container, appendNextBatch);
+  }
 }
 
 export function renderXEmbeds(container, feeds = [], isDark = false) {
   if (!container) return;
   if (!feeds || feeds.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">X 피드가 없습니다.</p>';
+    container.innerHTML = "<p style=\"text-align: center; color: #888; padding: 20px;\">X 피드가 없습니다.</p>";
     return;
   }
 
-  const themeStr = isDark ? 'dark' : 'light';
-  container.innerHTML = '';
+  const themeStr = isDark ? "dark" : "light";
+  container.innerHTML = "";
 
-  feeds.forEach(feed => {
-    const tweetId = feed.id;
-    if (tweetId) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'feed-iframe-wrapper';
-      wrapper.innerHTML = `<iframe src="https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=${themeStr}" style="width: 100%; height: 250px; transition: height 0.3s ease;" frameborder="0" scrolling="no" loading="lazy"></iframe>`;
-      container.appendChild(wrapper);
-    }
-  });
+  const validFeeds = feeds.filter(feed => Boolean(feed.id));
+  let loadedCount = 0;
 
-  enableIframeScrollGuard(container);
+  function appendNextBatch() {
+    const nextBatch = validFeeds.slice(loadedCount, loadedCount + FEED_PAGE_SIZE);
+    if (nextBatch.length === 0) return false;
+
+    const fragment = document.createDocumentFragment();
+    nextBatch.forEach(feed => {
+      const tweetId = feed.id;
+      const wrapper = document.createElement("div");
+      wrapper.className = "feed-iframe-wrapper";
+      wrapper.innerHTML = "<iframe src=\"https://platform.twitter.com/embed/Tweet.html?id=" + tweetId + "&theme=" + themeStr + "\" style=\"width: 100%; height: 250px; transition: height 0.3s ease;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\"></iframe>";
+      fragment.appendChild(wrapper);
+    });
+
+    container.appendChild(fragment);
+    loadedCount += nextBatch.length;
+    enableIframeScrollGuard(container);
+    return loadedCount < validFeeds.length;
+  }
+
+  appendNextBatch();
+
+  if (loadedCount < validFeeds.length) {
+    bindFeedInfiniteScroll(container, appendNextBatch);
+  }
 }
 
 export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
   if (!container) return;
 
-  const themeStr = isDark ? 'dark' : 'light';
+  const themeStr = isDark ? "dark" : "light";
 
-  // 1. 수집된 틱톡 비디오 목록이 있으면 개별 숏폼 플레이어 카드로 렌더링 (반응형 멀티 컬럼 그리드)
   if (feeds && feeds.length > 0) {
-    container.innerHTML = '';
-    feeds.forEach(feed => {
-      const videoId = feed.id;
-      if (videoId) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'feed-iframe-wrapper tiktok-feed-item';
-        wrapper.innerHTML = `
-          <iframe src="https://www.tiktok.com/embed/v2/${videoId}" 
-                  style="width: 325px; max-width: 100%; height: 740px; min-height: 580px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 
-                  frameborder="0" 
-                  scrolling="no" 
-                  loading="lazy" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen>
-          </iframe>
-        `;
-        container.appendChild(wrapper);
-      }
-    });
-    enableIframeScrollGuard(container);
+    container.innerHTML = "";
+    const validFeeds = feeds.filter(feed => Boolean(feed.id));
+    let loadedCount = 0;
+
+    function appendNextBatch() {
+      const nextBatch = validFeeds.slice(loadedCount, loadedCount + FEED_PAGE_SIZE);
+      if (nextBatch.length === 0) return false;
+
+      const fragment = document.createDocumentFragment();
+      nextBatch.forEach(feed => {
+        const videoId = feed.id;
+        const wrapper = document.createElement("div");
+        wrapper.className = "feed-iframe-wrapper tiktok-feed-item";
+        wrapper.innerHTML = "<iframe src=\"https://www.tiktok.com/embed/v2/" + videoId + "\" style=\"width: 325px; max-width: 100%; height: 740px; min-height: 580px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe>";
+        fragment.appendChild(wrapper);
+      });
+
+      container.appendChild(fragment);
+      loadedCount += nextBatch.length;
+      enableIframeScrollGuard(container);
+      return loadedCount < validFeeds.length;
+    }
+
+    appendNextBatch();
+
+    if (loadedCount < validFeeds.length) {
+      bindFeedInfiniteScroll(container, appendNextBatch);
+    }
     return;
   }
 
-  // 2. 피드가 아직 없으면 공식 프로필 위젯으로 폴백 렌더링
-  container.innerHTML = `
-    <div class="feed-iframe-wrapper tiktok-feed-item" style="height: calc(100vh - 120px); min-height: 500px;">
-      <iframe src="https://www.tiktok.com/embed/@rescene_official?theme=${themeStr}" 
-              title="TikTok" 
-              style="width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;" 
-              frameborder="0"
-              scrolling="no"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
-      </iframe>
-    </div>
-  `;
+  container.innerHTML = "<div class=\"feed-iframe-wrapper tiktok-feed-item\" style=\"height: calc(100vh - 120px); min-height: 500px;\"><iframe src=\"https://www.tiktok.com/embed/@rescene_official?theme=" + themeStr + "\" title=\"TikTok\" style=\"width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\"></iframe></div>";
 }
 
 /* =========================================================================

@@ -121,7 +121,7 @@ async function fetchMnetSnsFeeds() {
 
     let xFeeds = [];
     if (xDatasetId) {
-      const xRes = await fetch(`${MNET_API_BASE}/home/api/v1/datasets/${xDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`, fetchOptions);
+      const xRes = await fetch(`${MNET_API_BASE}/home/api/v1/datasets/${xDatasetId}?pageSize=24&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`, fetchOptions);
       if (xRes.ok) {
         const xData = await xRes.json();
         xFeeds = (xData.items || []).map(item => ({
@@ -137,7 +137,7 @@ async function fetchMnetSnsFeeds() {
 
     let instaFeeds = [];
     if (instaDatasetId) {
-      const instaRes = await fetch(`${MNET_API_BASE}/home/api/v1/datasets/${instaDatasetId}?pageSize=10&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`, fetchOptions);
+      const instaRes = await fetch(`${MNET_API_BASE}/home/api/v1/datasets/${instaDatasetId}?pageSize=24&startIndex=0&listProperties=DESCRIPTION&listProperties=LINK&listProperties=THUMBNAIL`, fetchOptions);
       if (instaRes.ok) {
         const instaData = await instaRes.json();
         instaFeeds = (instaData.items || []).map(item => ({
@@ -168,7 +168,27 @@ export async function collectSnsData() {
     fetchMnetSnsFeeds()
   ]);
 
-  // Instagram 하이브리드 병합
+  // 이전 피드 로드 (docs/api/v1/core.json 또는 data.json)하여 누적 아카이빙 (최대 36건 유지)
+  let prevInstagram = [];
+  let prevTiktok = [];
+  let prevX = [];
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const curDir = path.dirname(fileURLToPath(import.meta.url));
+    const corePath = path.resolve(curDir, '../../../docs/api/v1/core.json');
+    const dataPath = path.resolve(curDir, '../../../docs/api/v1/data.json');
+    const targetPath = fs.existsSync(corePath) ? corePath : (fs.existsSync(dataPath) ? dataPath : null);
+    if (targetPath) {
+      const prev = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+      prevInstagram = prev.sns?.instagram || [];
+      prevTiktok = prev.sns?.tiktok || [];
+      prevX = prev.sns?.x || [];
+    }
+  } catch (e) {}
+
+  // 1. Instagram 병합
   let instagram = directInsta;
   if (instagram.length === 0) {
     instagram = mnetSns.instaFeeds;
@@ -187,11 +207,64 @@ export async function collectSnsData() {
       }
     });
   }
+  // 이전 Instagram 피드 누적 보강
+  const instaCodeSet = new Set(instagram.map(f => (f.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i)?.[1] || f.id));
+  prevInstagram.forEach(pItem => {
+    const code = (pItem.link || '').match(/\/(?:p|reel|reels)\/([^\/?#]+)/i)?.[1] || pItem.id;
+    if (code && !instaCodeSet.has(code)) {
+      instagram.push(pItem);
+      instaCodeSet.add(code);
+    }
+  });
 
-  const tiktok = directTikTok;
-  const x = mnetSns.xFeeds;
+  // 2. TikTok 병합 (이전 수집분 누적하여 12건 이상 확보)
+  let tiktok = [...directTikTok];
+  const tiktokIdSet = new Set(tiktok.map(t => t.id));
+  prevTiktok.forEach(pItem => {
+    if (pItem.id && !tiktokIdSet.has(pItem.id)) {
+      tiktok.push(pItem);
+      tiktokIdSet.add(pItem.id);
+    }
+  });
 
-  console.log(`✓ [SNS] 완료: Instagram ${instagram.length}건, TikTok ${tiktok.length}건, X ${x.length}건`);
+  // 3. X 병합
+  let x = [...mnetSns.xFeeds];
+  const xIdSet = new Set(x.map(item => item.id));
+  prevX.forEach(pItem => {
+    if (pItem.id && !xIdSet.has(pItem.id)) {
+      x.push(pItem);
+      xIdSet.add(pItem.id);
+    }
+  });
+
+  // 불필요한 대형 텍스트 필드를 정제하여 경량 슬림화 (1건당 수십 바이트로 수백 건 무한 누적 가능)
+  function slimFeed(f, platform) {
+    if (platform === 'x') {
+      return { id: f.id };
+    }
+    if (platform === 'instagram') {
+      const link = f.link || (f.shortcode ? `https://www.instagram.com/p/${f.shortcode}/` : '') || '';
+      const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+      return {
+        id: f.id,
+        shortcode: m ? m[2] : (f.shortcode || f.id),
+        type: m ? m[1].toLowerCase() : (f.type || 'p')
+      };
+    }
+    if (platform === 'tiktok') {
+      return {
+        id: f.id,
+        title: f.title ? String(f.title).slice(0, 50) : undefined
+      };
+    }
+    return f;
+  }
+
+  instagram = instagram.map(f => slimFeed(f, 'instagram'));
+  tiktok = tiktok.map(f => slimFeed(f, 'tiktok'));
+  x = x.map(f => slimFeed(f, 'x'));
+
+  console.log(`✓ [SNS] 완료: Instagram ${instagram.length}건, TikTok ${tiktok.length}건, X ${x.length}건 (영구 누적 보존)`);
 
   return {
     instagram,
