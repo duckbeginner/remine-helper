@@ -29,7 +29,7 @@ jobs:
         run: node scripts/data-hub/fetch-all.js
 
       - name: Run Schema Validation Test
-        run: node scripts/data-hub/test.js
+        run: node scripts/data-hub/validate.js
 
       - name: Commit and Push if Changed
         run: |
