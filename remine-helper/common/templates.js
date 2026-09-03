@@ -419,6 +419,12 @@ export function createFanpageCardHTML(fanpages = FANPAGE_LIST) {
       <div class="fanpage-links-grid">
         ${linksHtml}
       </div>
+      <div class="artist-protect-container">
+        <a href="https://themuze.kr/protect" target="_blank" class="artist-protect-btn" title="더뮤즈 엔터테인먼트 아티스트 권익 침해 제보 센터 바로가기">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>아티스트 권익 침해 제보하기</span>
+        </a>
+      </div>
     </div>
   `;
 }
