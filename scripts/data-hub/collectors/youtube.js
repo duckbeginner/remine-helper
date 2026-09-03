@@ -136,19 +136,23 @@ async function checkLiveStream(channelId) {
       if (!res.ok) continue;
 
       const html = await res.text();
+      const canonicalTag = html.match(/<link rel="canonical"[^>]*>/i)?.[0] || "";
+      console.log(`[YouTube Debug] Live check (${url}): status=${res.status}, canonical=${canonicalTag}`);
 
       // 1. 핵심 판별: canonical URL이 /watch?v= 형식인지 검사 (SEO 표준 불변 태그)
       let videoId = null;
-      const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})"/i);
-      if (canonicalMatch) {
-        videoId = canonicalMatch[1];
+      const canonicalHrefMatch = canonicalTag.match(/href="([^"]+)"/i);
+      if (canonicalHrefMatch && canonicalHrefMatch[1].includes('/watch')) {
+        const vMatch = canonicalHrefMatch[1].match(/[?&]v=([^&#]+)/);
+        if (vMatch) videoId = vMatch[1];
       }
 
       // 2. 핵심 판별: og:url 검사
       if (!videoId) {
-        const ogMatch = html.match(/<meta property="og:url" content="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})"/i);
-        if (ogMatch) {
-          videoId = ogMatch[1];
+        const ogMatch = html.match(/<meta property="og:url" content="([^"]+)"/i);
+        if (ogMatch && ogMatch[1].includes('/watch')) {
+          const vMatch = ogMatch[1].match(/[?&]v=([^&#]+)/);
+          if (vMatch) videoId = vMatch[1];
         }
       }
 
