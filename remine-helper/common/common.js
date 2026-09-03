@@ -2693,6 +2693,8 @@ export function initAppStorageData({
       'woniVideos',
       'blipSchedules',
       'isLive',
+      'isLiveStreaming',
+      'liveVideoInfo',
       'themeMode',
       'channelOrder'
     ];
@@ -2709,25 +2711,23 @@ export function initAppStorageData({
         if (areaName !== 'local') return;
 
         // 라이브 상태 변경 시 배너 즉시 반영
-        if (changes.isLive) {
+        if (changes.isLive || changes.liveVideoInfo || changes.isLiveStreaming) {
           const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
           if (liveBanner) {
-            if (changes.isLive.newValue) {
-              chrome.storage.local.get(['latestVideos', 'liveVideoInfo'], (res) => {
-                if (res) {
-                  liveBanner.style.display = 'block';
-                  const liveUrl = (res.liveVideoInfo && res.liveVideoInfo.url) || 'https://www.youtube.com/@RESCENE_official/live';
-                  liveBanner.href = liveUrl;
-                  liveBanner.onclick = (e) => {
-                    e.preventDefault();
-                    window.open(liveUrl, '_blank');
-                  };
-                }
-              });
-            } else {
-              liveBanner.style.display = 'none';
-              liveBanner.onclick = null;
-            }
+            chrome.storage.local.get(['isLive', 'isLiveStreaming', 'latestVideos', 'liveVideoInfo'], (res) => {
+              if (res && (res.isLive || res.isLiveStreaming)) {
+                liveBanner.style.display = 'block';
+                const liveUrl = (res.liveVideoInfo && res.liveVideoInfo.url) || 'https://www.youtube.com/@RESCENE_official/live';
+                liveBanner.href = liveUrl;
+                liveBanner.onclick = (e) => {
+                  e.preventDefault();
+                  window.open(liveUrl, '_blank');
+                };
+              } else {
+                liveBanner.style.display = 'none';
+                liveBanner.onclick = null;
+              }
+            });
           }
         }
 
