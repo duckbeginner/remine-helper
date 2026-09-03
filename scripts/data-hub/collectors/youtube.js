@@ -118,62 +118,84 @@ async function fetchRssFeed(url, channelName = "", retries = 2) {
 
 // 실시간 라이브 방송 On-Air 감지
 async function checkLiveStream(channelId) {
-  try {
-    const res = await fetch(`https://www.youtube.com/channel/${channelId}/live`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
-      },
-      redirect: 'follow'
-    });
-    if (!res.ok) return { isLive: false, liveInfo: null };
+  const urlsToTry = [
+    `https://www.youtube.com/@RESCENE_official/live`,
+    `https://www.youtube.com/channel/${channelId}/live`
+  ];
 
-    const html = await res.text();
-    const isLiveOnAir = html.includes('"isLive":true') || html.includes('"isLiveNow":true') || html.includes('"status":"LIVE"');
+  for (const url of urlsToTry) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Cookie": "CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg"
+        },
+        redirect: 'follow'
+      });
+      if (!res.ok) continue;
 
-    if (isLiveOnAir) {
-      // 1. 실제 라이브 videoId 정밀 추출 (og:url 및 canonical 최우선)
-      let videoId = null;
-      const ogUrlMatch = html.match(/<meta property="og:url" content="([^"]+)"/i) || html.match(/<link rel="canonical" href="([^"]+)"/i);
-      if (ogUrlMatch) {
-        const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
-        if (vMatch) videoId = vMatch[1];
-      }
-      if (!videoId) {
-        const liveVideoMatch = html.match(/"liveStreamability"[\s\S]*?"videoId":"([a-zA-Z0-9_-]{11})"/);
-        if (liveVideoMatch) videoId = liveVideoMatch[1];
-      }
+      const finalUrl = res.url || "";
+      const html = await res.text();
 
-      // 2. 실제 라이브 제목 정밀 추출
-      let title = "RESCENE 실시간 라이브";
-      const ogTitleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<meta name="title" content="([^"]+)"/i);
-      if (ogTitleMatch) {
-        title = decodeXml(ogTitleMatch[1]);
-      } else {
-        const titleRunMatch = html.match(/"title":{"runs":\[{"text":"([^"]+)"}\]/);
-        if (titleRunMatch) title = decodeXml(titleRunMatch[1]);
-      }
+      // 라이브 판별: 리다이렉트 URL이 watch?v= 형식이거나 HTML 내 라이브 시그널 존재
+      const hasWatchRedirect = finalUrl.includes('/watch?v=');
+      const isLiveSignal = html.includes('"isLive":true') || 
+                           html.includes('"isLiveNow":true') || 
+                           html.includes('"status":"LIVE"') || 
+                           html.includes('"liveStreamability"');
 
-      if (videoId) {
-        return {
-          isLive: true,
-          liveInfo: {
-            id: videoId,
-            title: title,
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isShorts: false,
-            isLive: true
+      if (hasWatchRedirect || isLiveSignal) {
+        // 1. videoId 정밀 추출
+        let videoId = null;
+        if (hasWatchRedirect) {
+          const vMatch = finalUrl.match(/[?&]v=([^&#]+)/);
+          if (vMatch) videoId = vMatch[1];
+        }
+        if (!videoId) {
+          const ogUrlMatch = html.match(/<meta property="og:url" content="([^"]+)"/i) || html.match(/<link rel="canonical" href="([^"]+)"/i);
+          if (ogUrlMatch) {
+            const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
+            if (vMatch) videoId = vMatch[1];
           }
-        };
-      }
-    }
+        }
+        if (!videoId) {
+          const liveVideoMatch = html.match(/"liveStreamability"[\s\S]*?"videoId":"([a-zA-Z0-9_-]{11})"/);
+          if (liveVideoMatch) videoId = liveVideoMatch[1];
+        }
 
-    return { isLive: false, liveInfo: null };
-  } catch (err) {
-    console.warn(`[YouTube] Live check failed:`, err.message);
-    return { isLive: false, liveInfo: null };
+        // 2. 제목 정밀 추출
+        let title = "RESCENE 실시간 라이브";
+        const ogTitleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<meta name="title" content="([^"]+)"/i);
+        if (ogTitleMatch) {
+          title = decodeXml(ogTitleMatch[1]);
+        } else {
+          const titleTagMatch = html.match(/<title>(.*?)<\/title>/i);
+          if (titleTagMatch) {
+            title = decodeXml(titleTagMatch[1].replace(/ - YouTube$/i, '').trim());
+          }
+        }
+
+        if (videoId) {
+          return {
+            isLive: true,
+            liveInfo: {
+              id: videoId,
+              title: title,
+              url: `https://www.youtube.com/watch?v=${videoId}`,
+              thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+              isShorts: false,
+              isLive: true
+            }
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`[YouTube] Live check failed for ${url}:`, err.message);
+    }
   }
+
+  return { isLive: false, liveInfo: null };
 }
 
 // 전체 유튜브 데이터 수집 진입점
