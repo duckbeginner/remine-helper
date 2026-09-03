@@ -40,5 +40,5 @@ jobs:
             echo "No changes in data.json"
           else
             git commit -m "chore(data-hub): auto-update central feed data.json [skip ci]"
-            git push origin HEAD:main
+            git push origin HEAD:refs/heads/main
           fi
