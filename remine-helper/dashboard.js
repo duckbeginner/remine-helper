@@ -26,6 +26,7 @@ import {
   renderInstaEmbeds,
   renderXEmbeds,
   renderTiktokEmbeds,
+  pauseAllTiktokEmbeds,
   requestBackgroundRefresh
 } from './common/common.js';
 
@@ -166,6 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabEngine(document.getElementById('dashboardTabBar'), document.getElementById('tabGlassSlider'), dashboardTabs, {
       onTabChange: (targetId, tabConfig, loadedMap) => {
         const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+
+        if (targetId !== 'tabTiktok') {
+          pauseAllTiktokEmbeds(document.getElementById('tiktokFeedList'));
+        }
+
         if (targetId === 'tabInsta') {
           chrome.storage.local.get(['instaFeeds'], (res) => {
             const feeds = (res && res.instaFeeds) || feedCache.insta;

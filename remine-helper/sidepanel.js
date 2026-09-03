@@ -25,7 +25,8 @@ import {
   requestBackgroundRefresh,
   extractAllShortsVideos,
   renderShortsList,
-  pauseAllShortsVideos
+  pauseAllShortsVideos,
+  pauseAllTiktokEmbeds
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -219,6 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (targetId !== 'tabShorts') {
           pauseAllShortsVideos();
+        }
+
+        if (targetId !== 'tabTiktok') {
+          pauseAllTiktokEmbeds(document.getElementById('tiktokFeedList'));
         }
 
         if (targetId === 'tabSchedule') {

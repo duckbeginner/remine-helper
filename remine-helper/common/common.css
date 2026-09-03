@@ -1598,7 +1598,7 @@ img.custom-logo {
 
 .tiktok-feed-item {
   width: 100%;
-  max-width: 340px;
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
   background: transparent !important;
@@ -1611,14 +1611,22 @@ img.custom-logo {
   justify-content: center;
 
   iframe {
-    width: 325px;
-    max-width: 100%;
+    width: 100%;
+    /* max-width: 360px; */
+    aspect-ratio: 325 / 580;
     margin: 0 auto;
     border: none;
     border-radius: 12px;
     background: transparent;
     display: block;
-    transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.2s ease;
+  }
+
+  iframe:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
   }
 }
 

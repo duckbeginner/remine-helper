@@ -168,11 +168,11 @@ export async function collectSnsData() {
     fetchMnetSnsFeeds()
   ]);
 
-  // 이전 피드 로드 (docs/api/v1/core.json 또는 data.json)하여 누적 아카이빙 (최대 36건 유지)
+  // 이전 공식 피드 로드 (docs/api/v1/core.json 또는 data.json)하여 순수 공식 채널 피드만 누적
   let prevInstagram = [];
   let prevTiktok = [];
   let prevX = [];
-  let seedFeeds = { x: [], instagram: [], tiktok: [] };
+  let seedTiktok = [];
   try {
     const fs = await import('fs');
     const path = await import('path');
@@ -188,10 +188,11 @@ export async function collectSnsData() {
       prevX = prev.sns?.x || [];
     }
 
-    // 과거 피드 시드 데이터 (과거 스케줄에서 마이닝한 X 122건, Insta 74건) 로드
-    const seedPath = path.resolve(curDir, '../seeds/past-feeds.json');
-    if (fs.existsSync(seedPath)) {
-      seedFeeds = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+    // 공식 틱톡 아카이브 시드 로드
+    const tiktokSeedPath = path.resolve(curDir, '../seeds/tiktok-official.json');
+    if (fs.existsSync(tiktokSeedPath)) {
+      const seedIds = JSON.parse(fs.readFileSync(tiktokSeedPath, 'utf8'));
+      seedTiktok = seedIds.map(id => ({ id: String(id) }));
     }
   } catch (e) {}
 
@@ -204,7 +205,7 @@ export async function collectSnsData() {
     return String(item.id || '');
   }
 
-  // 1. Instagram 병합 (최신 Mnet 20건 + 이전 누적분 + 과거 시드 아카이브 74건)
+  // 1. Instagram 공식 피드 병합 (직접 수집 + 공식 Mnet 피드 + 이전 누적 공식 피드)
   let instagram = directInsta;
   if (instagram.length === 0) {
     instagram = mnetSns.instaFeeds;
@@ -218,9 +219,8 @@ export async function collectSnsData() {
       }
     });
   }
-  // 이전 Instagram 피드 및 과거 시드 누적 보강 (동일 게시물 완벽 중복 제거)
   const instaCodeSet = new Set(instagram.map(f => getInstaKey(f)).filter(Boolean));
-  [...prevInstagram, ...(seedFeeds?.instagram || [])].forEach(pItem => {
+  prevInstagram.forEach(pItem => {
     const code = getInstaKey(pItem);
     if (code && !instaCodeSet.has(code)) {
       instagram.push(pItem);
@@ -228,20 +228,20 @@ export async function collectSnsData() {
     }
   });
 
-  // 2. TikTok 병합 (최신 10건 + 이전 누적분 + 과거 시드)
+  // 2. TikTok 공식 피드 병합 (직접 최신 수집 + 이전 누적분 + 공식 틱톡 아카이브)
   let tiktok = [...directTikTok];
   const tiktokIdSet = new Set(tiktok.map(t => t.id));
-  [...prevTiktok, ...(seedFeeds?.tiktok || [])].forEach(pItem => {
+  [...prevTiktok, ...seedTiktok].forEach(pItem => {
     if (pItem.id && !tiktokIdSet.has(pItem.id)) {
       tiktok.push(pItem);
       tiktokIdSet.add(pItem.id);
     }
   });
 
-  // 3. X 병합 (최신 Mnet 20건 + 이전 누적분 + 과거 시드 아카이브 122건)
+  // 3. X 공식 피드 병합 (공식 Mnet 피드 + 이전 누적 공식 피드)
   let x = [...mnetSns.xFeeds];
   const xIdSet = new Set(x.map(item => item.id));
-  [...prevX, ...(seedFeeds?.x || [])].forEach(pItem => {
+  prevX.forEach(pItem => {
     if (pItem.id && !xIdSet.has(pItem.id)) {
       x.push(pItem);
       xIdSet.add(pItem.id);

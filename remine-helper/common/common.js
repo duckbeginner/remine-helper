@@ -8,7 +8,7 @@ import { escapeHtml, createVideoCardHTML, createFanpageLinkCardHTML, createSched
 (function initConsoleGuard() {
   const isDev = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest && !('update_url' in chrome.runtime.getManifest());
   if (!isDev) {
-    const noop = () => {};
+    const noop = () => { };
     console.log = noop;
     console.info = noop;
     console.debug = noop;
@@ -2003,10 +2003,116 @@ export function renderXEmbeds(container, feeds = [], isDark = false) {
   }
 }
 
+// 틱톡 iframe에 공식 postMessage 일시정지 명령 전송 (공식 TikTok Embed Player 규격)
+export function pauseTiktokIframe(iframe) {
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage({
+      'x-tiktok-player': true,
+      type: 'pause'
+    }, '*');
+  } catch (e) { }
+}
+
+// 탭 전환 또는 패널 비활성화 시 모든 틱톡 일괄 일시정지
+export function pauseAllTiktokEmbeds(container) {
+  if (!container) return;
+  const iframes = container.querySelectorAll('.tiktok-feed-item iframe');
+  iframes.forEach(iframe => pauseTiktokIframe(iframe));
+}
+
+// 틱톡 음소거 및 볼륨 전역 동기화 상태 관리
+let lastTiktokMutedState = null;
+let lastTiktokVolumeState = null;
+
+export function sendTiktokMuteCommand(iframe, isMuted) {
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage({
+      'x-tiktok-player': true,
+      type: isMuted ? 'mute' : 'unMute'
+    }, '*');
+  } catch (e) { }
+}
+
+// 틱톡 플레이어 전역 이벤트 리스너 (음소거 동기화 & 전체화면 복구)
+let tiktokGlobalEventsInitialized = false;
+function initTiktokGlobalEvents() {
+  if (tiktokGlobalEventsInitialized || typeof window === 'undefined') return;
+  tiktokGlobalEventsInitialized = true;
+
+  // 1. 틱톡 플레이어의 음소거 / 볼륨 변경 이벤트 수신 및 전파
+  window.addEventListener('message', (e) => {
+    const data = e.data;
+    if (!data || typeof data !== 'object') return;
+    if (data['x-tiktok-player']) {
+      if (data.type === 'onMute') {
+        const isMuted = !!data.value;
+        lastTiktokMutedState = isMuted;
+        // 다른 모든 틱톡 영상에 음소거 상태 동기화
+        const iframes = document.querySelectorAll('.tiktok-feed-item iframe');
+        iframes.forEach(iframe => {
+          if (iframe.contentWindow && iframe.contentWindow !== e.source) {
+            sendTiktokMuteCommand(iframe, isMuted);
+          }
+        });
+      } else if (data.type === 'onVolumeChange') {
+        lastTiktokVolumeState = data.value;
+      }
+    }
+  });
+
+  // 2. 전체화면(최대화) 해제 시 세로 늘어남 방지 (인라인 강제 크기 제거 -> aspect-ratio 복원)
+  const handleFullscreenExit = () => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const iframes = document.querySelectorAll('.tiktok-feed-item iframe');
+      iframes.forEach(iframe => {
+        iframe.style.removeProperty('height');
+        iframe.style.removeProperty('max-height');
+        iframe.style.removeProperty('min-height');
+        iframe.style.removeProperty('width');
+      });
+    }
+  };
+
+  document.addEventListener('fullscreenchange', handleFullscreenExit);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+}
+
+// 틱톡 뷰포트 이탈 감지 옵저버 (화면 밖으로 나간 영상 일시정지 - 카드 크기/DOM 변경 일절 없음)
+let tiktokPlayerObserver = null;
+function getTiktokPlayerObserver() {
+  initTiktokGlobalEvents();
+
+  if (!tiktokPlayerObserver && typeof IntersectionObserver !== 'undefined') {
+    tiktokPlayerObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // 화면(뷰포트)에서 벗어난 틱톡 영상에 공식 pause 전송
+        if (!entry.isIntersecting) {
+          const iframe = entry.target.querySelector('iframe');
+          if (iframe) pauseTiktokIframe(iframe);
+        }
+      });
+    }, {
+      root: null, // 브라우저 뷰포트 기준
+      threshold: 0.05 // 화면을 95% 이상 벗어났을 때 트리거
+    });
+
+    // 브라우저 탭 비활성화 시 모든 틱톡 일괄 일시정지
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        document.querySelectorAll('.tiktok-feed-item iframe').forEach(iframe => pauseTiktokIframe(iframe));
+      }
+    });
+  }
+  return tiktokPlayerObserver;
+}
+
 export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
   if (!container) return;
 
   const themeStr = isDark ? "dark" : "light";
+  const observer = getTiktokPlayerObserver();
 
   if (feeds && feeds.length > 0) {
     container.innerHTML = "";
@@ -2027,15 +2133,34 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
       if (nextBatch.length === 0) return false;
 
       const fragment = document.createDocumentFragment();
+      const newWrappers = [];
       nextBatch.forEach(feed => {
         const videoId = feed.id;
         const wrapper = document.createElement("div");
         wrapper.className = "feed-iframe-wrapper tiktok-feed-item";
-        wrapper.innerHTML = "<iframe src=\"https://www.tiktok.com/embed/v2/" + videoId + "\" style=\"width: 325px; max-width: 100%; height: 740px; min-height: 580px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe>";
+        wrapper.innerHTML = "<iframe src=\"https://www.tiktok.com/player/v1/" + videoId + "?controls=1\" style=\"width: 100%; aspect-ratio: 325 / 580; border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe>";
         fragment.appendChild(wrapper);
+        newWrappers.push(wrapper);
       });
 
       container.appendChild(fragment);
+
+      // DOM에 마운트된 후 뷰포트 이탈 옵저버 등록 및 음소거 상태 상속
+      if (observer) {
+        newWrappers.forEach(w => observer.observe(w));
+      }
+
+      if (lastTiktokMutedState !== null) {
+        newWrappers.forEach(w => {
+          const iframe = w.querySelector('iframe');
+          if (iframe) {
+            iframe.addEventListener('load', () => {
+              sendTiktokMuteCommand(iframe, lastTiktokMutedState);
+            }, { once: true });
+          }
+        });
+      }
+
       loadedCount += nextBatch.length;
       enableIframeScrollGuard(container);
       return loadedCount < validFeeds.length;
@@ -2049,7 +2174,7 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
     return;
   }
 
-  container.innerHTML = "<div class=\"feed-iframe-wrapper tiktok-feed-item\" style=\"height: calc(100vh - 120px); min-height: 500px;\"><iframe src=\"https://www.tiktok.com/embed/@rescene_official?theme=" + themeStr + "\" title=\"TikTok\" style=\"width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\"></iframe></div>";
+  container.innerHTML = "<div class=\"feed-iframe-wrapper tiktok-feed-item\" style=\"height: calc(100vh - 120px); min-height: 500px;\"><iframe src=\"https://www.tiktok.com/embed/@rescene_official?theme=" + themeStr + "\" title=\"TikTok\" style=\"width: 325px; max-width: 100%; height: 100%; min-height: 500px; transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: none; border-radius: 12px; display: block; margin: 0 auto;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\" allow=\"accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\"></iframe></div>";
 }
 
 /* =========================================================================
