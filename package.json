@@ -1,0 +1,11 @@
+{
+  "name": "remine-helper",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "RESCENE Remine Helper Extension & Data Hub",
+  "scripts": {
+    "fetch-data": "node scripts/data-hub/fetch-all.js",
+    "test": "node scripts/data-hub/test.js"
+  }
+}

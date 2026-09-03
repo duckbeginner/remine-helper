@@ -25,6 +25,7 @@ archive/
 guide/
 scripts/capture*
 scripts/sync*
+docs/api/
 
 # IDE & Editor files
 .vscode/

@@ -1,0 +1,44 @@
+name: Central Data Hub Sync
+
+on:
+  schedule:
+    # 15분마다 자동 실행 (UTC 기준)
+    - cron: '*/15 * * * *'
+  push:
+    paths:
+      - 'scripts/data-hub/**'
+      - '.github/workflows/data-hub-sync.yml'
+  workflow_dispatch: # GitHub UI에서 수동 트리거 가능
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Data Hub Aggregator
+        run: node scripts/data-hub/fetch-all.js
+
+      - name: Run Schema Validation Test
+        run: node scripts/data-hub/test.js
+
+      - name: Commit and Push if Changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -f docs/api/v1/data.json
+          if git diff --staged --quiet; then
+            echo "No changes in data.json"
+          else
+            git commit -m "chore(data-hub): auto-update central feed data.json [skip ci]"
+            git push origin HEAD:main
+          fi
