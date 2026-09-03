@@ -31,14 +31,8 @@ jobs:
       - name: Run Schema Validation Test
         run: node scripts/data-hub/validate.js
 
-      - name: Commit and Push if Changed
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -f docs/api/v1/data.json
-          if git diff --staged --quiet; then
-            echo "No changes in data.json"
-          else
-            git commit -m "chore(data-hub): auto-update central feed data.json [skip ci]"
-            git push origin HEAD:refs/heads/main
-          fi
+      - name: Upload data.json to GitHub Gist
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: "44b49b328233ef6157499debe03f165c"
+        run: node scripts/data-hub/upload-gist.js

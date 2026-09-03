@@ -1623,6 +1623,7 @@ async function fetchFeedsFromMnet() {
 const ENABLE_LOCAL_FALLBACK = false;
 
 const CENTRAL_DATA_HUB_URLS = [
+  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/data.json",
   "https://duckbeginner.github.io/remine-helper/api/v1/data.json",
   "https://cdn.jsdelivr.net/gh/duckbeginner/remine-helper@main/docs/api/v1/data.json"
 ];
