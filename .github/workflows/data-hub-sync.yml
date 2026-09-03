@@ -2,8 +2,8 @@ name: Central Data Hub Sync
 
 on:
   schedule:
-    # 5분마다 자동 실행 (UTC 기준)
-    - cron: '*/5 * * * *'
+    # 15분마다 자동 실행 (UTC 기준)
+    - cron: '*/15 * * * *'
   push:
     paths:
       - 'scripts/data-hub/**'
