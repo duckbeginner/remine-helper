@@ -346,6 +346,23 @@ document.addEventListener('DOMContentLoaded', () => {
           if (tabListChanged || fanpagesChanged) {
             renderAppViews(settings.tabList, settings.fanpages, { isInitial: false, cachedStorage: res });
           } else {
+            // [스마트 렌더링 가드] 이미 마이크로 캐시 등으로 렌더링 완료된 상태이고 핵심 데이터가 동일하면 무거운 DOM 전체 재렌더링 스킵!
+            const prevCore = fullStorageData ? `${fullStorageData.latestVideos?.[0]?.id}-${fullStorageData.isLive}-${fullStorageData.blipSchedules?.length}` : '';
+            const newCore = `${res.latestVideos?.[0]?.id}-${res.isLive}-${res.blipSchedules?.length}`;
+            if (prevCore && prevCore === newCore && document.getElementById('youtubeList')?.children.length > 0) {
+              // 라이브 배너 상태만 경량 업데이트
+              const liveBanner = document.getElementById('liveBanner');
+              if (liveBanner) {
+                if ((res.isLive || res.isLiveStreaming) && res.liveVideoInfo) {
+                  liveBanner.style.display = 'block';
+                  liveBanner.href = res.liveVideoInfo.url;
+                } else if (!res.isLive && !res.isLiveStreaming) {
+                  liveBanner.style.display = 'none';
+                }
+              }
+              return;
+            }
+
             initAppStorageData({
               hubContainerId: 'hubContainer',
               liveBannerId: 'liveBanner',
