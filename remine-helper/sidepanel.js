@@ -231,12 +231,20 @@ document.addEventListener('DOMContentLoaded', () => {
             shortsContainer.innerHTML = `
               <iframe id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
             `;
+            const iframe = document.getElementById('shortsTabFrame');
+            if (iframe) {
+              iframe.onload = () => {
+                chrome.storage.local.get(['latestVideos', 'officialPlaylistVideos', 'woniVideos'], (res) => {
+                  const shorts = extractAllShortsVideos(res || fullStorageData || microCache);
+                  renderShortsList(shortsContainer, shorts);
+                });
+              };
+            }
           }
-          const effectiveStorage = fullStorageData || microCache;
-          if (shortsContainer && effectiveStorage) {
-            const shorts = extractAllShortsVideos(effectiveStorage);
+          chrome.storage.local.get(['latestVideos', 'officialPlaylistVideos', 'woniVideos'], (res) => {
+            const shorts = extractAllShortsVideos(res || fullStorageData || microCache);
             renderShortsList(shortsContainer, shorts);
-          }
+          });
         } else if (targetId === 'tabInsta') {
           chrome.storage.local.get(['instaFeeds'], (res) => {
             const feeds = (res && res.instaFeeds) || feedCache.insta;

@@ -713,13 +713,28 @@ if (typeof window !== 'undefined') {
       const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
       const iframe = document.getElementById('shortsTabFrame');
       const muteOnLoad = getMuteOnLoadSetting();
-      if (iframe && iframe.contentWindow && cachedShortsData) {
-        iframe.contentWindow.postMessage({
-          type: 'INIT_SHORTS_DATA',
-          shorts: cachedShortsData,
-          isDark,
-          muteOnLoad
-        }, '*');
+      if (iframe && iframe.contentWindow) {
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.get(['latestVideos', 'officialPlaylistVideos', 'woniVideos'], (res) => {
+            const shorts = (res && (res.latestVideos || res.officialPlaylistVideos || res.woniVideos))
+              ? extractAllShortsVideos(res)
+              : (cachedShortsData || []);
+            cachedShortsData = shorts;
+            iframe.contentWindow.postMessage({
+              type: 'INIT_SHORTS_DATA',
+              shorts: shorts,
+              isDark,
+              muteOnLoad
+            }, '*');
+          });
+        } else if (cachedShortsData) {
+          iframe.contentWindow.postMessage({
+            type: 'INIT_SHORTS_DATA',
+            shorts: cachedShortsData,
+            isDark,
+            muteOnLoad
+          }, '*');
+        }
       }
     }
   });
