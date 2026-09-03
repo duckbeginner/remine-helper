@@ -127,7 +127,7 @@ async function checkLiveStream(channelId) {
     try {
       const res = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
           "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
           "Cookie": "CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg"
         },
@@ -135,48 +135,46 @@ async function checkLiveStream(channelId) {
       });
       if (!res.ok) continue;
 
-      const finalUrl = res.url || "";
       const html = await res.text();
 
-      // 라이브 판별: 리다이렉트 URL이 watch?v= 형식이거나 HTML 내 라이브 시그널 존재
-      const hasWatchRedirect = finalUrl.includes('/watch?v=');
-      const isLiveSignal = html.includes('"isLive":true') || 
-                           html.includes('"isLiveNow":true') || 
-                           html.includes('"status":"LIVE"') || 
-                           html.includes('"liveStreamability"');
+      // 1. 핵심 판별: canonical URL이 /watch?v= 형식인지 검사 (SEO 표준 불변 태그)
+      let videoId = null;
+      const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})"/i);
+      if (canonicalMatch) {
+        videoId = canonicalMatch[1];
+      }
 
-      if (hasWatchRedirect || isLiveSignal) {
-        // 1. videoId 정밀 추출
-        let videoId = null;
-        if (hasWatchRedirect) {
-          const vMatch = finalUrl.match(/[?&]v=([^&#]+)/);
-          if (vMatch) videoId = vMatch[1];
+      // 2. 핵심 판별: og:url 검사
+      if (!videoId) {
+        const ogMatch = html.match(/<meta property="og:url" content="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})"/i);
+        if (ogMatch) {
+          videoId = ogMatch[1];
         }
-        if (!videoId) {
-          const ogUrlMatch = html.match(/<meta property="og:url" content="([^"]+)"/i) || html.match(/<link rel="canonical" href="([^"]+)"/i);
-          if (ogUrlMatch) {
-            const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
-            if (vMatch) videoId = vMatch[1];
-          }
-        }
-        if (!videoId) {
-          const liveVideoMatch = html.match(/"liveStreamability"[\s\S]*?"videoId":"([a-zA-Z0-9_-]{11})"/);
-          if (liveVideoMatch) videoId = liveVideoMatch[1];
-        }
+      }
 
-        // 2. 제목 정밀 추출
-        let title = "RESCENE 실시간 라이브";
-        const ogTitleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<meta name="title" content="([^"]+)"/i);
-        if (ogTitleMatch) {
-          title = decodeXml(ogTitleMatch[1]);
-        } else {
-          const titleTagMatch = html.match(/<title>(.*?)<\/title>/i);
-          if (titleTagMatch) {
-            title = decodeXml(titleTagMatch[1].replace(/ - YouTube$/i, '').trim());
-          }
+      // 3. HTML 내 라이브 상태 플래그 검사
+      const isLiveOnAir = html.includes('"isLive":true') || 
+                          html.includes('"isLiveNow":true') || 
+                          html.includes('"status":"LIVE"') || 
+                          html.includes('"liveStreamability"');
+
+      if (videoId || isLiveOnAir) {
+        if (!videoId) {
+          const vidMatch = html.match(/"liveStreamability"[\s\S]*?"videoId":"([a-zA-Z0-9_-]{11})"/);
+          if (vidMatch) videoId = vidMatch[1];
         }
 
         if (videoId) {
+          let title = "RESCENE 실시간 라이브";
+          const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || 
+                             html.match(/<meta name="title" content="([^"]+)"/i) ||
+                             html.match(/<title>(.*?)<\/title>/i);
+          if (titleMatch) {
+            title = decodeXml(titleMatch[1].replace(/ - YouTube$/i, '').trim());
+          }
+
+          console.log(`🔴 [YouTube] 실시간 라이브 On-Air 감지 성공! (ID: ${videoId}, Title: ${title})`);
+
           return {
             isLive: true,
             liveInfo: {
