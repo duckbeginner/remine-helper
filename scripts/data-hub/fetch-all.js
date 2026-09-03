@@ -24,12 +24,20 @@ async function main() {
   const startTime = Date.now();
 
   try {
-    // 1. 모든 수집기를 병렬로 실행
-    const [youtube, schedule, sns] = await Promise.all([
+    // 1. YouTube & SNS 수집
+    const [youtube, sns] = await Promise.all([
       collectYouTubeData(),
-      collectScheduleData(),
       collectSnsData()
     ]);
+
+    const allYtVideos = [
+      ...(youtube.officialVideos || []),
+      ...(youtube.playlistVideos || []),
+      ...(youtube.woniVideos || [])
+    ];
+
+    // 2. Schedule 수집 & YouTube oEmbed 사전 보강
+    const schedule = await collectScheduleData(allYtVideos);
 
     // 2. 통합 데이터 구조체 생성
     const now = new Date();

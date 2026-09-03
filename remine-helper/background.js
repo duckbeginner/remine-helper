@@ -154,10 +154,8 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "refreshData") {
-    fetchAllData();
-  } else if (alarm.name === "fetchSocialFeeds") {
-    fetchFeedsFromMnet();
+  if (alarm.name === "refreshData" || alarm.name === "fetchSocialFeeds") {
+    executeAllBackgroundRefreshes();
   }
 });
 
@@ -1619,6 +1617,84 @@ async function fetchFeedsFromMnet() {
   }
 }
 
+// =========================================================================
+// 중앙 데이터 허브 (Central Data Hub) 연동 엔진 (1순위 초고속 조회)
+// =========================================================================
+const CENTRAL_DATA_HUB_URLS = [
+  "https://duckbeginner.github.io/remine-helper/api/v1/data.json",
+  "https://cdn.jsdelivr.net/gh/duckbeginner/remine-helper@main/docs/api/v1/data.json"
+];
+
+async function fetchFromCentralDataHub() {
+  for (const baseUrl of CENTRAL_DATA_HUB_URLS) {
+    try {
+      const url = `${baseUrl}?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && data.youtube && data.schedules && Array.isArray(data.schedules.items)) {
+        return data;
+      }
+    } catch (e) {
+      // 다음 CDN 엔드포인트 시도
+    }
+  }
+  return null;
+}
+
+async function applyCentralDataToStorage(data) {
+  if (!data) return false;
+
+  const storagePayload = {
+    latestVideos: data.youtube?.officialVideos || [],
+    officialPlaylistVideos: data.youtube?.playlistVideos || [],
+    woniVideos: data.youtube?.woniVideos || [],
+    isLiveStreaming: Boolean(data.youtube?.isLive),
+    liveVideoInfo: data.youtube?.liveInfo || null,
+    blipSchedules: data.schedules?.items || [],
+    xFeeds: data.sns?.x || [],
+    instaFeeds: data.sns?.instagram || [],
+    tiktokFeeds: data.sns?.tiktok || [],
+    lastCentralSyncTime: Date.now(),
+    lastCentralSyncUpdatedAt: data.updatedAt || null
+  };
+
+  await chrome.storage.local.set(storagePayload);
+
+  // 스케줄 알림 검사
+  if (storagePayload.blipSchedules.length > 0) {
+    checkUpcomingScheduleAlerts(storagePayload.blipSchedules);
+    checkDailyScheduleNotification(storagePayload.blipSchedules);
+  }
+
+  // 라이브 감지 시 알림 처리
+  if (data.youtube?.isLive && data.youtube?.liveInfo) {
+    const liveInfo = data.youtube.liveInfo;
+    chrome.storage.local.get(['liveNotificationHistory', 'userSettings'], (res) => {
+      const settings = res.userSettings || {};
+      if (settings.notifyLive !== false) {
+        const notiHistory = res.liveNotificationHistory || {};
+        const key = `live_${liveInfo.id}`;
+        const now = Date.now();
+        // 동일 라이브에 대해 12시간 내 중복 알림 방지
+        if (!notiHistory[key] || (now - notiHistory[key] > 12 * 60 * 60 * 1000)) {
+          sendNotification(
+            "🔴 RESCENE 유튜브 라이브 시작!",
+            liveInfo.title || "지금 RESCENE 공식 유튜브 라이브가 진행 중입니다!",
+            "live",
+            liveInfo.thumbnail || "icons/rescene-logo.png",
+            key
+          );
+          notiHistory[key] = now;
+          chrome.storage.local.set({ liveNotificationHistory: notiHistory });
+        }
+      }
+    });
+  }
+
+  return true;
+}
+
 let lastBackgroundRefreshTime = 0;
 let backgroundRefreshPromise = null;
 
@@ -1628,6 +1704,22 @@ async function executeAllBackgroundRefreshes() {
   }
   backgroundRefreshPromise = (async () => {
     try {
+      // 1️⃣ 1순위: 중앙 데이터 허브에서 초고속 단일 조회 (0.01초)
+      const centralData = await fetchFromCentralDataHub();
+      if (centralData) {
+        const applied = await applyCentralDataToStorage(centralData);
+        if (applied) {
+          lastBackgroundRefreshTime = Date.now();
+          console.log("⚡ [Central Hub] 중앙 데이터 허브에서 최신 데이터 즉시 동기화 완료!", {
+            updatedAt: centralData.updatedAt,
+            schedules: centralData.schedules?.totalCount
+          });
+          return;
+        }
+      }
+
+      // 2️⃣ 2순위 (Fallback 백업): 중앙 허브 접근 실패/오프라인 시 기존 클라이언트 직접 크롤링 수집 가동
+      console.warn("⚠️ 중앙 데이터 허브 응답 지연 -> 클라이언트 직접 수집(Fallback 백업) 가동");
       await Promise.allSettled([
         fetchAllData(),
         fetchFeedsFromMnet()
