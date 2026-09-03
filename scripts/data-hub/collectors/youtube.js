@@ -211,9 +211,7 @@ async function checkLiveStream(channelId, latestOfficialVideo = null) {
       if (vRes.ok) {
         const vHtml = await vRes.text();
         const isVideoLive = vHtml.includes('"isLive":true') || 
-                            vHtml.includes('"isLiveNow":true') || 
-                            vHtml.includes('"status":"LIVE"') ||
-                            vHtml.includes('"isLiveContent":true');
+                            vHtml.includes('"isLiveNow":true');
         console.log(`[YouTube Debug] Latest video live check (${latestOfficialVideo.id}): isLive=${isVideoLive}`);
         if (isVideoLive) {
           console.log(`🔴 [YouTube] 공식 채널 최신 영상 라이브 확인 성공! (ID: ${latestOfficialVideo.id}, Title: ${latestOfficialVideo.title})`);

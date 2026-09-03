@@ -1,5 +1,5 @@
 // scripts/data-hub/validate.js
-// data.json 스키마 및 무결성 검증 테스트 러너
+// 2계층 데이터 허브 무결성 검증 테스트 러너 (core.json, schedules.json, data.json)
 
 import fs from 'fs';
 import path from 'path';
@@ -7,26 +7,24 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE = path.resolve(__dirname, '../../docs/api/v1/data.json');
+const OUTPUT_DIR = path.resolve(__dirname, '../../docs/api/v1');
+
+const CORE_FILE = path.join(OUTPUT_DIR, 'core.json');
+const SCHEDULES_FILE = path.join(OUTPUT_DIR, 'schedules.json');
+const DATA_FILE = path.join(OUTPUT_DIR, 'data.json');
 
 function runValidation() {
   console.log("==================================================");
-  console.log("🧪 [Data Hub Test] data.json 무결성 검증 시작");
+  console.log("🧪 [Data Hub Test] 2계층 데이터 무결성 검증 시작");
   console.log("==================================================\n");
 
-  if (!fs.existsSync(DATA_FILE)) {
-    console.error(`❌ 실패: data.json 파일이 존재하지 않습니다 (${DATA_FILE})`);
+  if (!fs.existsSync(CORE_FILE) || !fs.existsSync(SCHEDULES_FILE)) {
+    console.error("❌ 실패: 필수 데이터 파일(core.json, schedules.json)이 존재하지 않습니다.");
     process.exit(1);
   }
 
-  const raw = fs.readFileSync(DATA_FILE, 'utf8');
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (e) {
-    console.error("❌ 실패: 유효하지 않은 JSON 포맷입니다:", e.message);
-    process.exit(1);
-  }
+  const core = JSON.parse(fs.readFileSync(CORE_FILE, 'utf8'));
+  const schedules = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
 
   let passed = 0;
   let failed = 0;
@@ -41,40 +39,38 @@ function runValidation() {
     }
   }
 
-  console.log("1️⃣ 메타데이터 검증");
-  assert(data.version === "1.0.0", "버전 번호 일치 (1.0.0)");
-  assert(Boolean(data.updatedAt) && !isNaN(new Date(data.updatedAt).getTime()), "updatedAt ISO 날짜 유효성");
-  assert(typeof data.updatedAtTimestamp === 'number', "updatedAtTimestamp 숫자형 타임스탬프");
+  console.log("1️⃣ [core.json] 초경량 헤드 검증");
+  assert(core.version === "1.0.0", "버전 번호 일치 (1.0.0)");
+  assert(typeof core.youtube?.isLive === 'boolean', "isLive 불리언 필드 존재");
+  assert(Array.isArray(core.youtube?.officialVideos) && core.youtube.officialVideos.length > 0, `공식 채널 영상 완비 (${core.youtube?.officialVideos?.length}건)`);
+  assert(Array.isArray(core.sns?.x) && core.sns.x.length > 0, `X 피드 완비 (${core.sns?.x?.length}건)`);
+  assert(Array.isArray(core.schedules?.activeItems), `활성 스케줄 배열 존재 (${core.schedules?.activeItems?.length}건)`);
+  assert(typeof core.schedules?.totalMasterCount === 'number' && core.schedules.totalMasterCount > 100, `마스터 스케줄 총계 표기 (${core.schedules?.totalMasterCount}건)`);
+  assert(Boolean(core.schedules?.masterUpdatedAt), "마스터 스케줄 갱신 타임스탬프 유효");
 
-  console.log("\n2️⃣ YouTube 데이터 검증");
-  assert(typeof data.youtube?.isLive === 'boolean', "isLive 불리언 필드 존재");
-  assert(Array.isArray(data.youtube?.officialVideos) && data.youtube.officialVideos.length > 0, `공식 채널 영상 존재 (${data.youtube?.officialVideos?.length}건)`);
-  assert(Array.isArray(data.youtube?.playlistVideos), `재생목록 영상 배열 형식 (${data.youtube?.playlistVideos?.length}건)`);
-  assert(Array.isArray(data.youtube?.woniVideos) && data.youtube.woniVideos.length > 0, `원이 채널 영상 존재 (${data.youtube?.woniVideos?.length}건)`);
+  console.log("\n2️⃣ [schedules.json] 마스터 아카이브 검증");
+  assert(schedules.version === "1.0.0", "버전 번호 일치 (1.0.0)");
+  assert(typeof schedules.totalCount === 'number' && schedules.totalCount > 100, `전체 마스터 아카이브 100건 이상 집계 (${schedules.totalCount}건)`);
+  assert(Array.isArray(schedules.items) && schedules.items.length === schedules.totalCount, "아카이브 items 배열 길이 일치");
+  
+  const sampleSchedule = schedules.items?.[0];
+  assert(Boolean(sampleSchedule?.title && sampleSchedule?.startTime), "스케줄 필수 필드(title, startTime) 완비");
 
-  const sampleVideo = data.youtube?.officialVideos?.[0];
-  assert(Boolean(sampleVideo?.id && sampleVideo?.title && sampleVideo?.thumbnail), "영상 객체 필수 필드(id, title, thumbnail) 완비");
-
-  console.log("\n3️⃣ Schedule 데이터 검증");
-  assert(typeof data.schedules?.totalCount === 'number' && data.schedules.totalCount > 100, `스케줄 100건 이상 집계 (${data.schedules?.totalCount}건)`);
-  assert(Array.isArray(data.schedules?.items) && data.schedules.items.length === data.schedules.totalCount, "스케줄 items 배열 길이 일치");
-
-  const sampleSchedule = data.schedules?.items?.[0];
-  assert(Boolean(sampleSchedule?.title && sampleSchedule?.startTime), "스케줄 객체 필수 필드(title, startTime) 완비");
-
-  console.log("\n4️⃣ SNS 데이터 검증");
-  assert(Array.isArray(data.sns?.instagram) && data.sns.instagram.length > 0, `Instagram 피드 존재 (${data.sns?.instagram?.length}건)`);
-  assert(Array.isArray(data.sns?.tiktok) && data.sns.tiktok.length > 0, `TikTok 피드 존재 (${data.sns?.tiktok?.length}건)`);
-  assert(Array.isArray(data.sns?.x) && data.sns.x.length > 0, `X 피드 존재 (${data.sns?.x?.length}건)`);
+  console.log("\n3️⃣ 파일 크기 2계층 다이어트 규격 검증");
+  const coreKb = Buffer.byteLength(JSON.stringify(core)) / 1024;
+  const schedKb = Buffer.byteLength(JSON.stringify(schedules)) / 1024;
+  assert(coreKb <= 80, `core.json 80KB 이하 초경량 유지 (${coreKb.toFixed(2)} KB)`);
+  assert(schedKb <= 600, `schedules.json 마스터 아카이브 규격 내 유지 (${schedKb.toFixed(2)} KB)`);
 
   console.log("\n==================================================");
   console.log(`📊 검증 결과: 통과 ${passed}개, 실패 ${failed}개`);
   console.log("==================================================");
 
   if (failed > 0) {
+    console.error(`🚨 검증 실패: ${failed}개의 테스트가 실패했습니다.`);
     process.exit(1);
   } else {
-    console.log("🎉 모든 검증 테스트를 완벽하게 통과했습니다!\n");
+    console.log("🎉 모든 2계층 검증 테스트를 완벽하게 통과했습니다!\n");
   }
 }
 

@@ -1622,25 +1622,47 @@ async function fetchFeedsFromMnet() {
 // 중앙 데이터 허브 단독 동작 검증을 위해 로컬 직접 크롤링 백업을 임시 비활성화 (false)
 const ENABLE_LOCAL_FALLBACK = false;
 
-const CENTRAL_DATA_HUB_URLS = [
-  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/data.json",
-  "https://duckbeginner.github.io/remine-helper/api/v1/data.json",
-  "https://cdn.jsdelivr.net/gh/duckbeginner/remine-helper@main/docs/api/v1/data.json"
+const CENTRAL_CORE_URLS = [
+  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/core.json",
+  "https://duckbeginner.github.io/remine-helper/api/v1/core.json",
+  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/data.json"
 ];
 
+const CENTRAL_SCHEDULES_URLS = [
+  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/schedules.json",
+  "https://duckbeginner.github.io/remine-helper/api/v1/schedules.json"
+];
+
+// 1계층: 초경량 core.json 다운로드 (단 20~25 KB, 5분 고속 동기화)
 async function fetchFromCentralDataHub() {
-  for (const baseUrl of CENTRAL_DATA_HUB_URLS) {
+  for (const baseUrl of CENTRAL_CORE_URLS) {
     try {
       const url = `${baseUrl}?_t=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-cache' });
       if (!res.ok) continue;
       const data = await res.json();
-      if (data && data.youtube && data.schedules && Array.isArray(data.schedules.items)) {
+      if (data && data.youtube) {
         return data;
       }
     } catch (e) {
-      // 다음 CDN 엔드포인트 시도
+      // 다음 엔드포인트 시도
     }
+  }
+  return null;
+}
+
+// 2계층: 마스터 스케줄 아카이브 다운로드 (신규 일정 변경 시 단 1회 백그라운드 동기화)
+async function fetchMasterSchedules() {
+  for (const baseUrl of CENTRAL_SCHEDULES_URLS) {
+    try {
+      const url = `${baseUrl}?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        return data.items;
+      }
+    } catch (e) { }
   }
   return null;
 }
@@ -1661,6 +1683,10 @@ async function applyCentralDataToStorage(data) {
     }
   }
 
+  // 1. 활성 스케줄 우선 확보 (core.json의 activeItems 또는 data.json의 items)
+  const activeSchedules = data.schedules?.activeItems || data.schedules?.items || [];
+  const masterUpdatedAt = data.schedules?.masterUpdatedAt || data.updatedAt || null;
+
   const storagePayload = {
     latestVideos: latestVideos,
     officialPlaylistVideos: data.youtube?.playlistVideos || [],
@@ -1668,7 +1694,7 @@ async function applyCentralDataToStorage(data) {
     isLive: isLive,
     isLiveStreaming: isLive,
     liveVideoInfo: liveInfo,
-    blipSchedules: data.schedules?.items || [],
+    activeSchedules: activeSchedules,
     xFeeds: data.sns?.x || [],
     instaFeeds: data.sns?.instagram || [],
     tiktokFeeds: data.sns?.tiktok || [],
@@ -1676,13 +1702,41 @@ async function applyCentralDataToStorage(data) {
     lastCentralSyncUpdatedAt: data.updatedAt || null
   };
 
-  await chrome.storage.local.set(storagePayload);
+  // 2. 마스터 아카이브 갱신 여부 검사 (로컬 스토리지와 비교)
+  const local = await chrome.storage.local.get(['blipSchedules', 'schedulesMasterUpdatedAt']);
+  let needMasterSync = false;
 
-  // 스케줄 알림 검사
-  if (storagePayload.blipSchedules.length > 0) {
-    checkUpcomingScheduleAlerts(storagePayload.blipSchedules);
-    checkDailyScheduleNotification(storagePayload.blipSchedules);
+  if (!local.blipSchedules || local.blipSchedules.length === 0) {
+    needMasterSync = true;
+  } else if (masterUpdatedAt && local.schedulesMasterUpdatedAt !== masterUpdatedAt) {
+    needMasterSync = true;
   }
+
+  if (needMasterSync) {
+    // 백그라운드 비동기로 전체 마스터 아카이브 다운로드
+    fetchMasterSchedules().then(masterItems => {
+      if (masterItems && masterItems.length > 0) {
+        chrome.storage.local.set({
+          blipSchedules: masterItems,
+          schedulesMasterUpdatedAt: masterUpdatedAt
+        });
+        checkUpcomingScheduleAlerts(masterItems);
+        checkDailyScheduleNotification(masterItems);
+      }
+    });
+  } else {
+    // 기존 마스터 아카이브가 최신이면 유지하되 활성 스케줄 알림 검사
+    const currentList = local.blipSchedules || activeSchedules;
+    checkUpcomingScheduleAlerts(currentList);
+    checkDailyScheduleNotification(currentList);
+  }
+
+  // 만약 아직 로컬에 blipSchedules가 아예 없다면 우선 activeSchedules로 초기화
+  if (!local.blipSchedules || local.blipSchedules.length === 0) {
+    storagePayload.blipSchedules = activeSchedules;
+  }
+
+  await chrome.storage.local.set(storagePayload);
 
   // 라이브 감지 시 알림 처리
   if (data.youtube?.isLive && data.youtube?.liveInfo) {

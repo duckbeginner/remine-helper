@@ -1348,8 +1348,8 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     nextIndex = Math.max(0, schedules.length - 1);
   }
 
-  // 기준점(오늘/가장 가까운 예정 일정) 중심: 전 15개 + 후 15개 초기 로드
-  const CHUNK_SIZE = 15;
+  // 기준점(오늘/가장 가까운 예정 일정) 중심: 전 40개 + 후 40개 넉넉한 초기 로드로 스크롤 끊김 완전 제거
+  const CHUNK_SIZE = 40;
   let startIndex = Math.max(0, nextIndex - CHUNK_SIZE);
   let endIndex = Math.min(schedules.length, nextIndex + CHUNK_SIZE + 1);
 
@@ -1500,11 +1500,11 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     setTimeout(() => { isScrollingLoading = false; }, 60);
   }
 
-  // 양방향 무한 스크롤 핸들러 (위/아래 넉넉한 80px 임계값으로 추가 로드)
+  // 양방향 무한 스크롤 핸들러 (위/아래 250px 사전 감지로 끊김 없는 매끄러운 추가 로드)
   scrollEl.onscroll = () => {
-    if (scrollEl.scrollTop <= 80 && startIndex > 0) {
+    if (scrollEl.scrollTop <= 250 && startIndex > 0) {
       loadPastItems();
-    } else if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 80 && endIndex < schedules.length) {
+    } else if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 250 && endIndex < schedules.length) {
       loadFutureItems();
     }
   };
