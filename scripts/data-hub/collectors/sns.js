@@ -172,6 +172,7 @@ export async function collectSnsData() {
   let prevInstagram = [];
   let prevTiktok = [];
   let prevX = [];
+  let seedFeeds = { x: [], instagram: [], tiktok: [] };
   try {
     const fs = await import('fs');
     const path = await import('path');
@@ -186,6 +187,12 @@ export async function collectSnsData() {
       prevTiktok = prev.sns?.tiktok || [];
       prevX = prev.sns?.x || [];
     }
+
+    // 과거 피드 시드 데이터 (과거 스케줄에서 마이닝한 X 122건, Insta 74건) 로드
+    const seedPath = path.resolve(curDir, '../seeds/past-feeds.json');
+    if (fs.existsSync(seedPath)) {
+      seedFeeds = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+    }
   } catch (e) {}
 
   function getInstaKey(item) {
@@ -197,7 +204,7 @@ export async function collectSnsData() {
     return String(item.id || '');
   }
 
-  // 1. Instagram 병합
+  // 1. Instagram 병합 (최신 Mnet 20건 + 이전 누적분 + 과거 시드 아카이브 74건)
   let instagram = directInsta;
   if (instagram.length === 0) {
     instagram = mnetSns.instaFeeds;
@@ -211,9 +218,9 @@ export async function collectSnsData() {
       }
     });
   }
-  // 이전 Instagram 피드 누적 보강 (동일 게시물 완벽 중복 제거)
+  // 이전 Instagram 피드 및 과거 시드 누적 보강 (동일 게시물 완벽 중복 제거)
   const instaCodeSet = new Set(instagram.map(f => getInstaKey(f)).filter(Boolean));
-  prevInstagram.forEach(pItem => {
+  [...prevInstagram, ...(seedFeeds?.instagram || [])].forEach(pItem => {
     const code = getInstaKey(pItem);
     if (code && !instaCodeSet.has(code)) {
       instagram.push(pItem);
@@ -221,20 +228,20 @@ export async function collectSnsData() {
     }
   });
 
-  // 2. TikTok 병합 (이전 수집분 누적하여 12건 이상 확보)
+  // 2. TikTok 병합 (최신 10건 + 이전 누적분 + 과거 시드)
   let tiktok = [...directTikTok];
   const tiktokIdSet = new Set(tiktok.map(t => t.id));
-  prevTiktok.forEach(pItem => {
+  [...prevTiktok, ...(seedFeeds?.tiktok || [])].forEach(pItem => {
     if (pItem.id && !tiktokIdSet.has(pItem.id)) {
       tiktok.push(pItem);
       tiktokIdSet.add(pItem.id);
     }
   });
 
-  // 3. X 병합
+  // 3. X 병합 (최신 Mnet 20건 + 이전 누적분 + 과거 시드 아카이브 122건)
   let x = [...mnetSns.xFeeds];
   const xIdSet = new Set(x.map(item => item.id));
-  prevX.forEach(pItem => {
+  [...prevX, ...(seedFeeds?.x || [])].forEach(pItem => {
     if (pItem.id && !xIdSet.has(pItem.id)) {
       x.push(pItem);
       xIdSet.add(pItem.id);
