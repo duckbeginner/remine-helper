@@ -92,21 +92,28 @@ async function parseYouTubeRss(xmlText, channelName = "") {
   return videos;
 }
 
-// RSS 피드 가져오기
-async function fetchRssFeed(url, channelName = "") {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+// RSS 피드 가져오기 (최대 2회 재시도)
+async function fetchRssFeed(url, channelName = "", retries = 2) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const xml = await res.text();
+      const videos = await parseYouTubeRss(xml, channelName);
+      if (videos.length > 0) return videos;
+    } catch (err) {
+      if (attempt === retries) {
+        console.warn(`[YouTube] RSS Fetch failed after ${retries} attempts (${url}):`, err.message);
+        return [];
       }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const xml = await res.text();
-    return await parseYouTubeRss(xml, channelName);
-  } catch (err) {
-    console.warn(`[YouTube] RSS Fetch failed (${url}):`, err.message);
-    return [];
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
   }
+  return [];
 }
 
 // 실시간 라이브 방송 On-Air 감지

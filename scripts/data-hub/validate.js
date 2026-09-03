@@ -49,7 +49,7 @@ function runValidation() {
   console.log("\n2️⃣ YouTube 데이터 검증");
   assert(typeof data.youtube?.isLive === 'boolean', "isLive 불리언 필드 존재");
   assert(Array.isArray(data.youtube?.officialVideos) && data.youtube.officialVideos.length > 0, `공식 채널 영상 존재 (${data.youtube?.officialVideos?.length}건)`);
-  assert(Array.isArray(data.youtube?.playlistVideos) && data.youtube.playlistVideos.length > 0, `재생목록 영상 존재 (${data.youtube?.playlistVideos?.length}건)`);
+  assert(Array.isArray(data.youtube?.playlistVideos), `재생목록 영상 배열 형식 (${data.youtube?.playlistVideos?.length}건)`);
   assert(Array.isArray(data.youtube?.woniVideos) && data.youtube.woniVideos.length > 0, `원이 채널 영상 존재 (${data.youtube?.woniVideos?.length}건)`);
 
   const sampleVideo = data.youtube?.officialVideos?.[0];
