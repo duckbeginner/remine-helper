@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadedMap[targetId] = true;
             const themeParam = isDark ? '?theme=dark' : '?theme=light';
             shortsContainer.innerHTML = `
-              <iframe id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+              <iframe credentialless id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
             `;
             const iframe = document.getElementById('shortsTabFrame');
             if (iframe) {

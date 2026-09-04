@@ -11,11 +11,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://*.youtube.com/*",
-    "https://blip.kr/*",
-    "https://*.mnetplus.world/*",
-    "https://*.instagram.com/*",
-    "https://*.tiktok.com/*"
+    "https://gist.githubusercontent.com/*",
+    "https://duckbeginner.github.io/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -40,6 +37,6 @@
     "default_path": "sidepanel.html"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' https://duckbeginner.github.io https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://www.tiktok.com https://*.mnetplus.world https://blip.kr https://*.bstage.in https://*.x.com https://platform.twitter.com https://platform.x.com https://syndication.twitter.com;"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' https://duckbeginner.github.io https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://*.tiktok.com https://*.x.com https://platform.twitter.com https://syndication.twitter.com;"
   }
 }

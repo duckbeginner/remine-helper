@@ -238,6 +238,36 @@ export async function collectSnsData() {
     }
   });
 
+  // 최신 틱톡 24건에 대해 공식 oEmbed API를 통한 썸네일 및 제목 보강
+  async function enrichTikTokWithOEmbed(list, limit = 24) {
+    const head = list.slice(0, limit);
+    const tail = list.slice(limit);
+    const enrichedHead = await Promise.all(head.map(async item => {
+      if (item.thumb || item.cover) return item;
+      try {
+        const res = await fetch(`https://www.tiktok.com/oembed?url=https://www.tiktok.com/@rescene_official/video/${item.id}`, {
+          headers: { "User-Agent": "Mozilla/5.0" }
+        });
+        if (res.ok) {
+          const d = await res.json();
+          return {
+            ...item,
+            title: d.title || item.title,
+            thumb: d.thumbnail_url
+          };
+        }
+      } catch (e) {}
+      return item;
+    }));
+    return [...enrichedHead, ...tail];
+  }
+
+  try {
+    tiktok = await enrichTikTokWithOEmbed(tiktok, 24);
+  } catch (e) {
+    console.warn("[SNS] TikTok oEmbed enrichment failed:", e.message);
+  }
+
   // 3. X 공식 피드 병합 (공식 Mnet 피드 + 이전 누적 공식 피드)
   let x = [...mnetSns.xFeeds];
   const xIdSet = new Set(x.map(item => item.id));
@@ -248,24 +278,35 @@ export async function collectSnsData() {
     }
   });
 
-  // 불필요한 대형 텍스트 필드를 정제하여 경량 슬림화 (1건당 수십 바이트로 수백 건 무한 누적 가능)
+  // 불필요한 대형 텍스트 필드를 정제하여 경량 슬림화하되, 썸네일과 본문 핵심 텍스트는 보존
   function slimFeed(f, platform) {
     if (platform === 'x') {
-      return { id: f.id };
+      return {
+        id: f.id,
+        desc: f.desc && f.desc !== "내용 없음" ? String(f.desc).slice(0, 140) : undefined,
+        thumb: f.thumb && !f.thumb.includes("icons/rescene-logo.png") ? f.thumb : undefined,
+        link: f.link || (f.id ? `https://twitter.com/RESCENEofficial/status/${f.id}` : undefined)
+      };
     }
     if (platform === 'instagram') {
       const link = f.link || (f.shortcode ? `https://www.instagram.com/p/${f.shortcode}/` : '') || '';
       const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+      const shortcode = m ? m[2] : (f.shortcode || f.id);
+      const type = m ? m[1].toLowerCase() : (f.type || 'p');
       return {
         id: f.id,
-        shortcode: m ? m[2] : (f.shortcode || f.id),
-        type: m ? m[1].toLowerCase() : (f.type || 'p')
+        shortcode,
+        type,
+        desc: f.desc && f.desc !== "내용 없음" ? String(f.desc).slice(0, 100) : undefined,
+        thumb: f.thumb && !f.thumb.includes("icons/rescene-logo.png") ? f.thumb : undefined,
+        link: link || `https://www.instagram.com/${type}/${shortcode}/`
       };
     }
     if (platform === 'tiktok') {
       return {
         id: f.id,
-        title: f.title ? String(f.title).slice(0, 50) : undefined
+        title: f.title ? String(f.title).slice(0, 80) : undefined,
+        thumb: f.thumb || f.cover || undefined
       };
     }
     return f;
