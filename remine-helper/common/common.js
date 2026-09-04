@@ -1985,50 +1985,12 @@ export function renderXEmbeds(container, feeds = [], isDark = false) {
     const fragment = document.createDocumentFragment();
     nextBatch.forEach(feed => {
       const tweetId = feed.id;
-      const fullLink = feed.link || `https://twitter.com/RESCENEofficial/status/${tweetId}`;
+      if (!tweetId) return;
 
-      // 텍스트나 썸네일이 있는 경우 초경량 네이티브 카드 렌더링
-      if (feed.desc || feed.thumb) {
-        const card = document.createElement("a");
-        card.className = "sns-native-card";
-        card.href = fullLink;
-        card.target = "_blank";
-        card.rel = "noopener noreferrer";
-
-        const descText = feed.desc ? escapeHtml(feed.desc) : "";
-        card.innerHTML = `
-          <div class="sns-card-header">
-            <div class="sns-card-author">
-              <img src="icons/rescene-logo.png" alt="RESCENE" class="sns-card-avatar" />
-              <span class="sns-card-author-name">RESCENE OFFICIAL</span>
-            </div>
-            <div class="sns-card-badge" title="X (Twitter)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-            </div>
-          </div>
-          ${feed.thumb ? `
-            <div class="sns-card-image-wrap">
-              <img src="${feed.thumb}" alt="X Media" class="sns-card-image" loading="lazy" />
-            </div>
-          ` : ''}
-          <div class="sns-card-body">
-            ${descText ? `<p class="sns-card-text">${descText}</p>` : ''}
-            <div class="sns-card-footer">
-              <span>Tweet</span>
-              <span class="sns-card-action-link">X에서 보기 →</span>
-            </div>
-          </div>
-        `;
-        fragment.appendChild(card);
-      } else {
-        // 썸네일/텍스트 없는 경우 기존 iframe 임베드 폴백
-        const wrapper = document.createElement("div");
-        wrapper.className = "feed-iframe-wrapper";
-        wrapper.innerHTML = "<iframe credentialless src=\"https://platform.twitter.com/embed/Tweet.html?id=" + tweetId + "&theme=" + themeStr + "\" style=\"width: 100%; height: 250px; transition: height 0.3s ease;\" frameborder=\"0\" scrolling=\"no\" loading=\"lazy\"></iframe>";
-        fragment.appendChild(wrapper);
-      }
+      const wrapper = document.createElement("div");
+      wrapper.className = "feed-iframe-wrapper tweet-embed-wrapper";
+      wrapper.innerHTML = `<iframe credentialless src="https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=${themeStr}" style="width: 100%; height: 250px; transition: height 0.25s ease;" frameborder="0" scrolling="no" loading="lazy"></iframe>`;
+      fragment.appendChild(wrapper);
     });
 
     container.appendChild(fragment);
@@ -2639,12 +2601,16 @@ export function setupIframeAutoHeight() {
       if (data && data['twttr.embed'] && data['twttr.embed'].method === 'twttr.private.resize') {
         const params = data['twttr.embed'].params;
         const height = Array.isArray(params) && params.length > 0 ? params[0].height : params.height;
-        if (height) {
+        if (height && typeof height === 'number' && height > 50) {
           const iframes = document.querySelectorAll('.feed-iframe-wrapper iframe, .modal-embed-card iframe');
           for (let iframe of iframes) {
             if (iframe.contentWindow === event.source) {
               iframe.style.height = `${height}px`;
               iframe.style.minHeight = `${height}px`;
+              if (iframe.parentElement) {
+                iframe.parentElement.style.height = `${height}px`;
+                iframe.parentElement.style.minHeight = `${height}px`;
+              }
               break;
             }
           }
