@@ -92,17 +92,22 @@ async function parseYouTubeRss(xmlText, channelName = "") {
   return videos;
 }
 
-// RSS 피드 가져오기 (최대 2회 재시도)
-async function fetchRssFeed(url, channelName = "", retries = 2) {
+// RSS 피드 가져오기 (최대 3회 재시도 + 지수 백오프)
+async function fetchRssFeed(url, channelName = "", retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept": "application/rss+xml, application/xml, text/xml, */*",
+          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
         }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const xml = await res.text();
+      if (!xml || !xml.includes('<feed')) {
+        throw new Error('Invalid or empty RSS feed XML');
+      }
       const videos = await parseYouTubeRss(xml, channelName);
       if (videos.length > 0) return videos;
     } catch (err) {
@@ -110,7 +115,7 @@ async function fetchRssFeed(url, channelName = "", retries = 2) {
         console.warn(`[YouTube] RSS Fetch failed after ${retries} attempts (${url}):`, err.message);
         return [];
       }
-      await new Promise(r => setTimeout(r, 1000 * attempt));
+      await new Promise(r => setTimeout(r, 1500 * attempt));
     }
   }
   return [];
@@ -236,21 +241,36 @@ async function checkLiveStream(channelId, latestOfficialVideo = null) {
   return { isLive: false, liveInfo: null };
 }
 
-// 전체 유튜브 데이터 수집 진입점
-export async function collectYouTubeData() {
+// 전체 유튜브 데이터 수집 진입점 (일시적 RSS 장애 시 기존 유효 데이터 자동 보존)
+export async function collectYouTubeData(previousYouTubeData = null) {
   console.log("▶ [YouTube] 데이터 수집 시작 (Shorts 자동 판별 포함)...");
 
   const officialRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${OFFICIAL_CHANNEL_ID}`;
   const playlistRssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${OFFICIAL_PLAYLIST_ID}`;
   const woniRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${WONI_CHANNEL_ID}`;
 
-  const [officialVideos, playlistVideos, woniVideos] = await Promise.all([
+  let [officialVideos, playlistVideos, woniVideos] = await Promise.all([
     fetchRssFeed(officialRssUrl, "공식 유튜브"),
     fetchRssFeed(playlistRssUrl, "RESCENE Archive"),
     fetchRssFeed(woniRssUrl, "안녕하세요원이입니다잘부탁드립니다")
   ]);
 
-  const liveStatus = await checkLiveStream(OFFICIAL_CHANNEL_ID, officialVideos[0]);
+  // RSS 일시 장애 방어: 수집 실패 시 기존 유효 데이터 자동 보존 (Zero-Downtime Fallback)
+  if ((!officialVideos || officialVideos.length === 0) && previousYouTubeData?.officialVideos?.length > 0) {
+    console.warn(`⚠️ [YouTube] 공식 채널 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.officialVideos.length}건) 보존`);
+    officialVideos = previousYouTubeData.officialVideos;
+  }
+  if ((!playlistVideos || playlistVideos.length === 0) && previousYouTubeData?.playlistVideos?.length > 0) {
+    console.warn(`⚠️ [YouTube] 플레이리스트 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.playlistVideos.length}건) 보존`);
+    playlistVideos = previousYouTubeData.playlistVideos;
+  }
+  if ((!woniVideos || woniVideos.length === 0) && previousYouTubeData?.woniVideos?.length > 0) {
+    console.warn(`⚠️ [YouTube] 원이 채널 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.woniVideos.length}건) 보존`);
+    woniVideos = previousYouTubeData.woniVideos;
+  }
+
+  const latestVideo = (officialVideos && officialVideos.length > 0) ? officialVideos[0] : null;
+  const liveStatus = await checkLiveStream(OFFICIAL_CHANNEL_ID, latestVideo);
 
   const allShorts = [...officialVideos, ...playlistVideos, ...woniVideos].filter(v => v.isShorts);
   console.log(`✓ [YouTube] 완료: 공식 ${officialVideos.length}건, 재생목록 ${playlistVideos.length}건, 원이 ${woniVideos.length}건 (쇼츠 총 ${allShorts.length}건 감지), 라이브: ${liveStatus.isLive ? '🔴 ON AIR' : 'OFF'}`);

@@ -27,9 +27,17 @@ async function main() {
   const startTime = Date.now();
 
   try {
-    // 1. YouTube & SNS 수집
+    // 기존 core.json 로드 (유튜브 RSS 등 일시 장애 시 데이터 유실 방지 및 폴백 보존용)
+    let previousCore = null;
+    if (fs.existsSync(CORE_FILE)) {
+      try {
+        previousCore = JSON.parse(fs.readFileSync(CORE_FILE, 'utf8'));
+      } catch (e) {}
+    }
+
+    // 1. YouTube & SNS 수집 (기존 데이터 전달하여 일시 장애 시 자동 보존)
     const [youtube, sns] = await Promise.all([
-      collectYouTubeData(),
+      collectYouTubeData(previousCore?.youtube),
       collectSnsData()
     ]);
 
