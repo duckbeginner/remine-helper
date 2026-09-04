@@ -1,5 +1,8 @@
 // common/modules/storage.js - 크롬 스토리지 연동, 닉네임/아바타 매핑 및 백그라운드 갱신 요청
 import { MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
+import { renderOfficialYoutubeList, renderWoniYoutubeList, extractAllShortsVideos, renderShortsList } from './youtube.js';
+import { setupHorizontalScroller, setupHubIconReordering } from './tabs.js';
+import { renderScheduleList, deduplicateScheduleList } from './calendar.js';
 
 export function getMemberDisplayName(rawNickname) {
   if (!rawNickname) return '멤버';

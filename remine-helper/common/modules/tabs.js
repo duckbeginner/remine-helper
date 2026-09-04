@@ -1,5 +1,6 @@
 // common/modules/tabs.js - 동적 탭 & 크리스탈 글래스 슬라이더 & Iframe 관리
 import { TAB_CONFIG_LIST } from '../../constants.js';
+import { escapeHtml } from '../templates.js';
 
 export function updateGlassSlider(targetBtn, sliderEl) {
   if (!sliderEl || !targetBtn) return;
