@@ -513,15 +513,36 @@ const CENTRAL_SCHEDULES_URLS = [
   "https://duckbeginner.github.io/remine-helper/api/v1/schedules.json"
 ];
 
-// 1계층: 초경량 core.json 다운로드 (단 20~25 KB, 5분 고속 동기화)
-async function fetchFromCentralDataHub() {
+// 1계층: 초경량 core.json 다운로드 (단 20~25 KB, 5분 고속 동기화, ETag 304 조건부 캐싱 지원)
+async function fetchFromCentralDataHub(force = false) {
+  let savedEtag = null;
+  if (!force) {
+    const local = await chrome.storage.local.get(['centralCoreEtag']);
+    savedEtag = local && local.centralCoreEtag;
+  }
+
   for (const baseUrl of CENTRAL_CORE_URLS) {
     try {
       const url = `${baseUrl}?_t=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-cache' });
+      const headers = {};
+      if (savedEtag) {
+        headers['If-None-Match'] = savedEtag;
+      }
+      const res = await fetch(url, { headers, cache: 'no-cache' });
+
+      // 304 Not Modified: 원격 데이터에 변경 없음 (전송량 0바이트)
+      if (res.status === 304) {
+        return { notModified: true };
+      }
+
       if (!res.ok) continue;
+
+      const newEtag = res.headers.get('etag');
       const data = await res.json();
       if (data && data.youtube) {
+        if (newEtag) {
+          data._newEtag = newEtag;
+        }
         return data;
       }
     } catch (e) {
@@ -531,16 +552,36 @@ async function fetchFromCentralDataHub() {
   return null;
 }
 
-// 2계층: 마스터 스케줄 아카이브 다운로드 (신규 일정 변경 시 단 1회 백그라운드 동기화)
-async function fetchMasterSchedules() {
+// 2계층: 마스터 스케줄 아카이브 다운로드 (신규 일정 변경 시 단 1회 백그라운드 동기화, ETag 지원)
+async function fetchMasterSchedules(force = false) {
+  let savedEtag = null;
+  if (!force) {
+    const local = await chrome.storage.local.get(['centralSchedulesEtag']);
+    savedEtag = local && local.centralSchedulesEtag;
+  }
+
   for (const baseUrl of CENTRAL_SCHEDULES_URLS) {
     try {
       const url = `${baseUrl}?_t=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-cache' });
+      const headers = {};
+      if (savedEtag) {
+        headers['If-None-Match'] = savedEtag;
+      }
+      const res = await fetch(url, { headers, cache: 'no-cache' });
+
+      if (res.status === 304) {
+        return { notModified: true };
+      }
+
       if (!res.ok) continue;
+
+      const newEtag = res.headers.get('etag');
       const data = await res.json();
       if (data && Array.isArray(data.items) && data.items.length > 0) {
-        return data.items;
+        if (newEtag) {
+          data._newEtag = newEtag;
+        }
+        return data;
       }
     } catch (e) { }
   }
@@ -548,7 +589,7 @@ async function fetchMasterSchedules() {
 }
 
 async function applyCentralDataToStorage(data) {
-  if (!data) return false;
+  if (!data || data.notModified) return false;
 
   const isLive = Boolean(data.youtube?.isLive);
   const liveInfo = data.youtube?.liveInfo || null;
@@ -581,6 +622,10 @@ async function applyCentralDataToStorage(data) {
     lastCentralSyncUpdatedAt: data.updatedAt || null
   };
 
+  if (data._newEtag) {
+    storagePayload.centralCoreEtag = data._newEtag;
+  }
+
   const local = await chrome.storage.local.get(['blipSchedules', 'schedulesMasterUpdatedAt']);
   let needMasterSync = false;
 
@@ -591,14 +636,18 @@ async function applyCentralDataToStorage(data) {
   }
 
   if (needMasterSync) {
-    fetchMasterSchedules().then(masterItems => {
-      if (masterItems && masterItems.length > 0) {
-        chrome.storage.local.set({
-          blipSchedules: masterItems,
+    fetchMasterSchedules().then(result => {
+      if (result && !result.notModified && Array.isArray(result.items) && result.items.length > 0) {
+        const updatePayload = {
+          blipSchedules: result.items,
           schedulesMasterUpdatedAt: masterUpdatedAt
-        });
-        checkUpcomingScheduleAlerts(masterItems);
-        checkDailyScheduleNotification(masterItems);
+        };
+        if (result._newEtag) {
+          updatePayload.centralSchedulesEtag = result._newEtag;
+        }
+        chrome.storage.local.set(updatePayload);
+        checkUpcomingScheduleAlerts(result.items);
+        checkDailyScheduleNotification(result.items);
       }
     });
   } else {
@@ -629,13 +678,27 @@ async function applyCentralDataToStorage(data) {
 let lastBackgroundRefreshTime = 0;
 let backgroundRefreshPromise = null;
 
-async function executeAllBackgroundRefreshes() {
+async function executeAllBackgroundRefreshes(force = false) {
   if (backgroundRefreshPromise) {
     return backgroundRefreshPromise;
   }
   backgroundRefreshPromise = (async () => {
     try {
-      const centralData = await fetchFromCentralDataHub();
+      const centralData = await fetchFromCentralDataHub(force);
+      if (centralData && centralData.notModified) {
+        lastBackgroundRefreshTime = Date.now();
+        console.log("⚡ [Central Hub] 304 Not Modified - 원격 변경 없음 (전송량 0B 유지)");
+
+        // 데이터 변경이 없어도 시간이 경과함에 따른 스케줄 알림은 로컬 데이터로 점검
+        const local = await chrome.storage.local.get(['blipSchedules', 'activeSchedules']);
+        const currentList = local.blipSchedules || local.activeSchedules || [];
+        if (currentList.length > 0) {
+          checkUpcomingScheduleAlerts(currentList);
+          checkDailyScheduleNotification(currentList);
+        }
+        return;
+      }
+
       if (centralData) {
         const applied = await applyCentralDataToStorage(centralData);
         if (applied) {
@@ -668,7 +731,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    executeAllBackgroundRefreshes().then(() => {
+    executeAllBackgroundRefreshes(force).then(() => {
       sendResponse({ success: true });
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });
