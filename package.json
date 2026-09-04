@@ -7,8 +7,5 @@
   "scripts": {
     "fetch-data": "node scripts/data-hub/fetch-all.js",
     "test": "node scripts/data-hub/validate.js"
-  },
-  "dependencies": {
-    "playwright": "^1.62.1"
   }
 }
