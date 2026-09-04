@@ -298,6 +298,8 @@ export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
    ========================================================================= */
 
 
+let isAutoHeightSetup = false;
+
 export function setupIframeAutoHeight() {
   if (isAutoHeightSetup) return;
   isAutoHeightSetup = true;
