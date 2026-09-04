@@ -432,10 +432,10 @@ export function enableIframeScrollGuard(container = document) {
   });
 }
 
-const FEED_PAGE_SIZE = 12;
+export const FEED_PAGE_SIZE = 12;
 
 // 공통 무한 스크롤 바인딩 유틸 (IntersectionObserver 네이티브 뷰포트 감지 + 2중 폴백)
-function bindFeedInfiniteScroll(container, loadMoreFn) {
+export function bindFeedInfiniteScroll(container, loadMoreFn) {
   if (!container) return;
 
   // 기존 센티넬이 있으면 제거

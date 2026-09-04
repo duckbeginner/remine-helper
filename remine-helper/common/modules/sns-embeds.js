@@ -1,5 +1,6 @@
 // common/modules/sns-embeds.js - 인스타그램, X, 틱톡 임베드 렌더러 및 리사이즈
 import { escapeHtml } from '../templates.js';
+import { FEED_PAGE_SIZE, bindFeedInfiniteScroll, enableIframeScrollGuard } from './tabs.js';
 
 export function renderInstaEmbeds(container, feeds = [], isDark = false) {
   if (!container) return;
