@@ -43,6 +43,12 @@ function runValidation() {
   assert(core.version === "1.0.0", "버전 번호 일치 (1.0.0)");
   assert(typeof core.youtube?.isLive === 'boolean', "isLive 불리언 필드 존재");
   assert(Array.isArray(core.youtube?.officialVideos) && core.youtube.officialVideos.length > 0, `공식 채널 영상 완비 (${core.youtube?.officialVideos?.length}건)`);
+  const allShorts = [
+    ...(core.youtube?.officialVideos || []),
+    ...(core.youtube?.playlistVideos || []),
+    ...(core.youtube?.woniVideos || [])
+  ].filter(v => v.isShorts || v.url?.includes('/shorts/'));
+  assert(allShorts.length > 0, `Shorts 영상 판별 완비 (${allShorts.length}건)`);
   assert(Array.isArray(core.sns?.x) && core.sns.x.length > 0, `X 피드 완비 (${core.sns?.x?.length}건)`);
   assert(Array.isArray(core.schedules?.activeItems), `활성 스케줄 배열 존재 (${core.schedules?.activeItems?.length}건)`);
   assert(typeof core.schedules?.totalMasterCount === 'number' && core.schedules.totalMasterCount > 100, `마스터 스케줄 총계 표기 (${core.schedules?.totalMasterCount}건)`);

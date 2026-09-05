@@ -291,9 +291,20 @@ async function fetchPlaylistHtml(channelOrPlaylistId, channelName = "", limit = 
         const labelMatch = chunk.match(/"accessibilityContext":\{"label":"([^"]+)"\}/);
         if (labelMatch) {
           const rawTitle = labelMatch[1].replace(/\\u0026/g, '&');
-          title = rawTitle.replace(/\s+\d+분(?:\s*\d+초)?$|\s+\d+초$|\s+\d+:\d+$/g, '').trim();
+          // 재생시간 감지: 60초 이하인 경우 유튜브 쇼츠 공식 규격
+          const timeMatch = rawTitle.match(/(?:(\d+)시간\s*)?(?:(\d+)분\s*)?(\d+)초$/);
+          if (/#shorts|#Shorts|#쇼츠|\/shorts\//i.test(chunk + ' ' + rawTitle)) {
+            isShort = true;
+          } else if (timeMatch) {
+            const hours = parseInt(timeMatch[1] || '0', 10);
+            const minutes = parseInt(timeMatch[2] || '0', 10);
+            const seconds = parseInt(timeMatch[3] || '0', 10);
+            if (hours === 0 && minutes === 0 && seconds <= 60) {
+              isShort = true;
+            }
+          }
+          title = rawTitle.replace(/(?:(\d+)시간\s*)?(?:(\d+)분\s*)?(\d+)초$|\s+\d+:\d+$/g, '').trim();
         }
-        isShort = /#shorts|#Shorts|#쇼츠|\/shorts\//i.test(chunk + ' ' + title);
       }
 
       videos.push({
