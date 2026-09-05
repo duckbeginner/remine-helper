@@ -241,6 +241,84 @@ async function checkLiveStream(channelId, latestOfficialVideo = null) {
   return { isLive: false, liveInfo: null };
 }
 
+// 채널 ID 또는 플레이리스트 ID로부터 최신 업로드 플레이리스트 ID 도출
+function toPlaylistId(id) {
+  if (!id) return "";
+  if (id.startsWith("UC")) {
+    return "UU" + id.slice(2);
+  }
+  return id;
+}
+
+// YouTube 플레이리스트 직접 HTML 스크래핑 (RSS 404/장애 시 실시간 무중단 폴백)
+async function fetchPlaylistHtml(channelOrPlaylistId, channelName = "", limit = 15) {
+  const playlistId = toPlaylistId(channelOrPlaylistId);
+  const url = `https://www.youtube.com/playlist?list=${playlistId}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cookie": "CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg"
+      }
+    });
+    if (!res.ok) {
+      console.warn(`[YouTube Scraper] Playlist fetch failed HTTP ${res.status} (${url})`);
+      return [];
+    }
+
+    const html = await res.text();
+    const regex = /"contentId":"([a-zA-Z0-9_-]{11})"/g;
+    let m;
+    const videoIds = [];
+    const seen = new Set();
+    while ((m = regex.exec(html)) !== null) {
+      const vid = m[1];
+      if (!seen.has(vid)) {
+        seen.add(vid);
+        videoIds.push(vid);
+        if (videoIds.length >= limit) break;
+      }
+    }
+
+    const videos = [];
+    for (const id of videoIds) {
+      const idx = html.indexOf(`"contentId":"${id}"`);
+      let title = "RESCENE Video";
+      let isShort = false;
+      if (idx !== -1) {
+        const chunk = html.substring(Math.max(0, idx - 100), Math.min(html.length, idx + 1500));
+        const labelMatch = chunk.match(/"accessibilityContext":\{"label":"([^"]+)"\}/);
+        if (labelMatch) {
+          const rawTitle = labelMatch[1].replace(/\\u0026/g, '&');
+          title = rawTitle.replace(/\s+\d+분(?:\s*\d+초)?$|\s+\d+초$|\s+\d+:\d+$/g, '').trim();
+        }
+        isShort = /#shorts|#Shorts|#쇼츠|\/shorts\//i.test(chunk + ' ' + title);
+      }
+
+      videos.push({
+        id,
+        title,
+        published: "",
+        publishedAt: null,
+        url: isShort ? `https://www.youtube.com/shorts/${id}` : `https://www.youtube.com/watch?v=${id}`,
+        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        channelName: channelName,
+        isShorts: isShort,
+        isLive: false
+      });
+    }
+
+    if (videos.length > 0) {
+      console.log(`[YouTube Scraper] ✓ 플레이리스트 HTML 직접 스크래핑 성공: ${channelName} ${videos.length}건 확보`);
+    }
+    return videos;
+  } catch (err) {
+    console.warn(`[YouTube Scraper] Error scraping playlist (${url}):`, err.message);
+    return [];
+  }
+}
+
 // 전체 유튜브 데이터 수집 진입점 (일시적 RSS 장애 시 기존 유효 데이터 자동 보존)
 export async function collectYouTubeData(previousYouTubeData = null) {
   console.log("▶ [YouTube] 데이터 수집 시작 (Shorts 자동 판별 포함)...");
@@ -255,17 +333,31 @@ export async function collectYouTubeData(previousYouTubeData = null) {
     fetchRssFeed(woniRssUrl, "안녕하세요원이입니다잘부탁드립니다")
   ]);
 
-  // RSS 일시 장애 방어: 수집 실패 시 기존 유효 데이터 자동 보존 (Zero-Downtime Fallback)
+  // 1차 폴백: RSS 실패 시 플레이리스트 HTML 직접 스크래핑 (유튜브 RSS 404 버그 대응)
+  if (!officialVideos || officialVideos.length === 0) {
+    console.warn("⚠️ [YouTube] 공식 채널 RSS 실패 -> 플레이리스트 HTML 직접 스크래핑 시도...");
+    officialVideos = await fetchPlaylistHtml(OFFICIAL_CHANNEL_ID, "공식 유튜브");
+  }
+  if (!playlistVideos || playlistVideos.length === 0) {
+    console.warn("⚠️ [YouTube] 플레이리스트 RSS 실패 -> 플레이리스트 HTML 직접 스크래핑 시도...");
+    playlistVideos = await fetchPlaylistHtml(OFFICIAL_PLAYLIST_ID, "RESCENE Archive");
+  }
+  if (!woniVideos || woniVideos.length === 0) {
+    console.warn("⚠️ [YouTube] 원이 채널 RSS 실패 -> 플레이리스트 HTML 직접 스크래핑 시도...");
+    woniVideos = await fetchPlaylistHtml(WONI_CHANNEL_ID, "안녕하세요원이입니다잘부탁드립니다");
+  }
+
+  // 2차 폴백: RSS 및 스크래핑 실패 시 기존 유효 데이터 보존 (Zero-Downtime Fallback)
   if ((!officialVideos || officialVideos.length === 0) && previousYouTubeData?.officialVideos?.length > 0) {
-    console.warn(`⚠️ [YouTube] 공식 채널 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.officialVideos.length}건) 보존`);
+    console.warn(`⚠️ [YouTube] 공식 채널 RSS/스크래핑 모두 실패 -> 기존 데이터(${previousYouTubeData.officialVideos.length}건) 보존`);
     officialVideos = previousYouTubeData.officialVideos;
   }
   if ((!playlistVideos || playlistVideos.length === 0) && previousYouTubeData?.playlistVideos?.length > 0) {
-    console.warn(`⚠️ [YouTube] 플레이리스트 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.playlistVideos.length}건) 보존`);
+    console.warn(`⚠️ [YouTube] 플레이리스트 RSS/스크래핑 모두 실패 -> 기존 데이터(${previousYouTubeData.playlistVideos.length}건) 보존`);
     playlistVideos = previousYouTubeData.playlistVideos;
   }
   if ((!woniVideos || woniVideos.length === 0) && previousYouTubeData?.woniVideos?.length > 0) {
-    console.warn(`⚠️ [YouTube] 원이 채널 RSS 응답 실패/지연 -> 기존 데이터(${previousYouTubeData.woniVideos.length}건) 보존`);
+    console.warn(`⚠️ [YouTube] 원이 채널 RSS/스크래핑 모두 실패 -> 기존 데이터(${previousYouTubeData.woniVideos.length}건) 보존`);
     woniVideos = previousYouTubeData.woniVideos;
   }
 
