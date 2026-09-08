@@ -891,13 +891,38 @@ async function applyScheduleOverrides(scheduleList) {
     }
   });
 
+  // 삭제 판별 스마트 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
+  const isItemDeleted = (item, key) => {
+    if (deletedSet.has(key) || deletedSet.has(item.title)) return true;
+    const datePart = key.split('_')[0];
+
+    // 이 아이템의 수정본(mod.title)이 deletedSet에 등록되어 있는지 검사
+    const mod = resolvedModifiedMap[key] || resolvedModifiedMap[item.title];
+    if (mod && mod.title) {
+      const derivedKey = `${datePart}_${mod.title}`;
+      if (deletedSet.has(derivedKey) || deletedSet.has(mod.title)) return true;
+    }
+
+    // deletedSet 안의 항목 중 날짜가 같고 정제 제목이 일치하는 경우
+    const cleanCur = cleanDisplayTitle(item.title);
+    for (const dKey of deletedSet) {
+      if (dKey.startsWith(datePart + '_')) {
+        const dTitle = dKey.slice(datePart.length + 1);
+        if (dTitle === item.title || (cleanCur && cleanCur === cleanDisplayTitle(dTitle))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // (1) 삭제 및 수정 적용
   const result = [];
   scheduleList.forEach(item => {
     const key = getItemKey(item);
 
     // 삭제 대상
-    if (deletedSet.has(key) || deletedSet.has(item.title)) {
+    if (isItemDeleted(item, key)) {
       delCount++;
       return;
     }
@@ -931,10 +956,21 @@ async function applyScheduleOverrides(scheduleList) {
     result.push(item);
   });
 
-  // (2) 신규 등록 항목 반영
-  createdList.forEach(c => {
+  // (2) 신규 등록 항목 반영 (createdList + modified 내 _isCustom 격리 항목 자동 구출)
+  const allCreated = [...createdList];
+  Object.entries(resolvedModifiedMap).forEach(([mKey, mVal]) => {
+    if (mVal && mVal._isCustom) {
+      if (!allCreated.some(c => getItemKey(c) === mKey || c.title === mVal.title)) {
+        allCreated.push({ ...mVal });
+      }
+    }
+  });
+
+  allCreated.forEach(c => {
     if (!c.title || !c.startTime) return;
     const cKey = getItemKey(c);
+    if (isItemDeleted(c, cKey)) return;
+
     if (!result.some(r => getItemKey(r) === cKey)) {
       result.push({ ...c });
       addCount++;

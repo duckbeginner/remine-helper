@@ -1112,11 +1112,45 @@
           }
           if (overridesJson.modified && typeof overridesJson.modified === 'object') {
             appliedOverrides.modified = resolveModifiedChain(overridesJson.modified);
+            // modified 내 _isCustom 격리 항목 자동 구출 -> created로 편입
+            Object.entries(appliedOverrides.modified).forEach(([mKey, mVal]) => {
+              if (mVal && mVal._isCustom) {
+                if (!appliedOverrides.created.some(c => getScheduleKey(c) === mKey || c.title === mVal.title)) {
+                  appliedOverrides.created.push({ ...mVal, _originKey: mKey, _isCustom: true });
+                }
+              }
+            });
           }
           if (Array.isArray(overridesJson.created)) {
-            appliedOverrides.created = overridesJson.created.map(c => ({ ...c, _isCustom: true }));
+            overridesJson.created.forEach(c => {
+              if (!appliedOverrides.created.some(x => x.title === c.title && x.startTime === c.startTime)) {
+                appliedOverrides.created.push({ ...c, _isCustom: true });
+              }
+            });
           }
         }
+
+        // 삭제 판별 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
+        const checkIsDeleted = (item) => {
+          const rawKey = getRawScheduleKey(item);
+          const originKey = item._originKey || rawKey;
+          if (appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(item.title)) {
+            return true;
+          }
+          const datePart = rawKey.split('_')[0];
+          const mod = findMatchingOverride(item, appliedOverrides.modified);
+          if (mod && mod.title) {
+            const derivedKey = `${datePart}_${mod.title}`;
+            if (appliedOverrides.deleted.has(derivedKey) || appliedOverrides.deleted.has(mod.title)) return true;
+          }
+          for (const dKey of appliedOverrides.deleted) {
+            if (dKey.startsWith(datePart + '_')) {
+              const dTitle = dKey.slice(datePart.length + 1);
+              if (dTitle === item.title) return true;
+            }
+          }
+          return false;
+        };
 
         // 3. baseItems에 appliedOverrides 병합 (실제 화면 덮어쓰기!)
         allSchedules = baseItems.map(item => {
@@ -1132,19 +1166,22 @@
             itemCopy._isModified = true;
           }
 
-          if (appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(itemCopy.title)) {
+          if (checkIsDeleted(itemCopy)) {
             itemCopy._isDeleted = true;
           }
 
           return itemCopy;
         });
 
-        // 4. Gist에 저장된 생성 항목 추가
+        // 4. Gist에 저장된 생성 항목 추가 (격리 구출 항목 포함)
         appliedOverrides.created.forEach(c => {
           const cCopy = { ...c, _isCustom: true };
           const cKey = getScheduleKey(cCopy);
           cCopy._originKey = cKey;
-          if (!allSchedules.some(s => getScheduleKey(s) === cKey)) {
+          if (checkIsDeleted(cCopy)) {
+            cCopy._isDeleted = true;
+          }
+          if (!allSchedules.some(s => getScheduleKey(s) === cKey || (s.title === cCopy.title && s.startTime === cCopy.startTime))) {
             allSchedules.unshift(cCopy);
           }
         });
@@ -1376,20 +1413,31 @@
       const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
       const stableKey = item ? (item._originKey || key) : key;
       const rawKey = item ? getRawScheduleKey(item) : key;
+      const keysToToggle = new Set([stableKey, rawKey, key]);
+
+      // 만약 수정된 제목이 있다면 파생 키도 함께 토글 대상에 포함
+      if (item && item.title) {
+        const datePart = rawKey.split('_')[0];
+        keysToToggle.add(`${datePart}_${item.title}`);
+        keysToToggle.add(item.title);
+      }
 
       if (item && item._isDeleted) {
-        appliedOverrides.deleted.delete(stableKey);
-        appliedOverrides.deleted.delete(rawKey);
+        keysToToggle.forEach(k => {
+          appliedOverrides.deleted.delete(k);
+          pendingOverrides.deleted.delete(k);
+        });
         item._isDeleted = false;
-        pendingOverrides.deleted.delete(stableKey);
-        pendingOverrides.deleted.delete(rawKey);
       } else {
-        if (pendingOverrides.deleted.has(stableKey) || pendingOverrides.deleted.has(rawKey)) {
-          pendingOverrides.deleted.delete(stableKey);
-          pendingOverrides.deleted.delete(rawKey);
+        const isCurrentlyPendingDel = Array.from(keysToToggle).some(k => pendingOverrides.deleted.has(k));
+        if (isCurrentlyPendingDel) {
+          keysToToggle.forEach(k => pendingOverrides.deleted.delete(k));
         } else {
-          pendingOverrides.deleted.add(stableKey);
-          if (rawKey !== stableKey) pendingOverrides.deleted.add(rawKey);
+          keysToToggle.forEach(k => {
+            pendingOverrides.deleted.add(k);
+            delete pendingOverrides.modified[k];
+            delete appliedOverrides.modified[k];
+          });
         }
       }
       updateStagingBar();
@@ -1400,16 +1448,23 @@
       const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
       const stableKey = item ? (item._originKey || key) : key;
       const rawKey = item ? getRawScheduleKey(item) : key;
+      const keysToRestore = new Set([stableKey, rawKey, key]);
+
+      if (item && item.title) {
+        const datePart = rawKey.split('_')[0];
+        keysToRestore.add(`${datePart}_${item.title}`);
+        keysToRestore.add(item.title);
+      }
 
       if (item) {
         item._isDeleted = false;
-        appliedOverrides.deleted.delete(stableKey);
-        appliedOverrides.deleted.delete(rawKey);
       }
-      pendingOverrides.deleted.delete(stableKey);
-      pendingOverrides.deleted.delete(rawKey);
-      delete pendingOverrides.modified[stableKey];
-      delete pendingOverrides.modified[rawKey];
+      keysToRestore.forEach(k => {
+        appliedOverrides.deleted.delete(k);
+        pendingOverrides.deleted.delete(k);
+        delete pendingOverrides.modified[k];
+      });
+
       updateStagingBar();
       renderSchedules();
     }
@@ -1479,30 +1534,55 @@
           if (isOfficialYoutube) item.isOfficialYoutube = isOfficialYoutube;
           item._isModified = true;
 
-          const modObj = {
-            title,
-            startTime,
-            endTime: startTime,
-            isAllday,
-            typeText,
-            channel,
-            url,
-            location,
-            message,
-            thumbnail,
-            isOfficialYoutube
-          };
+          // 수동 등록(custom) 아이템인 경우: created 목록에서 직접 갱신 (modified로 이탈 방지!)
+          if (item._isCustom) {
+            const customObj = {
+              title,
+              startTime,
+              endTime: startTime,
+              isAllday,
+              typeText,
+              channel,
+              url,
+              location,
+              message,
+              thumbnail,
+              isOfficialYoutube,
+              _isCustom: true,
+              _originKey: stableKey
+            };
+            const cIdx = pendingOverrides.created.findIndex(c => c._originKey === stableKey || getScheduleKey(c) === stableKey);
+            if (cIdx >= 0) {
+              pendingOverrides.created[cIdx] = customObj;
+            } else {
+              pendingOverrides.created.push(customObj);
+            }
+          } else {
+            const modObj = {
+              title,
+              startTime,
+              endTime: startTime,
+              isAllday,
+              typeText,
+              channel,
+              url,
+              location,
+              message,
+              thumbnail,
+              isOfficialYoutube
+            };
 
-          // 1) 원본 불변 키로 저장
-          pendingOverrides.modified[stableKey] = modObj;
+            // 1) 원본 불변 키로 저장
+            pendingOverrides.modified[stableKey] = modObj;
 
-          // 2) 만약 제목/날짜가 바뀌었다면 새 키 및 기존 파생 키도 최신본으로 상호 동기화
-          const newRawKey = getRawScheduleKey(item);
-          if (newRawKey !== stableKey) {
-            pendingOverrides.modified[newRawKey] = { ...modObj };
-          }
-          if (key !== stableKey && key !== newRawKey) {
-            pendingOverrides.modified[key] = { ...modObj };
+            // 2) 만약 제목/날짜가 바뀌었다면 새 키 및 기존 파생 키도 최신본으로 상호 동기화
+            const newRawKey = getRawScheduleKey(item);
+            if (newRawKey !== stableKey) {
+              pendingOverrides.modified[newRawKey] = { ...modObj };
+            }
+            if (key !== stableKey && key !== newRawKey) {
+              pendingOverrides.modified[key] = { ...modObj };
+            }
           }
         }
       }
@@ -1679,11 +1759,41 @@
           }
         });
 
-        mergedDeleted.forEach(dKey => {
-          delete mergedModified[dKey];
+        // modified 안에 남아있던 _isCustom 격리 항목을 created로 승격 및 modified에서 제거
+        const mergedCreatedMap = new Map();
+        [...appliedOverrides.created, ...pendingOverrides.created].forEach(c => {
+          const cKey = getScheduleKey(c) || getRawScheduleKey(c);
+          mergedCreatedMap.set(cKey, { ...c, _isCustom: true });
         });
 
-        const mergedCreated = [...appliedOverrides.created, ...pendingOverrides.created];
+        Object.entries(mergedModified).forEach(([mKey, mVal]) => {
+          if (mVal && mVal._isCustom) {
+            mergedCreatedMap.set(mKey, { ...mVal, _originKey: mKey, _isCustom: true });
+            delete mergedModified[mKey];
+          }
+        });
+
+        // 삭제 대상에 포함된 키는 mergedModified에서 완전 제거
+        mergedDeleted.forEach(dKey => {
+          delete mergedModified[dKey];
+          const datePart = dKey.split('_')[0];
+          // 연관 파생 키들도 제거
+          for (const mKey of Object.keys(mergedModified)) {
+            if (mKey.startsWith(datePart + '_')) {
+              const val = mergedModified[mKey];
+              if (val && (val.title === dKey.slice(datePart.length + 1) || mKey === dKey)) {
+                delete mergedModified[mKey];
+              }
+            }
+          }
+        });
+
+        // 삭제 대상에 포함된 created 항목 필터링
+        const finalCreated = Array.from(mergedCreatedMap.values()).filter(c => {
+          const cKey = getScheduleKey(c);
+          const rKey = getRawScheduleKey(c);
+          return !mergedDeleted.has(cKey) && !mergedDeleted.has(rKey) && !mergedDeleted.has(c.title);
+        });
 
         const payload = {
           files: {
@@ -1692,7 +1802,7 @@
                 updatedAt: new Date().toISOString(),
                 deleted: Array.from(mergedDeleted),
                 modified: mergedModified,
-                created: mergedCreated
+                created: finalCreated
               }, null, 2)
             }
           }
