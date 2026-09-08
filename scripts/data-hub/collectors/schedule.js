@@ -88,12 +88,15 @@ function isTvMainBroadcast(item, channel) {
 }
 
 // 유튜브 링크가 있는 일정 항목들을 YouTube oEmbed API로 사전 일괄 보강
+// 및 쇼츠(_isShorts) 판별 + 공식/안원잘부 채널 영상 메타데이터 완전 정제
 async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   if (!Array.isArray(schedules) || schedules.length === 0) return;
   const oembedCache = loadOembedCache();
   let cacheHitCount = 0;
   let newFetchCount = 0;
 
+  // allYtVideos 맵 생성 (id -> video)
+  const allYtVideoMap = new Map((allYtVideos || []).map(v => [v.id, v]));
   const officialIdSet = new Set((allYtVideos || []).map(v => v.id).filter(Boolean));
 
   // 유튜브 비디오 ID가 있는 일정들 추출
@@ -103,6 +106,11 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
     const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
     if (match) {
       targetItems.push({ item, vid: match[1] });
+    } else {
+      // 유튜브 링크는 없지만 텍스트 자체에 #shorts나 #쇼츠가 있는 경우 쇼츠로 마킹
+      if (/#shorts|#Shorts|#쇼츠|\/shorts\//i.test(text)) {
+        item._isShorts = true;
+      }
     }
   });
 
@@ -111,6 +119,16 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   for (let i = 0; i < targetItems.length; i += CHUNK_SIZE) {
     const chunk = targetItems.slice(i, i + CHUNK_SIZE);
     await Promise.all(chunk.map(async ({ item, vid }) => {
+      // 1. 쇼츠 여부 1차 검사 (텍스트/URL 기반)
+      const rawText = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
+      let isShorts = /shorts\/|#shorts|#Shorts|#쇼츠|\[shorts\]|\(shorts\)/i.test(rawText);
+
+      // 2. allYtVideos에서 쇼츠 판별 확인
+      const knownYt = allYtVideoMap.get(vid);
+      if (knownYt && knownYt.isShorts) {
+        isShorts = true;
+      }
+
       let oeData = oembedCache.get(vid);
       if (!oeData) {
         try {
@@ -126,14 +144,51 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       }
 
       if (oeData) {
-        // 1) 썸네일 및 링크 보강
+        // oEmbed 제목에 쇼츠 키워드가 있는 경우
+        if (/#shorts|#Shorts|#쇼츠/i.test(oeData.title || '')) {
+          isShorts = true;
+        }
+
+        // 만약 쇼츠이면 item에 _isShorts 마킹
+        if (isShorts) {
+          item._isShorts = true;
+          return;
+        }
+
+        // 공식 채널 및 안원잘부 채널 여부 판별
+        const isOfficialRescene = oeData.author_name === 'RESCENE' ||
+          (oeData.author_url && oeData.author_url.includes('RESCENE')) ||
+          (item.channel === 'RESCENE') ||
+          officialIdSet.has(vid);
+
+        const isWoniChannel = (oeData.author_name && oeData.author_name.includes('원이')) ||
+          (oeData.author_url && oeData.author_url.includes('helloiamwoni')) ||
+          (item.channel && (item.channel.includes('원이') || item.channel.includes('안원잘부')));
+
+        if (isOfficialRescene || isWoniChannel) {
+          // [요구사항 2] 공식 채널 & 안원잘부 채널 영상:
+          // 블립의 임의 제목, 블립 본문 메시지 등은 사용하지 않고 유튜브 정식 정보로 대체
+          const officialChannelName = isWoniChannel ? '안녕하세요원이입니다잘부탁드립니다' : 'RESCENE';
+          item.title = oeData.title || item.title;
+          item.thumbnail = oeData.thumbnail_url || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
+          item.url = `https://www.youtube.com/watch?v=${vid}`;
+          item.link = item.url;
+          item.channel = officialChannelName;
+          item.extField = { key: '채널', value: officialChannelName };
+          item.typeText = "영상";
+          item.typeId = 1;
+          item.message = ""; // 블립 안내문구(*아티스트 공식..., 🔗관련 링크...) 전면 제거
+          item.isOfficialYoutube = true;
+          return;
+        }
+
+        // 그 외 외부 영상(방송사, 웹예능 등): 기존 oEmbed 보강 로직
         if (!item.thumbnail || item.thumbnail.includes('rescene-logo')) {
           item.thumbnail = oeData.thumbnail_url || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
         }
         if (!item.url) item.url = `https://www.youtube.com/watch?v=${vid}`;
         if (!item.link) item.link = item.url;
 
-        // 2) 채널명 처리 (단, 방송사인 경우는 방송사 명을 채널명으로 유지)
         const currentChannel = item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null);
         if (!currentChannel || !isBroadcasterName(currentChannel)) {
           const author = oeData.author_name;
@@ -143,23 +198,22 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
           }
         }
 
-        // 3) 제목 재구성: TV 본방이 아닌 경우 oEmbed의 정식 제목으로 전면 변환
         const isTvShow = isTvMainBroadcast(item, currentChannel);
         if (!isTvShow && oeData.title) {
           item.title = oeData.title;
         }
 
-        // 4) 카테고리(typeText) 정돈: TV 본방이 아니고 공식 채널/웹 콘텐츠면 "영상"으로 보정
         if (!isTvShow) {
           if (/RESCENE|안녕하세요원이|자컨|비하인드|vlog|브이로그|ep\.|유튜브|youtube/i.test((item.channel || '') + ' ' + (item.title || '') + ' ' + (item.message || ''))) {
             item.typeText = "영상";
           }
         }
 
-        // 5) 공식/원이 채널 플래그 매핑
         if (officialIdSet.has(vid)) {
           item.isOfficialYoutube = true;
         }
+      } else if (isShorts) {
+        item._isShorts = true;
       }
     }));
   }
@@ -410,11 +464,18 @@ export async function collectScheduleData(allYtVideos = []) {
   // YouTube oEmbed 사전 일괄 보강 수행!
   await enrichSchedulesWithYouTubeOEmbed(mergedList, allYtVideos);
 
+  // [쇼츠 일정 원천 제외] 쇼츠(_isShorts)로 판별된 항목은 스케줄 아카이브에 등록하지 않고 완전 제외
+  const nonShortsList = mergedList.filter(item => !item._isShorts);
+  const removedShortsCount = mergedList.length - nonShortsList.length;
+  if (removedShortsCount > 0) {
+    console.log(`  ✂️ [Schedule Filter] 스케줄 목록에서 쇼츠(Shorts) ${removedShortsCount}건 원천 제외 완료`);
+  }
+
   // 날짜 순 정렬
-  mergedList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
+  nonShortsList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
 
   // [초강력 데이터 다이어트] 불필요한 공백, 빈 배열, 중복 필드 제거
-  const slimmedList = mergedList.map(item => {
+  const slimmedList = nonShortsList.map(item => {
     const slim = {
       title: item.title,
       startTime: item.startTime,
