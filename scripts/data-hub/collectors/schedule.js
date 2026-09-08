@@ -36,14 +36,30 @@ function saveOembedCache(cacheMap) {
   } catch (e) { }
 }
 
-// 로컬 라이브 스트림 캐시 로드
+const SEEDS_STREAMS_FILE = path.resolve(__dirname, '../seeds/official-streams.json');
+
+// 로컬 라이브 스트림 캐시 로드 (시드 폴백 지원)
 function loadStreamsCache() {
+  const cache = {};
+  // 1. 기본 시드 파일에서 로드 (CI fresh runner 등에서도 즉시 100% 가용)
   try {
-    if (fs.existsSync(STREAMS_CACHE_FILE)) {
-      return JSON.parse(fs.readFileSync(STREAMS_CACHE_FILE, 'utf8'));
+    if (fs.existsSync(SEEDS_STREAMS_FILE)) {
+      const seeds = JSON.parse(fs.readFileSync(SEEDS_STREAMS_FILE, 'utf8'));
+      if (Array.isArray(seeds)) {
+        seeds.forEach(s => { if (s && s.id) cache[s.id] = s; });
+      }
     }
   } catch (e) { }
-  return {};
+
+  // 2. 런타임 캐시 파일이 있으면 덮어쓰기
+  try {
+    if (fs.existsSync(STREAMS_CACHE_FILE)) {
+      const runtimeCache = JSON.parse(fs.readFileSync(STREAMS_CACHE_FILE, 'utf8'));
+      Object.assign(cache, runtimeCache);
+    }
+  } catch (e) { }
+
+  return cache;
 }
 
 // 로컬 라이브 스트림 캐시 저장
@@ -60,42 +76,64 @@ async function fetchOfficialLiveStreams() {
   try {
     const res = await fetch('https://www.youtube.com/@RESCENE_official/streams', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg'
       }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
-    const match = html.match(/var ytInitialData = ({.*?});<\/script>/s);
-    if (!match) return Object.values(cache);
 
-    const data = JSON.parse(match[1]);
-    const tabs = data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-    const streamTab = tabs.find(t => t.tabRenderer?.title === '라이브' || t.tabRenderer?.title === 'Live' || t.tabRenderer?.title === 'Streams');
-    const contents = streamTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
-
+    // 1차: 불변 정규식으로 비디오 ID 일괄 추출
+    const vids = [...new Set([...html.matchAll(/\/watch\?v=([\w-]{11})/g)].map(m => m[1]))];
     const rawList = [];
-    contents.forEach(c => {
-      const vm = c.richItemRenderer?.content?.lockupViewModel;
-      if (vm && vm.contentId) {
-        rawList.push({
-          id: vm.contentId,
-          title: vm.metadata?.lockupMetadataViewModel?.title?.content || ''
+
+    // 2차: ytInitialData에서 제목 보강 시도
+    let titleMap = new Map();
+    try {
+      const match = html.match(/var ytInitialData = ({.*?});<\/script>/s);
+      if (match) {
+        const data = JSON.parse(match[1]);
+        const tabs = data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+        const streamTab = tabs.find(t => {
+          const url = t.tabRenderer?.endpoint?.commandMetadata?.webCommandMetadata?.url || '';
+          return url.endsWith('/streams') || /라이브|Live|Streams/i.test(t.tabRenderer?.title || '');
+        });
+        const contents = streamTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
+        contents.forEach(c => {
+          const vm = c.richItemRenderer?.content?.lockupViewModel;
+          if (vm && vm.contentId) {
+            const title = vm.metadata?.lockupMetadataViewModel?.title?.content || '';
+            if (title) titleMap.set(vm.contentId, title);
+          }
         });
       }
+    } catch (e) { }
+
+    vids.forEach(vid => {
+      rawList.push({
+        id: vid,
+        title: titleMap.get(vid) || ''
+      });
     });
 
     let newFetches = 0;
     await Promise.all(rawList.map(async s => {
       if (cache[s.id] && cache[s.id].published) {
+        if (!cache[s.id].title && s.title) cache[s.id].title = s.title;
         return;
       }
       try {
         const r = await fetch('https://www.youtube.com/watch?v=' + s.id, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
         });
         const h = await r.text();
         const m = h.match(/itemprop="datePublished" content="([^"]+)"/) || h.match(/"publishDate":"([^"]+)"/) || h.match(/"uploadDate":"([^"]+)"/);
+        const titleM = h.match(/<title>([^<]+)<\/title>/);
+        const cleanTitle = s.title || (titleM ? titleM[1].replace(' - YouTube', '').trim() : '');
         const publishedAt = m ? m[1] : null;
         let published = '';
         if (publishedAt) {
@@ -105,7 +143,7 @@ async function fetchOfficialLiveStreams() {
         }
         cache[s.id] = {
           id: s.id,
-          title: s.title,
+          title: cleanTitle,
           publishedAt,
           published,
           url: 'https://www.youtube.com/watch?v=' + s.id,
@@ -119,7 +157,7 @@ async function fetchOfficialLiveStreams() {
       saveStreamsCache(cache);
     }
   } catch (err) {
-    console.warn('  ⚠️ [Schedule] 라이브 스트림 목록 조회 실패 (캐시 사용):', err.message);
+    console.warn('  ⚠️ [Schedule] 라이브 스트림 목록 실시간 조회 실패 (시드/캐시 사용):', err.message);
   }
 
   return Object.values(cache);
