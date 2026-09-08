@@ -157,9 +157,21 @@
       transform: scale(0.96);
     }
 
+    /* 상단 고정 (헤더 + 월 네비게이션 + 검색/필터 일체화) */
+    .sticky-nav-filter {
+      position: sticky;
+      top: 60px;
+      z-index: 95;
+      background: rgba(12, 14, 20, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding-top: 2px;
+    }
+
     /* 월 네비게이션 & 통계 바 */
     .nav-bar {
-      padding: 14px 18px 8px;
+      padding: 10px 18px 6px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -172,7 +184,7 @@
     }
 
     .month-display {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       letter-spacing: -0.4px;
     }
@@ -205,12 +217,12 @@
 
     /* 검색 & 카테고리 필터 */
     .filter-section {
-      padding: 4px 18px 12px;
+      padding: 4px 18px 10px;
     }
 
     .search-box {
       position: relative;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .search-input {
@@ -218,7 +230,7 @@
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 10px 14px 10px 36px;
+      padding: 9px 14px 9px 36px;
       color: var(--text-main);
       font-size: 13px;
       outline: none;
@@ -243,7 +255,7 @@
       display: flex;
       gap: 6px;
       overflow-x: auto;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
       scrollbar-width: none;
     }
 
@@ -255,7 +267,7 @@
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
-      padding: 6px 12px;
+      padding: 5px 12px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 500;
@@ -480,6 +492,8 @@
     }
 
     .badge-mod { background: rgba(124, 92, 252, 0.25); color: #c4b5fd; }
+    .badge-pending { background: rgba(245, 158, 11, 0.25); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-confirmed { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
     .badge-new { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
     .badge-del { background: rgba(239, 68, 68, 0.25); color: #fca5a5; }
 
@@ -768,30 +782,33 @@
   <!-- 메인 뷰 컨테이너 (인증 성공 시만 표시) -->
   <main id="mainContent" style="display: none;">
 
-    <!-- 월 선택 & 오늘 이동 -->
-    <section class="nav-bar">
-      <div class="month-selector">
-        <button class="month-arrow" id="btnPrevMonth">◀</button>
-        <span class="month-display" id="currentMonthText">2026. 08</span>
-        <button class="month-arrow" id="btnNextMonth">▶</button>
-      </div>
-      <button class="today-btn" id="btnToday">오늘로</button>
-    </section>
+    <!-- 상단 고정 영역: 월 이동 + 검색 + 필터 칩 -->
+    <div class="sticky-nav-filter">
+      <!-- 월 선택 & 오늘 이동 -->
+      <section class="nav-bar">
+        <div class="month-selector">
+          <button class="month-arrow" id="btnPrevMonth">◀</button>
+          <span class="month-display" id="currentMonthText">2026. 08</span>
+          <button class="month-arrow" id="btnNextMonth">▶</button>
+        </div>
+        <button class="today-btn" id="btnToday">오늘로</button>
+      </section>
 
-    <!-- 검색 & 카테고리 필터 -->
-    <section class="filter-section">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
-      </div>
-      <div class="filter-chips">
-        <button class="chip active" data-type="all">전체</button>
-        <button class="chip" data-type="영상">영상</button>
-        <button class="chip" data-type="방송">방송/라디오</button>
-        <button class="chip" data-type="공연">행사/공연</button>
-        <button class="chip" data-type="기념일">기념일</button>
-      </div>
-    </section>
+      <!-- 검색 & 카테고리 필터 -->
+      <section class="filter-section">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
+        </div>
+        <div class="filter-chips">
+          <button class="chip active" data-type="all">전체</button>
+          <button class="chip" data-type="영상">영상</button>
+          <button class="chip" data-type="방송">방송/라디오</button>
+          <button class="chip" data-type="공연">행사/공연</button>
+          <button class="chip" data-type="기념일">기념일</button>
+        </div>
+      </section>
+    </div>
 
     <!-- 스케줄 리스트 -->
     <section class="schedule-container" id="scheduleListContainer">
@@ -1002,8 +1019,12 @@
         let overridesJson = null;
         if (token) {
           try {
-            const apiRes = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
+            const apiRes = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+              headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github+json'
+              },
+              cache: 'no-store'
             });
             if (apiRes.ok) {
               const gistData = await apiRes.json();
@@ -1176,10 +1197,10 @@
             stateBadge = '<span class="state-badge badge-del">삭제됨</span>';
           } else if (isPendingMod) {
             statusClass = 'status-modified';
-            stateBadge = '<span class="state-badge badge-mod">수정 대기</span>';
+            stateBadge = '<span class="state-badge badge-pending">수정 대기</span>';
           } else if (isSavedMod) {
             statusClass = 'status-modified';
-            stateBadge = '<span class="state-badge badge-mod">수정됨</span>';
+            stateBadge = '<span class="state-badge badge-confirmed">수정됨</span>';
           } else if (isCustom) {
             statusClass = 'status-custom';
             stateBadge = '<span class="state-badge badge-new">수동 등록</span>';
@@ -1415,12 +1436,42 @@
       const bar = document.getElementById('stagingBar');
       const badge = document.getElementById('stagingCountBadge');
 
-      badge.textContent = `${count}건`;
+      if (badge) badge.textContent = `${count}건`;
       if (count > 0) {
+        bar.style.display = 'flex';
+        void bar.offsetHeight;
         bar.classList.add('visible');
       } else {
         bar.classList.remove('visible');
+        setTimeout(() => {
+          if (!bar.classList.contains('visible')) {
+            bar.style.display = 'none';
+          }
+        }, 300);
       }
+    }
+
+    // 하단 스테이징 바 원래 마크업 복원
+    function restoreStagingBarMarkup() {
+      const bar = document.getElementById('stagingBar');
+      bar.style.borderColor = 'var(--accent-purple)';
+      bar.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.6), var(--shadow-glow)';
+      bar.style.background = 'rgba(22, 26, 36, 0.95)';
+      bar.innerHTML = `
+        <div class="staging-info">
+          <span>수정 대기</span>
+          <span class="staging-badge" id="stagingCountBadge">0건</span>
+        </div>
+        <div class="staging-actions">
+          <button class="btn-reset" id="btnResetStaging">초기화</button>
+          <button class="btn-commit" id="btnSaveToGist">
+            <span>💾</span> 저장 적용
+          </button>
+        </div>
+      `;
+      document.getElementById('btnResetStaging').addEventListener('click', onResetStagingClick);
+      document.getElementById('btnSaveToGist').addEventListener('click', onSaveToGistClick);
+      updateStagingBar();
     }
 
     // 스텔스 트리거 (404 글자 3회 연속 탭 시 시크릿 입력창 토글)
@@ -1463,8 +1514,9 @@
       errorDiv.style.display = 'none';
 
       try {
-        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store'
         });
         if (!res.ok) {
           throw new Error('Access Denied');
@@ -1490,8 +1542,8 @@
       }
     });
 
-    // Gist에 최종 저장
-    document.getElementById('btnSaveToGist').addEventListener('click', async () => {
+    // Gist에 최종 저장 및 반영 검증
+    async function onSaveToGistClick() {
       const token = getStoredToken();
       if (!token) {
         showGatekeeper();
@@ -1510,15 +1562,16 @@
       }
 
       const commitBtn = document.getElementById('btnSaveToGist');
-      commitBtn.innerHTML = '<span>⏳</span> 저장 중...';
-      commitBtn.disabled = true;
+      if (commitBtn) {
+        commitBtn.innerHTML = '<span>⏳</span> Gist 전송 중...';
+        commitBtn.disabled = true;
+      }
 
       try {
-        // 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합!
+        // 1. 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합
         const mergedDeleted = new Set([...appliedOverrides.deleted, ...pendingOverrides.deleted]);
         const mergedModified = { ...appliedOverrides.modified, ...pendingOverrides.modified };
         
-        // 삭제된 항목은 modified에서 제거
         mergedDeleted.forEach(dKey => {
           delete mergedModified[dKey];
         });
@@ -1552,16 +1605,80 @@
           throw new Error(`저장 실패 (HTTP ${res.status}). 토큰 권한(gist scope)을 확인해 주세요.`);
         }
 
-        alert('🎉 [저장 완료] Gist에 보정 규칙이 영구 저장되었습니다!\n수집 엔진이 15분마다 돌아도 이 규칙이 항상 우선 적용됩니다.');
+        // [중요!] Gist 서버 응답 본문에서 실제 기록된 파일 내용을 직접 확인 & 검증!
+        const savedGist = await res.json();
+        const savedFile = savedGist.files && savedGist.files['schedule-overrides.json'];
+        if (!savedFile || !savedFile.content) {
+          throw new Error('Gist에 파일이 생성되지 않았습니다.');
+        }
+
+        const confirmedOverrides = JSON.parse(savedFile.content);
+
+        // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정
+        appliedOverrides.deleted = new Set(Array.isArray(confirmedOverrides.deleted) ? confirmedOverrides.deleted : []);
+        appliedOverrides.modified = confirmedOverrides.modified && typeof confirmedOverrides.modified === 'object' ? confirmedOverrides.modified : {};
+        appliedOverrides.created = Array.isArray(confirmedOverrides.created) ? confirmedOverrides.created.map(c => ({ ...c, _isCustom: true })) : [];
+
+        // 3. 대기열(pendingOverrides) 비우기
         pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
-        loadSchedules();
+
+        // 4. 화면 목록에 확정 반영 덮어쓰기 & re-render (수정 대기 뱃지 -> [수정됨] 초록 뱃지로 확정)
+        allSchedules = allSchedules.map(item => {
+          const originKey = getScheduleKey(item);
+          const mod = appliedOverrides.modified[originKey] || appliedOverrides.modified[item.title];
+          if (mod) {
+            Object.assign(item, mod);
+            item._isModified = true;
+          }
+          if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(item.title)) {
+            item._isDeleted = true;
+          }
+          return item;
+        });
+
+        renderSchedules();
+
+        // 5. 하단바 표시 즉시 변경: "수정 대기" -> "✅ Gist 반영 완료 (N건)"
+        const stagingBar = document.getElementById('stagingBar');
+        stagingBar.style.borderColor = 'var(--accent-green)';
+        stagingBar.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.45)';
+        stagingBar.style.background = 'rgba(16, 185, 129, 0.2)';
+        stagingBar.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px; color:#34d399; font-weight:700; font-size:13px; width:100%; justify-content:center; padding: 4px 0;">
+            <span style="font-size:16px;">✅</span>
+            <span>Gist에 총 ${count}건 정상 반영 완료!</span>
+          </div>
+        `;
+
+        // 1.8초 동안 반영 완료 피드백을 보여준 뒤 자연스럽게 닫음
+        setTimeout(() => {
+          stagingBar.classList.remove('visible');
+          setTimeout(() => {
+            stagingBar.style.display = 'none';
+            restoreStagingBarMarkup();
+          }, 300);
+        }, 1800);
+
       } catch (err) {
         alert('⚠️ 저장 중 오류: ' + err.message);
-      } finally {
-        commitBtn.innerHTML = '<span>💾</span> 저장 적용';
-        commitBtn.disabled = false;
+        if (commitBtn) {
+          commitBtn.innerHTML = '<span>💾</span> 저장 적용';
+          commitBtn.disabled = false;
+        }
       }
-    });
+    }
+
+    function onResetStagingClick() {
+      if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        updateStagingBar();
+        loadSchedules();
+      }
+    }
+
+    // 초기 이벤트 바인딩
+    document.getElementById('btnSaveToGist').addEventListener('click', onSaveToGistClick);
+    document.getElementById('btnResetStaging').addEventListener('click', onResetStagingClick);
 
     // 이벤트 리스너 등록
     document.getElementById('btnCloseModal').addEventListener('click', closeModal);
