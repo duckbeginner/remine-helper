@@ -635,10 +635,11 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
 
       let h = d.getHours();
       const m = String(d.getMinutes()).padStart(2, '0');
-      if (!(h === 0 && m === '00' && String(rawDate).includes('T15:00:00'))) {
+      const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
+      if (!isAllDay) {
         const ap = h >= 12 ? '오후' : '오전';
-        h = h % 12 || 12;
-        timeStr = ` ${ap} ${h}:${m}`;
+        const displayH = h % 12 || 12;
+        timeStr = ` ${ap} ${displayH}:${m}`;
       } else {
         timeStr = " 종일";
       }
@@ -792,9 +793,10 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
       const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
       let h = d.getHours();
       const m = String(d.getMinutes()).padStart(2, '0');
+      const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(item.startTime || item.date).includes('T15:00:00')));
       const ap = h >= 12 ? '오후' : '오전';
-      h = h % 12 || 12;
-      const timeStr = (h === 0 && m === '00' && String(item.startTime || item.date).includes('T15:00:00')) ? '종일 일정' : `${ap} ${h}:${m}`;
+      const displayH = h % 12 || 12;
+      const timeStr = isAllDay ? '종일 일정' : `${ap} ${displayH}:${m}`;
       const { typeText } = getScheduleTypeInfo(item);
 
       const ext = item.extField;
@@ -936,11 +938,12 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
             const d = parseSafeDate(rawDate);
             let h = d.getHours();
             const m = String(d.getMinutes()).padStart(2, '0');
-            if (!(h === 0 && m === '00' && String(rawDate).includes('T15:00:00'))) {
+            const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
+            if (!isAllDay) {
               const ap = h >= 12 ? '오후' : '오전';
-              h = h % 12 || 12;
-              timeStrForHover = `${ap} ${h}:${m}`;
-              timeStrForModal = `${ap} ${h}:${m}`;
+              const displayH = h % 12 || 12;
+              timeStrForHover = `${ap} ${displayH}:${m}`;
+              timeStrForModal = `${ap} ${displayH}:${m}`;
             } else {
               timeStrForModal = item.isMultiDay ? "연속 일정" : "종일 일정";
             }
