@@ -43,32 +43,40 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    html {
+      overflow-x: clip;
+    }
+
     body {
       font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--bg-main);
       color: var(--text-main);
       min-height: 100vh;
       padding-bottom: 90px;
-      overflow-x: hidden;
+      overflow-x: clip; /* overflow-x: hidden 대신 clip을 사용하여 position: sticky 무력화 원천 차단 */
       background-image: 
         radial-gradient(circle at 15% 10%, rgba(124, 92, 252, 0.12) 0%, transparent 40%),
         radial-gradient(circle at 85% 60%, rgba(244, 63, 94, 0.08) 0%, transparent 40%);
       background-attachment: fixed;
     }
 
-    /* 상단 헤더 바 */
-    .app-header {
+    /* 상단 일체형 고정 헤더 (헤더 + 월 네비 + 검색/필터) */
+    .app-header-fixed {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(12, 14, 20, 0.88);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(12, 14, 20, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .header-top-bar {
       padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     .brand-group {
@@ -761,55 +769,54 @@
     </div>
   </div>
 
-  <!-- 앱 헤더 (인증 성공 시만 표시) -->
-  <header class="app-header" id="appHeader" style="display: none;">
-    <div class="brand-group">
-      <div class="brand-logo">R</div>
-      <div class="brand-title">
-        Schedule Ops
-        <span class="brand-badge" id="envBadge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3);">Authorized</span>
+  <!-- 상단 일체형 고정 헤더 (인증 성공 시만 표시) -->
+  <header class="app-header-fixed" id="appHeader" style="display: none;">
+    <!-- 상단 브랜드 & 액션 바 -->
+    <div class="header-top-bar">
+      <div class="brand-group">
+        <div class="brand-logo">R</div>
+        <div class="brand-title">
+          Schedule Ops
+          <span class="brand-badge" id="envBadge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3);">Authorized</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>
+        <button class="btn-icon" id="btnRefresh" title="새로고침">🔄</button>
+        <button class="btn-add-schedule" id="btnOpenAddModal">
+          <span>➕</span> 새 일정
+        </button>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>
-      <button class="btn-icon" id="btnRefresh" title="새로고침">🔄</button>
-      <button class="btn-add-schedule" id="btnOpenAddModal">
-        <span>➕</span> 새 일정
-      </button>
-    </div>
+
+    <!-- 월 선택 & 오늘 이동 -->
+    <section class="nav-bar">
+      <div class="month-selector">
+        <button class="month-arrow" id="btnPrevMonth">◀</button>
+        <span class="month-display" id="currentMonthText">2026. 08</span>
+        <button class="month-arrow" id="btnNextMonth">▶</button>
+      </div>
+      <button class="today-btn" id="btnToday">오늘로</button>
+    </section>
+
+    <!-- 검색 & 카테고리 필터 -->
+    <section class="filter-section">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
+      </div>
+      <div class="filter-chips">
+        <button class="chip active" data-type="all">전체</button>
+        <button class="chip" data-type="영상">영상</button>
+        <button class="chip" data-type="방송">방송/라디오</button>
+        <button class="chip" data-type="공연">행사/공연</button>
+        <button class="chip" data-type="기념일">기념일</button>
+      </div>
+    </section>
   </header>
 
-  <!-- 메인 뷰 컨테이너 (인증 성공 시만 표시) -->
+  <!-- 메인 뷰 컨테이너 (스케줄 리스트) -->
   <main id="mainContent" style="display: none;">
-
-    <!-- 상단 고정 영역: 월 이동 + 검색 + 필터 칩 -->
-    <div class="sticky-nav-filter">
-      <!-- 월 선택 & 오늘 이동 -->
-      <section class="nav-bar">
-        <div class="month-selector">
-          <button class="month-arrow" id="btnPrevMonth">◀</button>
-          <span class="month-display" id="currentMonthText">2026. 08</span>
-          <button class="month-arrow" id="btnNextMonth">▶</button>
-        </div>
-        <button class="today-btn" id="btnToday">오늘로</button>
-      </section>
-
-      <!-- 검색 & 카테고리 필터 -->
-      <section class="filter-section">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
-        </div>
-        <div class="filter-chips">
-          <button class="chip active" data-type="all">전체</button>
-          <button class="chip" data-type="영상">영상</button>
-          <button class="chip" data-type="방송">방송/라디오</button>
-          <button class="chip" data-type="공연">행사/공연</button>
-          <button class="chip" data-type="기념일">기념일</button>
-        </div>
-      </section>
-    </div>
-
     <!-- 스케줄 리스트 -->
     <section class="schedule-container" id="scheduleListContainer">
       <div class="loading-spinner">
@@ -951,7 +958,7 @@
     // 도어락 화면 / 메인 앱 화면 전환
     function showApp() {
       document.getElementById('gatekeeperScreen').style.display = 'none';
-      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appHeader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'block';
     }
 
