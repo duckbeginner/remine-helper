@@ -943,6 +943,9 @@ async function applyScheduleOverrides(scheduleList) {
 
     if (mod) {
       if (mod.title) item.title = mod.title;
+      if (mod.startTime !== undefined) item.startTime = mod.startTime;
+      if (mod.endTime !== undefined) item.endTime = mod.endTime || mod.startTime;
+      if (mod.isAllday !== undefined) item.isAllday = Boolean(mod.isAllday);
       if (mod.url !== undefined) item.url = mod.url || undefined;
       if (mod.channel !== undefined) item.channel = mod.channel || undefined;
       if (mod.location !== undefined) item.location = mod.location || undefined;

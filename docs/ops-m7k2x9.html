@@ -1281,6 +1281,12 @@
             </div>
         `;
 
+        groupItems.sort((a, b) => {
+          const tA = a.item.startTime ? new Date(a.item.startTime).getTime() : 0;
+          const tB = b.item.startTime ? new Date(b.item.startTime).getTime() : 0;
+          return tA - tB;
+        });
+
         groupItems.forEach(({ item, originalIndex }) => {
           const key = getScheduleKey(item);
           const isDeleted = pendingOverrides.deleted.has(key) || item._isDeleted;
@@ -1316,9 +1322,11 @@
           let timeStr = '종일';
           if (!item.isAllday && item.startTime) {
             const timeD = new Date(item.startTime);
-            const hours = String(timeD.getHours()).padStart(2, '0');
-            const mins = String(timeD.getMinutes()).padStart(2, '0');
-            timeStr = `${hours}:${mins}`;
+            if (!isNaN(timeD.getTime())) {
+              const hours = String(timeD.getHours()).padStart(2, '0');
+              const mins = String(timeD.getMinutes()).padStart(2, '0');
+              timeStr = `${hours}:${mins}`;
+            }
           }
 
           html += `
@@ -1477,15 +1485,22 @@
 
       const title = document.getElementById('formTitle').value.trim();
       const dateStr = document.getElementById('formDate').value;
-      const timeStr = document.getElementById('formTime').value;
+      const timeRaw = document.getElementById('formTime').value;
       const typeText = document.getElementById('formType').value;
       const channel = document.getElementById('formChannel').value.trim();
       const url = document.getElementById('formUrl').value.trim();
       const location = document.getElementById('formLocation').value.trim();
       const message = document.getElementById('formMessage').value.trim();
 
-      const startTime = timeStr ? `${dateStr}T${timeStr}:00+09:00` : `${dateStr}T00:00:00+09:00`;
-      const isAllday = !timeStr;
+      let timeFormatted = '';
+      if (timeRaw && timeRaw.trim()) {
+        const parts = timeRaw.trim().split(':');
+        if (parts.length >= 2) {
+          timeFormatted = `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
+      }
+      const startTime = timeFormatted ? `${dateStr}T${timeFormatted}:00+09:00` : `${dateStr}T00:00:00+09:00`;
+      const isAllday = !timeFormatted;
 
       // 유튜브 썸네일 자동 감지
       let thumbnail = undefined;
