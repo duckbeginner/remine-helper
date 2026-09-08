@@ -46,16 +46,30 @@ function loadStreamsCache() {
     if (fs.existsSync(SEEDS_STREAMS_FILE)) {
       const seeds = JSON.parse(fs.readFileSync(SEEDS_STREAMS_FILE, 'utf8'));
       if (Array.isArray(seeds)) {
-        seeds.forEach(s => { if (s && s.id) cache[s.id] = s; });
+        seeds.forEach(s => {
+          if (s && s.id) cache[s.id] = { ...s };
+        });
       }
     }
   } catch (e) { }
 
-  // 2. 런타임 캐시 파일이 있으면 덮어쓰기
+  // 2. 런타임 캐시 파일이 있으면 유효한 값만 스마트 병합 (시드의 유효한 published를 빈 값으로 덮어쓰지 않음)
   try {
     if (fs.existsSync(STREAMS_CACHE_FILE)) {
       const runtimeCache = JSON.parse(fs.readFileSync(STREAMS_CACHE_FILE, 'utf8'));
-      Object.assign(cache, runtimeCache);
+      for (const [id, val] of Object.entries(runtimeCache)) {
+        if (!cache[id]) {
+          cache[id] = val;
+        } else {
+          cache[id] = {
+            ...cache[id],
+            ...val,
+            published: val.published || cache[id].published,
+            publishedAt: val.publishedAt || cache[id].publishedAt,
+            title: val.title || cache[id].title
+          };
+        }
+      }
     }
   } catch (e) { }
 
@@ -141,15 +155,17 @@ async function fetchOfficialLiveStreams() {
           const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
           published = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}-${String(kstD.getUTCDate()).padStart(2, '0')}`;
         }
-        cache[s.id] = {
-          id: s.id,
-          title: cleanTitle,
-          publishedAt,
-          published,
-          url: 'https://www.youtube.com/watch?v=' + s.id,
-          thumbnail: `https://i.ytimg.com/vi/${s.id}/hqdefault.jpg`
-        };
-        newFetches++;
+        if (publishedAt || cleanTitle) {
+          cache[s.id] = {
+            id: s.id,
+            title: cleanTitle || cache[s.id]?.title || '',
+            publishedAt: publishedAt || cache[s.id]?.publishedAt || null,
+            published: published || cache[s.id]?.published || '',
+            url: 'https://www.youtube.com/watch?v=' + s.id,
+            thumbnail: `https://i.ytimg.com/vi/${s.id}/hqdefault.jpg`
+          };
+          newFetches++;
+        }
       } catch (e) { }
     }));
 
@@ -320,44 +336,22 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
     }
   });
   console.log(`  🎥 [Live Stream] 공식 라이브 스트림 총 ${officialStreams.length}건 확보 완료`);
-  console.log(`  🔎 [Debug Streams]: ${officialStreams.map(s => `${s.id}(${s.published})`).join(', ')}`);
-
-  const targetDebug = schedules.find(s => (s.title && s.title.includes('생일 기념 라이브')) || (s.message && s.message.includes('생일 기념 라이브')));
-  if (targetDebug) {
-    console.log(`  🔎 [Debug Live Target] 발견: title="${targetDebug.title}", _isShorts=${targetDebug._isShorts}, _isExcluded=${targetDebug._isExcluded}, channel="${targetDebug.channel}", extField=${JSON.stringify(targetDebug.extField)}`);
-  } else {
-    console.log(`  🔎 [Debug Live Target] 스케줄 목록 내 없음 (전체: ${schedules.length}건)`);
-  }
 
   schedules.forEach(item => {
-    const isTargetItem = (item.title && item.title.includes('생일 기념 라이브')) || (item.message && item.message.includes('생일 기념 라이브'));
-
-    if (item._isShorts || item._isExcluded) {
-      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 제외됨: _isShorts=${item._isShorts}, _isExcluded=${item._isExcluded}`);
-      return;
-    }
+    if (item._isShorts || item._isExcluded) return;
     const text = [item.title, item.message, item.url, item.link, item.channel, item.extField?.value].filter(Boolean).join(' ');
     const hasVid = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
 
     // 타 채널 외부 방송(침착맨, 문명특급, 방송사, 페스티벌 등)은 공식 채널 스트림 매칭에서 제외
     const isExternalBroadcast = /침착맨|문명특급|mmtg|대\.?친\.?소|인기가요|뮤직뱅크|쇼챔|엠카|it'?s\s*live|아이돌\s*라디오|친한친구|kcon|서든어택|월드컵/i.test(text);
-    if (isExternalBroadcast) {
-      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 외부 방송으로 판정됨: text=${text.slice(0, 100)}`);
-      return;
-    }
+    if (isExternalBroadcast) return;
 
     // 리센느 공식 채널 라이브 방송인지 판별
     const isOfficialLive = item.channel === 'RESCENE' || /youtube\.com\/@rescene_official|RESCENE\s*공식\s*YOUTUBE/i.test(text);
-    if (!isOfficialLive) {
-      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 공식 채널 라이브 아님: channel=${item.channel}`);
-      return;
-    }
+    if (!isOfficialLive) return;
 
     // 비디오 ID가 없고 라이브 관련 키워드가 있는 일정
     const isLiveKeyword = /\[live\]|라이브|\blive\b/i.test(item.title || '') || /\[live\]|라이브/i.test(item.message || '');
-    if (isTargetItem) {
-      console.log(`  🔎 [Debug Live Step] 조건: hasVid=${Boolean(hasVid)}, isLiveKeyword=${isLiveKeyword}, startTime=${item.startTime}`);
-    }
     if (!hasVid && isLiveKeyword && item.startTime) {
       const itemDate = parseSafeDate(item.startTime);
       const kstItemDate = new Date(itemDate.getTime() + 9 * 60 * 60 * 1000);
@@ -367,10 +361,6 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       // 스트림 VOD가 이미 존재하거나 현재 시각보다 과거인 경우 종료된 라이브로 판정
       const hasStreamUploaded = officialStreams.some(s => s.published === itemDateStr);
       const isPast = (itemTimeMs < Date.now()) || hasStreamUploaded;
-
-      if (isTargetItem) {
-        console.log(`  🔎 [Debug Live Step] 날짜/시각: itemDateStr=${itemDateStr}, hasStreamUploaded=${hasStreamUploaded}, isPast=${isPast}, streamCount=${officialStreams.length}`);
-      }
 
       if (isPast && officialStreams.length > 0) {
         // 날짜가 같거나 ±24시간 이내인 스트림 후보 추출
