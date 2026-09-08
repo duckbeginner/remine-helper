@@ -319,10 +319,11 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       allYtVideoMap.set(s.id, { ...s, isShorts: false });
     }
   });
+  console.log(`  🎥 [Live Stream] 공식 라이브 스트림 총 ${officialStreams.length}건 확보 완료`);
 
   schedules.forEach(item => {
     if (item._isShorts || item._isExcluded) return;
-    const text = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ');
+    const text = [item.title, item.message, item.url, item.link, item.channel, item.extField?.value].filter(Boolean).join(' ');
     const hasVid = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
 
     // 타 채널 외부 방송(침착맨, 문명특급, 방송사, 페스티벌 등)은 공식 채널 스트림 매칭에서 제외
@@ -341,8 +342,9 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       const itemDateStr = `${kstItemDate.getUTCFullYear()}-${String(kstItemDate.getUTCMonth() + 1).padStart(2, '0')}-${String(kstItemDate.getUTCDate()).padStart(2, '0')}`;
       const itemTimeMs = itemDate.getTime();
 
-      // 현재 시각보다 과거인 경우 (종료된 라이브)
-      const isPast = itemTimeMs < Date.now();
+      // 스트림 VOD가 이미 존재하거나 현재 시각보다 과거인 경우 종료된 라이브로 판정
+      const hasStreamUploaded = officialStreams.some(s => s.published === itemDateStr);
+      const isPast = (itemTimeMs < Date.now()) || hasStreamUploaded;
 
       if (isPast && officialStreams.length > 0) {
         // 날짜가 같거나 ±24시간 이내인 스트림 후보 추출
@@ -725,12 +727,14 @@ export async function collectScheduleData(allYtVideos = []) {
   allRaw.forEach(newItem => {
     if (!newItem.title || !newItem.startTime) return;
     const newD = parseSafeDate(newItem.startTime);
-    const newDateStr = `${newD.getFullYear()}-${String(newD.getMonth() + 1).padStart(2, '0')}-${String(newD.getDate()).padStart(2, '0')}`;
+    const kstNewD = new Date(newD.getTime() + 9 * 60 * 60 * 1000);
+    const newDateStr = `${kstNewD.getUTCFullYear()}-${String(kstNewD.getUTCMonth() + 1).padStart(2, '0')}-${String(kstNewD.getUTCDate()).padStart(2, '0')}`;
 
     let matchIdx = -1;
     for (let i = 0; i < mergedList.length; i++) {
       const existD = parseSafeDate(mergedList[i].startTime);
-      const existDateStr = `${existD.getFullYear()}-${String(existD.getMonth() + 1).padStart(2, '0')}-${String(existD.getDate()).padStart(2, '0')}`;
+      const kstExistD = new Date(existD.getTime() + 9 * 60 * 60 * 1000);
+      const existDateStr = `${kstExistD.getUTCFullYear()}-${String(kstExistD.getUTCMonth() + 1).padStart(2, '0')}-${String(kstExistD.getUTCDate()).padStart(2, '0')}`;
 
       if (newDateStr === existDateStr && areSchedulesDuplicate(mergedList[i], newItem)) {
         matchIdx = i;
@@ -742,6 +746,7 @@ export async function collectScheduleData(allYtVideos = []) {
       const target = mergedList[matchIdx];
       target.title = pickBestTitle(target.title, newItem.title);
       if (!target.url && newItem.url) target.url = newItem.url;
+      if (!target.message && newItem.message) target.message = newItem.message;
       if (!target.typeText && newItem.typeText) target.typeText = newItem.typeText;
       if (!target.location && newItem.location) target.location = newItem.location;
       if (!target.channel && newItem.channel) target.channel = newItem.channel;
