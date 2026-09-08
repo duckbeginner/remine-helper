@@ -88,7 +88,7 @@ function isTvMainBroadcast(item, channel) {
 }
 
 // 유튜브 링크가 있는 일정 항목들을 YouTube oEmbed API로 사전 일괄 보강
-// 및 쇼츠(_isShorts) 판별 + 공식/안원잘부 채널 영상 메타데이터 완전 정제
+// 및 쇼츠/숏폼(_isShorts) 판별 + 공식/안원잘부 채널 롱폼 정제 및 타 채널(수원시 등) 원 채널명 보존
 async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   if (!Array.isArray(schedules) || schedules.length === 0) return;
   const oembedCache = loadOembedCache();
@@ -97,33 +97,117 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
 
   // allYtVideos 맵 생성 (id -> video)
   const allYtVideoMap = new Map((allYtVideos || []).map(v => [v.id, v]));
-  const officialIdSet = new Set((allYtVideos || []).map(v => v.id).filter(Boolean));
 
-  // 유튜브 비디오 ID가 있는 일정들 추출
+  // 1. 공식 채널 링크 포함 일정의 채널명 표준화 및 틱톡/숏폼 사전 검사
+  schedules.forEach(item => {
+    const rawText = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
+
+    // (1) 틱톡 비디오 링크 또는 숏폼 URL 검사 -> 스케줄 제외 마킹
+    const isTikTokVideo = /(?:https?:\/\/)?(?:vt\.tiktok\.com\/[\w-]+\/?|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(rawText) ||
+      ((item.url && /tiktok\.com/i.test(item.url)) || (item.link && /tiktok\.com/i.test(item.link)));
+    const isReel = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/reels?\/[\w-]+/i.test(rawText);
+
+    if (isTikTokVideo || isReel) {
+      item._isShorts = true;
+    }
+
+    // (2) 공식 채널 링크 표준화
+    if (/youtube\.com\/@rescene_official|RESCENE\s*공식\s*YOUTUBE/i.test(rawText) || item.channel === 'RESCENE 공식 YOUTUBE 채널') {
+      item.channel = 'RESCENE';
+      if (item.extField) item.extField.value = 'RESCENE';
+      else item.extField = { key: '채널', value: 'RESCENE' };
+    } else if (/helloiamwoni|UCWpY0eSJtyO-qNAPbKFRSSg/i.test(rawText) || (item.channel && item.channel.includes('안원잘부'))) {
+      item.channel = '안녕하세요원이입니다잘부탁드립니다';
+      if (item.extField) item.extField.value = '안녕하세요원이입니다잘부탁드립니다';
+      else item.extField = { key: '채널', value: '안녕하세요원이입니다잘부탁드립니다' };
+    }
+  });
+
+  // 2. 비디오 ID가 없는 일정 중 채널 링크만 있는 '예정 일정'의 유튜브 영상 자동 매칭
+  schedules.forEach(item => {
+    if (item._isShorts) return;
+    const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
+    const hasVid = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
+
+    if (!hasVid && item.startTime) {
+      const isWoniChannelItem = /helloiamwoni|UCWpY0eSJtyO-qNAPbKFRSSg/i.test(text) || item.channel === '안녕하세요원이입니다잘부탁드립니다';
+      const isResceneChannelItem = /@rescene_official/i.test(text) || item.channel === 'RESCENE';
+
+      if (isWoniChannelItem || isResceneChannelItem) {
+        const itemDate = parseSafeDate(item.startTime);
+        const itemDateStr = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}-${String(itemDate.getDate()).padStart(2, '0')}`;
+        const itemTimeMs = itemDate.getTime();
+
+        // 매칭 후보 영상 필터링
+        const targetChannelName = isWoniChannelItem ? '안녕하세요원이입니다잘부탁드립니다' : 'RESCENE';
+        const candidateVideos = (allYtVideos || []).filter(v => {
+          if (v.channelName !== targetChannelName) return false;
+          if (!v.publishedAt && !v.published) return false;
+          const vDateStr = v.published || (v.publishedAt ? v.publishedAt.split('T')[0] : '');
+          if (vDateStr === itemDateStr) return true;
+          if (v.publishedAt) {
+            const diffMs = Math.abs(new Date(v.publishedAt).getTime() - itemTimeMs);
+            return diffMs <= 12 * 60 * 60 * 1000; // ±12시간 이내
+          }
+          return false;
+        });
+
+        if (candidateVideos.length > 0) {
+          // 롱폼 영상 최우선 매칭, 시간 오차 최소인 영상 선택
+          const longFormVideos = candidateVideos.filter(v => !v.isShorts);
+          const pool = longFormVideos.length > 0 ? longFormVideos : candidateVideos;
+
+          pool.sort((a, b) => {
+            const diffA = a.publishedAt ? Math.abs(new Date(a.publishedAt).getTime() - itemTimeMs) : 999999999;
+            const diffB = b.publishedAt ? Math.abs(new Date(b.publishedAt).getTime() - itemTimeMs) : 999999999;
+            return diffA - diffB;
+          });
+
+          const matched = pool[0];
+          if (matched.isShorts) {
+            item._isShorts = true;
+          } else {
+            // 정식 롱폼 영상으로 일정 보강
+            item.url = `https://www.youtube.com/watch?v=${matched.id}`;
+            item.link = item.url;
+            item.title = matched.title || item.title;
+            item.thumbnail = matched.thumbnail || `https://img.youtube.com/vi/${matched.id}/hqdefault.jpg`;
+            item.channel = matched.channelName || targetChannelName;
+            item.extField = { key: '채널', value: item.channel };
+            item.typeText = "영상";
+            item.typeId = 1;
+            item.message = ""; // 블립 안내문구 제거
+            item.isOfficialYoutube = true;
+          }
+        }
+      }
+    }
+  });
+
+  // 3. 유튜브 비디오 ID가 있는 일정들 추출
   const targetItems = [];
   schedules.forEach(item => {
+    if (item._isShorts) return;
     const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
     const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
     if (match) {
       targetItems.push({ item, vid: match[1] });
     } else {
-      // 유튜브 링크는 없지만 텍스트 자체에 #shorts나 #쇼츠가 있는 경우 쇼츠로 마킹
       if (/#shorts|#Shorts|#쇼츠|\/shorts\//i.test(text)) {
         item._isShorts = true;
       }
     }
   });
 
-  // 병렬 10개씩 청크 처리로 초고속 조회
+  // 4. 병렬 10개씩 청크 처리로 초고속 조회
   const CHUNK_SIZE = 10;
   for (let i = 0; i < targetItems.length; i += CHUNK_SIZE) {
     const chunk = targetItems.slice(i, i + CHUNK_SIZE);
     await Promise.all(chunk.map(async ({ item, vid }) => {
-      // 1. 쇼츠 여부 1차 검사 (텍스트/URL 기반)
+      // 쇼츠 여부 1차 검사
       const rawText = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
       let isShorts = /shorts\/|#shorts|#Shorts|#쇼츠|\[shorts\]|\(shorts\)/i.test(rawText);
 
-      // 2. allYtVideos에서 쇼츠 판별 확인
       const knownYt = allYtVideoMap.get(vid);
       if (knownYt && knownYt.isShorts) {
         isShorts = true;
@@ -144,31 +228,25 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       }
 
       if (oeData) {
-        // oEmbed 제목에 쇼츠 키워드가 있는 경우
         if (/#shorts|#Shorts|#쇼츠/i.test(oeData.title || '')) {
           isShorts = true;
         }
 
-        // 만약 쇼츠이면 item에 _isShorts 마킹
         if (isShorts) {
           item._isShorts = true;
           return;
         }
 
-        // 공식 채널 및 안원잘부 채널 여부 판별
-        const isOfficialRescene = oeData.author_name === 'RESCENE' ||
-          (oeData.author_url && oeData.author_url.includes('RESCENE')) ||
-          (item.channel === 'RESCENE') ||
-          officialIdSet.has(vid);
+        const authorName = (oeData.author_name || '').trim();
+        const authorUrl = oeData.author_url || '';
 
-        const isWoniChannel = (oeData.author_name && oeData.author_name.includes('원이')) ||
-          (oeData.author_url && oeData.author_url.includes('helloiamwoni')) ||
-          (item.channel && (item.channel.includes('원이') || item.channel.includes('안원잘부')));
+        // 공식 채널 직접 업로드 여부 판별 (재생목록 수록 타채널 영상 제외)
+        const isDirectRescene = authorName === 'RESCENE' || /youtube\.com\/@rescene_official/i.test(authorUrl);
+        const isDirectWoni = authorName.includes('원이') || /helloiamwoni|UCWpY0eSJtyO-qNAPbKFRSSg/i.test(authorUrl);
 
-        if (isOfficialRescene || isWoniChannel) {
-          // [요구사항 2] 공식 채널 & 안원잘부 채널 영상:
-          // 블립의 임의 제목, 블립 본문 메시지 등은 사용하지 않고 유튜브 정식 정보로 대체
-          const officialChannelName = isWoniChannel ? '안녕하세요원이입니다잘부탁드립니다' : 'RESCENE';
+        if (isDirectRescene || isDirectWoni) {
+          // [공식 채널 영상 중 유튜브 롱폼]
+          const officialChannelName = isDirectWoni ? '안녕하세요원이입니다잘부탁드립니다' : 'RESCENE';
           item.title = oeData.title || item.title;
           item.thumbnail = oeData.thumbnail_url || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
           item.url = `https://www.youtube.com/watch?v=${vid}`;
@@ -177,41 +255,36 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
           item.extField = { key: '채널', value: officialChannelName };
           item.typeText = "영상";
           item.typeId = 1;
-          item.message = ""; // 블립 안내문구(*아티스트 공식..., 🔗관련 링크...) 전면 제거
+          item.message = ""; // 블립 안내문구 제거
           item.isOfficialYoutube = true;
           return;
         }
 
-        // 그 외 외부 영상(방송사, 웹예능 등): 기존 oEmbed 보강 로직
+        // [타 채널 영상 (수원시, 방송사, 웹예능 등 외부 출연 영상)]
+        // 공식 재생목록(Archive)에 등록되었더라도 원 채널명(authorName)을 채널명으로 온전히 보존
         if (!item.thumbnail || item.thumbnail.includes('rescene-logo')) {
           item.thumbnail = oeData.thumbnail_url || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
         }
         if (!item.url) item.url = `https://www.youtube.com/watch?v=${vid}`;
         if (!item.link) item.link = item.url;
 
-        const currentChannel = item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null);
-        if (!currentChannel || !isBroadcasterName(currentChannel)) {
-          const author = oeData.author_name;
-          if (author) {
-            item.channel = author;
-            item.extField = { key: '채널', value: author };
-          }
+        // 원 채널명 보존
+        const effectiveChannel = authorName || item.channel || (item.extField?.value);
+        if (effectiveChannel) {
+          item.channel = effectiveChannel;
+          item.extField = { key: '채널', value: effectiveChannel };
         }
 
-        const isTvShow = isTvMainBroadcast(item, currentChannel);
+        const isTvShow = isTvMainBroadcast(item, effectiveChannel);
         if (!isTvShow && oeData.title) {
           item.title = oeData.title;
         }
 
         if (!isTvShow) {
-          if (/RESCENE|안녕하세요원이|자컨|비하인드|vlog|브이로그|ep\.|유튜브|youtube/i.test((item.channel || '') + ' ' + (item.title || '') + ' ' + (item.message || ''))) {
-            item.typeText = "영상";
-          }
+          item.typeText = "영상";
         }
 
-        if (officialIdSet.has(vid)) {
-          item.isOfficialYoutube = true;
-        }
+        item.isOfficialYoutube = false;
       } else if (isShorts) {
         item._isShorts = true;
       }
