@@ -892,10 +892,19 @@
     let currentViewDate = new Date();
     let activeCategory = 'all';
     let searchQuery = '';
+
+    // Gist에 이미 영구 저장된 오버라이드 데이터 (서버 상태)
+    let appliedOverrides = {
+      modified: {},
+      deleted: new Set(),
+      created: []
+    };
+
+    // 현재 화면에서 사용자가 변경하여 [저장 적용]을 눌러야 할 스테이징 데이터
     let pendingOverrides = {
-      modified: {}, // key -> item
-      deleted: new Set(),  // key set
-      created: []   // items
+      modified: {},
+      deleted: new Set(),
+      created: []
     };
 
     const GIST_ID = '44b49b328233ef6157499debe03f165c';
@@ -962,11 +971,13 @@
     }
 
     function getScheduleKey(item) {
+      if (!item) return '';
+      if (item._originKey) return item._originKey;
       const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
       return `${d}_${item.title}`;
     }
 
-    // 데이터 로드 (기본 스케줄 + 기존 Gist 오버라이드 병합)
+    // 데이터 로드 (기본 스케줄 + 기존 Gist 오버라이드 실시간 병합)
     async function loadSchedules() {
       const container = document.getElementById('scheduleListContainer');
       container.innerHTML = `
@@ -977,34 +988,99 @@
       `;
 
       try {
+        const token = getStoredToken();
+
         // 1. 기본 schedules.json 로드
         const res = await fetch(`${GIST_RAW_URL}?t=${Date.now()}`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        allSchedules = data.items || [];
+        const baseItems = data.items || [];
 
-        // 2. 기존 schedule-overrides.json 로드 시도
-        try {
-          const overRes = await fetch(`${GIST_OVERRIDES_RAW_URL}?t=${Date.now()}`);
-          if (overRes.ok) {
-            const overData = await overRes.json();
-            if (overData && typeof overData === 'object') {
-              if (Array.isArray(overData.deleted)) {
-                overData.deleted.forEach(k => pendingOverrides.deleted.add(k));
-              }
-              if (overData.modified && typeof overData.modified === 'object') {
-                Object.assign(pendingOverrides.modified, overData.modified);
-              }
-              if (Array.isArray(overData.created)) {
-                overData.created.forEach(c => {
-                  if (!allSchedules.some(s => getScheduleKey(s) === getScheduleKey(c))) {
-                    allSchedules.unshift({ ...c, _isCustom: true });
-                  }
-                });
+        // 2. schedule-overrides.json 로드 (Gist API 우선 조회로 CDN 캐시 0% 실시간 최신본 획득)
+        appliedOverrides = { modified: {}, deleted: new Set(), created: [] };
+
+        let overridesJson = null;
+        if (token) {
+          try {
+            const apiRes = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (apiRes.ok) {
+              const gistData = await apiRes.json();
+              const overFile = gistData.files && gistData.files['schedule-overrides.json'];
+              if (overFile && overFile.content) {
+                overridesJson = JSON.parse(overFile.content);
               }
             }
+          } catch (e) { }
+        }
+
+        if (!overridesJson) {
+          try {
+            const rawRes = await fetch(`${GIST_OVERRIDES_RAW_URL}?t=${Date.now()}`);
+            if (rawRes.ok) {
+              overridesJson = await rawRes.json();
+            }
+          } catch (e) { }
+        }
+
+        if (overridesJson && typeof overridesJson === 'object') {
+          if (Array.isArray(overridesJson.deleted)) {
+            overridesJson.deleted.forEach(k => appliedOverrides.deleted.add(k));
           }
-        } catch (e) { }
+          if (overridesJson.modified && typeof overridesJson.modified === 'object') {
+            appliedOverrides.modified = { ...overridesJson.modified };
+          }
+          if (Array.isArray(overridesJson.created)) {
+            appliedOverrides.created = overridesJson.created.map(c => ({ ...c, _isCustom: true }));
+          }
+        }
+
+        // 3. baseItems에 appliedOverrides 병합 (실제 화면 덮어쓰기!)
+        allSchedules = baseItems.map(item => {
+          const itemCopy = { ...item };
+          const originKey = getScheduleKey(itemCopy);
+          itemCopy._originKey = originKey;
+
+          // Gist에 저장된 수정본이 있으면 실제 속성 덮어쓰기!
+          const mod = appliedOverrides.modified[originKey] || appliedOverrides.modified[itemCopy.title];
+          if (mod) {
+            Object.assign(itemCopy, mod);
+            itemCopy._originKey = originKey; // 고유 원본 키 유지
+            itemCopy._isModified = true;
+          }
+
+          if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(itemCopy.title)) {
+            itemCopy._isDeleted = true;
+          }
+
+          return itemCopy;
+        });
+
+        // 4. Gist에 저장된 생성 항목 추가
+        appliedOverrides.created.forEach(c => {
+          const cCopy = { ...c, _isCustom: true };
+          const cKey = getScheduleKey(cCopy);
+          cCopy._originKey = cKey;
+          if (!allSchedules.some(s => getScheduleKey(s) === cKey)) {
+            allSchedules.unshift(cCopy);
+          }
+        });
+
+        // 5. 사용자가 현재 세션에서 아직 [저장 적용] 안 한 pendingOverrides도 화면에 임시 합성
+        Object.entries(pendingOverrides.modified).forEach(([pKey, pMod]) => {
+          const target = allSchedules.find(s => getScheduleKey(s) === pKey);
+          if (target) {
+            Object.assign(target, pMod);
+            target._isModified = true;
+          }
+        });
+        pendingOverrides.created.forEach(c => {
+          const cKey = getScheduleKey(c);
+          if (!allSchedules.some(s => getScheduleKey(s) === cKey)) {
+            allSchedules.unshift({ ...c, _originKey: cKey, _isCustom: true });
+          }
+        });
 
         renderSchedules();
         updateStagingBar();
@@ -1088,21 +1164,25 @@
 
         groupItems.forEach(({ item, originalIndex }) => {
           const key = getScheduleKey(item);
-          const isDeleted = pendingOverrides.deleted.has(key);
-          const isModified = Boolean(pendingOverrides.modified[key]);
+          const isDeleted = pendingOverrides.deleted.has(key) || item._isDeleted;
+          const isPendingMod = Boolean(pendingOverrides.modified[key]);
+          const isSavedMod = Boolean(item._isModified);
           const isCustom = Boolean(item._isCustom);
 
           let statusClass = '';
           let stateBadge = '';
           if (isDeleted) {
             statusClass = 'status-excluded';
-            stateBadge = '<span class="state-badge badge-del">삭제 예정</span>';
-          } else if (isModified) {
+            stateBadge = '<span class="state-badge badge-del">삭제됨</span>';
+          } else if (isPendingMod) {
+            statusClass = 'status-modified';
+            stateBadge = '<span class="state-badge badge-mod">수정 대기</span>';
+          } else if (isSavedMod) {
             statusClass = 'status-modified';
             stateBadge = '<span class="state-badge badge-mod">수정됨</span>';
           } else if (isCustom) {
             statusClass = 'status-custom';
-            stateBadge = '<span class="state-badge badge-new">수동 추가</span>';
+            stateBadge = '<span class="state-badge badge-new">수동 등록</span>';
           }
 
           // 타입 뱃지
@@ -1209,16 +1289,28 @@
 
     // 아이템 숨김/삭제 토글
     function toggleDeleteItem(key) {
-      if (pendingOverrides.deleted.has(key)) {
+      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      if (item && item._isDeleted) {
+        appliedOverrides.deleted.delete(key);
+        item._isDeleted = false;
         pendingOverrides.deleted.delete(key);
       } else {
-        pendingOverrides.deleted.add(key);
+        if (pendingOverrides.deleted.has(key)) {
+          pendingOverrides.deleted.delete(key);
+        } else {
+          pendingOverrides.deleted.add(key);
+        }
       }
       updateStagingBar();
       renderSchedules();
     }
 
     function restoreItem(key) {
+      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      if (item) {
+        item._isDeleted = false;
+        appliedOverrides.deleted.delete(key);
+      }
       pendingOverrides.deleted.delete(key);
       delete pendingOverrides.modified[key];
       updateStagingBar();
@@ -1267,6 +1359,8 @@
           isOfficialYoutube,
           _isCustom: true
         };
+        const nKey = getScheduleKey(newItem);
+        newItem._originKey = nKey;
         allSchedules.unshift(newItem);
         pendingOverrides.created.push(newItem);
       } else {
@@ -1283,8 +1377,21 @@
           item.message = message;
           if (thumbnail) item.thumbnail = thumbnail;
           if (isOfficialYoutube) item.isOfficialYoutube = isOfficialYoutube;
+          item._isModified = true;
 
-          pendingOverrides.modified[key] = { ...item };
+          pendingOverrides.modified[key] = {
+            title,
+            startTime,
+            endTime: startTime,
+            isAllday,
+            typeText,
+            channel,
+            url,
+            location,
+            message,
+            thumbnail,
+            isOfficialYoutube
+          };
         }
       }
 
@@ -1407,14 +1514,25 @@
       commitBtn.disabled = true;
 
       try {
+        // 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합!
+        const mergedDeleted = new Set([...appliedOverrides.deleted, ...pendingOverrides.deleted]);
+        const mergedModified = { ...appliedOverrides.modified, ...pendingOverrides.modified };
+        
+        // 삭제된 항목은 modified에서 제거
+        mergedDeleted.forEach(dKey => {
+          delete mergedModified[dKey];
+        });
+
+        const mergedCreated = [...appliedOverrides.created, ...pendingOverrides.created];
+
         const payload = {
           files: {
             "schedule-overrides.json": {
               content: JSON.stringify({
                 updatedAt: new Date().toISOString(),
-                deleted: Array.from(pendingOverrides.deleted),
-                modified: pendingOverrides.modified,
-                created: pendingOverrides.created
+                deleted: Array.from(mergedDeleted),
+                modified: mergedModified,
+                created: mergedCreated
               }, null, 2)
             }
           }
