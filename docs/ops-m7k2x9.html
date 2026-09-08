@@ -1000,6 +1000,16 @@
       return `${d}_${item.title}`;
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function getScheduleKey(item) {
       if (!item) return '';
       if (item._originKey) return item._originKey;
@@ -1329,31 +1339,34 @@
             }
           }
 
+          const safeKey = escapeHtml(key);
+          const safeKeyJs = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
           html += `
-            <div class="schedule-card ${statusClass}" data-key="${key}">
+            <div class="schedule-card ${statusClass}" data-key="${safeKey}">
               <div class="card-top">
                 <div class="thumb-box">
-                  ${item.thumbnail ? `<img src="${item.thumbnail}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${type.includes('영상') ? '🎬' : (type.includes('방송') ? '📺' : '📅')}</div>`}
+                  ${item.thumbnail ? `<img src="${escapeHtml(item.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${type.includes('영상') ? '🎬' : (type.includes('방송') ? '📺' : '📅')}</div>`}
                 </div>
                 <div class="card-meta">
                   <div class="meta-badges">
-                    <span class="type-badge ${typeBadgeClass}">${type}</span>
-                    ${item.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${item.channel}</span>` : ''}
+                    <span class="type-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
+                    ${item.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(item.channel)}</span>` : ''}
                     ${stateBadge}
                   </div>
-                  <div class="card-title">${item.title}</div>
-                  ${item.location ? `<div class="card-subtext">📍 ${item.location}</div>` : ''}
+                  <div class="card-title">${escapeHtml(item.title)}</div>
+                  ${item.location ? `<div class="card-subtext">📍 ${escapeHtml(item.location)}</div>` : ''}
                 </div>
               </div>
 
               <div class="card-bottom">
                 <div class="card-time">⏰ ${timeStr}</div>
                 <div class="card-actions">
-                  ${item.url ? `<a href="${item.url}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
+                  ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
                   ${isDeleted ? 
-                    `<button class="btn-action btn-restore" onclick="restoreItem('${key}')">복구</button>` : 
-                    `<button class="btn-action" onclick="openEditModalByKey('${key}')">✏️ 수정</button>
-                     <button class="btn-action btn-del" onclick="toggleDeleteItem('${key}')">🗑️ 숨김</button>`
+                    `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` : 
+                    `<button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
+                     <button class="btn-action btn-del" onclick="toggleDeleteItem('${safeKeyJs}')">🗑️ 숨김</button>`
                   }
                 </div>
               </div>
