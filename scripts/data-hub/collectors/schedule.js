@@ -829,23 +829,37 @@ export async function collectScheduleData(allYtVideos = []) {
 async function applyScheduleOverrides(scheduleList) {
   let overridesData = null;
 
-  // 1. Gist에서 최신 schedule-overrides.json 로드 시도
+  // 1. 로컬 캐시 확인
+  let localData = null;
+  if (fs.existsSync(OVERRIDES_CACHE_FILE)) {
+    try {
+      localData = JSON.parse(fs.readFileSync(OVERRIDES_CACHE_FILE, 'utf8'));
+    } catch (e) { }
+  }
+
+  // 2. Gist에서 최신 schedule-overrides.json 로드 시도
   try {
     const res = await fetch(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json?t=${Date.now()}`);
     if (res.ok) {
-      overridesData = await res.json();
-      try {
-        ensureCacheDir();
-        fs.writeFileSync(OVERRIDES_CACHE_FILE, JSON.stringify(overridesData), 'utf8');
-      } catch (e) { }
+      const gistData = await res.json();
+      const gistTime = gistData && gistData.updatedAt ? new Date(gistData.updatedAt).getTime() : 0;
+      const localTime = localData && localData.updatedAt ? new Date(localData.updatedAt).getTime() : 0;
+
+      if (!localData || gistTime >= localTime) {
+        overridesData = gistData;
+        try {
+          ensureCacheDir();
+          fs.writeFileSync(OVERRIDES_CACHE_FILE, JSON.stringify(overridesData), 'utf8');
+        } catch (e) { }
+      } else {
+        overridesData = localData;
+      }
     }
   } catch (err) { }
 
-  // 2. 실패 시 로컬 캐시 사용
-  if (!overridesData && fs.existsSync(OVERRIDES_CACHE_FILE)) {
-    try {
-      overridesData = JSON.parse(fs.readFileSync(OVERRIDES_CACHE_FILE, 'utf8'));
-    } catch (e) { }
+  // 3. Gist 실패 시 로컬 캐시 사용
+  if (!overridesData) {
+    overridesData = localData;
   }
 
   if (!overridesData || typeof overridesData !== 'object') {
