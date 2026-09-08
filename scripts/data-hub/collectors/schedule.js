@@ -329,20 +329,34 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   }
 
   schedules.forEach(item => {
-    if (item._isShorts || item._isExcluded) return;
+    const isTargetItem = (item.title && item.title.includes('생일 기념 라이브')) || (item.message && item.message.includes('생일 기념 라이브'));
+
+    if (item._isShorts || item._isExcluded) {
+      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 제외됨: _isShorts=${item._isShorts}, _isExcluded=${item._isExcluded}`);
+      return;
+    }
     const text = [item.title, item.message, item.url, item.link, item.channel, item.extField?.value].filter(Boolean).join(' ');
     const hasVid = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
 
     // 타 채널 외부 방송(침착맨, 문명특급, 방송사, 페스티벌 등)은 공식 채널 스트림 매칭에서 제외
     const isExternalBroadcast = /침착맨|문명특급|mmtg|대\.?친\.?소|인기가요|뮤직뱅크|쇼챔|엠카|it'?s\s*live|아이돌\s*라디오|친한친구|kcon|서든어택|월드컵/i.test(text);
-    if (isExternalBroadcast) return;
+    if (isExternalBroadcast) {
+      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 외부 방송으로 판정됨: text=${text.slice(0, 100)}`);
+      return;
+    }
 
     // 리센느 공식 채널 라이브 방송인지 판별
     const isOfficialLive = item.channel === 'RESCENE' || /youtube\.com\/@rescene_official|RESCENE\s*공식\s*YOUTUBE/i.test(text);
-    if (!isOfficialLive) return;
+    if (!isOfficialLive) {
+      if (isTargetItem) console.log(`  🔎 [Debug Live Step] 공식 채널 라이브 아님: channel=${item.channel}`);
+      return;
+    }
 
     // 비디오 ID가 없고 라이브 관련 키워드가 있는 일정
     const isLiveKeyword = /\[live\]|라이브|\blive\b/i.test(item.title || '') || /\[live\]|라이브/i.test(item.message || '');
+    if (isTargetItem) {
+      console.log(`  🔎 [Debug Live Step] 조건: hasVid=${Boolean(hasVid)}, isLiveKeyword=${isLiveKeyword}, startTime=${item.startTime}`);
+    }
     if (!hasVid && isLiveKeyword && item.startTime) {
       const itemDate = parseSafeDate(item.startTime);
       const kstItemDate = new Date(itemDate.getTime() + 9 * 60 * 60 * 1000);
@@ -352,6 +366,10 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
       // 스트림 VOD가 이미 존재하거나 현재 시각보다 과거인 경우 종료된 라이브로 판정
       const hasStreamUploaded = officialStreams.some(s => s.published === itemDateStr);
       const isPast = (itemTimeMs < Date.now()) || hasStreamUploaded;
+
+      if (isTargetItem) {
+        console.log(`  🔎 [Debug Live Step] 날짜/시각: itemDateStr=${itemDateStr}, hasStreamUploaded=${hasStreamUploaded}, isPast=${isPast}, streamCount=${officialStreams.length}`);
+      }
 
       if (isPast && officialStreams.length > 0) {
         // 날짜가 같거나 ±24시간 이내인 스트림 후보 추출
