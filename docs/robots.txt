@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /ops-m7k2x9.html
 
 Sitemap: https://duckbeginner.github.io/remine-helper/sitemap.xml

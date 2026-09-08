@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>RESCENE Ops Portal</title>
+  
+  <!-- Pretendard & Inter Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-main: #0c0e14;
+      --bg-card: rgba(22, 26, 36, 0.85);
+      --bg-card-hover: rgba(30, 36, 50, 0.95);
+      --bg-input: #131722;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #7c5cfc;
+      --text-main: #f0f3f8;
+      --text-muted: #8e99ac;
+      --accent-purple: #7c5cfc;
+      --accent-purple-glow: rgba(124, 92, 252, 0.25);
+      --accent-pink: #f43f5e;
+      --accent-green: #10b981;
+      --accent-blue: #38bdf8;
+      --accent-amber: #f59e0b;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 20px rgba(124, 92, 252, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 90px;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(124, 92, 252, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 60%, rgba(244, 63, 94, 0.08) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    /* 상단 헤더 바 */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(12, 14, 20, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #7c5cfc, #f43f5e);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(124, 92, 252, 0.4);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(124, 92, 252, 0.2);
+      color: #a78bfa;
+      border: 1px solid rgba(124, 92, 252, 0.3);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .btn-add-schedule {
+      background: linear-gradient(135deg, #7c5cfc, #6366f1);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px var(--accent-purple-glow);
+      transition: transform 0.15s ease;
+    }
+
+    .btn-add-schedule:active {
+      transform: scale(0.96);
+    }
+
+    /* 월 네비게이션 & 통계 바 */
+    .nav-bar {
+      padding: 14px 18px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .month-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .month-display {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .month-arrow {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .month-arrow:hover {
+      color: var(--text-main);
+    }
+
+    .today-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* 검색 & 카테고리 필터 */
+    .filter-section {
+      padding: 4px 18px 12px;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px 10px 36px;
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--border-focus);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filter-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chip.active {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px var(--accent-purple-glow);
+    }
+
+    /* 변경사항 플로팅 알림 바 */
+    .staging-bar {
+      position: fixed;
+      bottom: 18px;
+      left: 18px;
+      right: 18px;
+      z-index: 90;
+      background: rgba(22, 26, 36, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--accent-purple);
+      border-radius: var(--radius-lg);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--shadow-glow);
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .staging-bar.visible {
+      transform: translateY(0);
+    }
+
+    .staging-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .staging-badge {
+      background: var(--accent-purple);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+
+    .staging-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-commit {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 일정 리스트 컨테이너 */
+    .schedule-container {
+      padding: 0 18px;
+    }
+
+    .date-group {
+      margin-bottom: 22px;
+    }
+
+    .date-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .date-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .date-header.today {
+      color: var(--accent-purple);
+    }
+
+    .date-header.today::after {
+      background: rgba(124, 92, 252, 0.3);
+    }
+
+    /* 일정 카드 */
+    .schedule-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .schedule-card:active {
+      transform: scale(0.99);
+    }
+
+    .schedule-card.status-excluded {
+      opacity: 0.45;
+      background: rgba(15, 17, 23, 0.7);
+      border-style: dashed;
+      filter: grayscale(0.8);
+    }
+
+    .schedule-card.status-modified {
+      border-color: rgba(124, 92, 252, 0.5);
+      background: rgba(30, 26, 50, 0.85);
+    }
+
+    .schedule-card.status-custom {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: rgba(20, 36, 30, 0.85);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .thumb-box {
+      width: 76px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #181d28;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .thumb-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    .card-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .meta-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: -0.2px;
+    }
+
+    .badge-video { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+    .badge-broadcast { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .badge-event { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-special { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge-default { background: rgba(142, 153, 172, 0.15); color: #94a3b8; }
+
+    .state-badge {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .badge-mod { background: rgba(124, 92, 252, 0.25); color: #c4b5fd; }
+    .badge-new { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
+    .badge-del { background: rgba(239, 68, 68, 0.25); color: #fca5a5; }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text-main);
+      word-break: break-all;
+    }
+
+    .card-subtext {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 8px;
+      font-size: 11px;
+    }
+
+    .card-time {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-action:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .btn-action.btn-del {
+      color: #fb7185;
+    }
+
+    .btn-action.btn-restore {
+      color: #34d399;
+    }
+
+    /* 바텀 시트 모달 (수정/추가용) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .bottom-sheet {
+      width: 100%;
+      max-height: 90vh;
+      background: #141824;
+      border-top: 1px solid var(--border-subtle);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 36px;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .bottom-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle {
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .sheet-title {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .sheet-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* 폼 요소 */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--border-focus);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .sheet-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn-sheet-del {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .btn-sheet-save {
+      background: linear-gradient(135deg, #7c5cfc, #6366f1);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 2;
+      box-shadow: 0 4px 14px var(--accent-purple-glow);
+    }
+
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--accent-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 404 Not Found 위장 도어락 화면 -->
+  <div id="gatekeeperScreen" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; user-select: none;">
+    <div style="max-width: 380px; width: 100%;">
+      <!-- 비밀 트리거: 404 글자를 3번 탭하면 시크릿 패널 노출 -->
+      <h1 id="stealthTrigger" style="font-size: 88px; font-weight: 900; letter-spacing: -3px; line-height: 1; margin-bottom: 12px; color: rgba(255, 255, 255, 0.22); cursor: default; transition: color 0.2s;">404</h1>
+      <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Page Not Found</h2>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
+        요청하신 페이지를 찾을 수 없거나 이동되었습니다.<br>주소를 다시 확인해 주세요.
+      </p>
+
+      <!-- 일반 방문자를 위한 가짜 홈 버튼 -->
+      <a id="btnFakeHome" href="./" style="display: inline-block; padding: 10px 22px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 13px; text-decoration: none; font-weight: 500; transition: background 0.2s;">
+        홈으로 이동
+      </a>
+
+      <!-- 스텔스 시크릿 폼 (기본 숨김) -->
+      <form id="gatekeeperForm" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: left; animation: fadeIn 0.3s ease;">
+        <div style="margin-bottom: 12px;">
+          <input type="password" id="gateTokenInput" class="form-input" placeholder="••••••••••••" required style="padding: 12px 14px; font-size: 15px; letter-spacing: 2px; text-align: center;">
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chkRememberDevice" checked style="accent-color: var(--accent-purple);">
+            <span>기기 기억하기</span>
+          </label>
+          <span id="gateErrorMsg" style="display: none; color: #fb7185; font-size: 11px;">Access Denied</span>
+        </div>
+
+        <button type="submit" id="btnGateUnlock" class="btn-sheet-save" style="width: 100%; padding: 12px; font-size: 14px; border-radius: var(--radius-sm);">
+          Confirm
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 앱 헤더 (인증 성공 시만 표시) -->
+  <header class="app-header" id="appHeader" style="display: none;">
+    <div class="brand-group">
+      <div class="brand-logo">R</div>
+      <div class="brand-title">
+        Schedule Ops
+        <span class="brand-badge" id="envBadge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3);">Authorized</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>
+      <button class="btn-icon" id="btnRefresh" title="새로고침">🔄</button>
+      <button class="btn-add-schedule" id="btnOpenAddModal">
+        <span>➕</span> 새 일정
+      </button>
+    </div>
+  </header>
+
+  <!-- 메인 뷰 컨테이너 (인증 성공 시만 표시) -->
+  <main id="mainContent" style="display: none;">
+
+    <!-- 월 선택 & 오늘 이동 -->
+    <section class="nav-bar">
+      <div class="month-selector">
+        <button class="month-arrow" id="btnPrevMonth">◀</button>
+        <span class="month-display" id="currentMonthText">2026. 08</span>
+        <button class="month-arrow" id="btnNextMonth">▶</button>
+      </div>
+      <button class="today-btn" id="btnToday">오늘로</button>
+    </section>
+
+    <!-- 검색 & 카테고리 필터 -->
+    <section class="filter-section">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
+      </div>
+      <div class="filter-chips">
+        <button class="chip active" data-type="all">전체</button>
+        <button class="chip" data-type="영상">영상</button>
+        <button class="chip" data-type="방송">방송/라디오</button>
+        <button class="chip" data-type="공연">행사/공연</button>
+        <button class="chip" data-type="기념일">기념일</button>
+      </div>
+    </section>
+
+    <!-- 스케줄 리스트 -->
+    <section class="schedule-container" id="scheduleListContainer">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <span>원격 일정 데이터 로드 중...</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 변경사항 플로팅 바 -->
+  <div class="staging-bar" id="stagingBar">
+    <div class="staging-info">
+      <span>수정 대기</span>
+      <span class="staging-badge" id="stagingCountBadge">0건</span>
+    </div>
+    <div class="staging-actions">
+      <button class="btn-reset" id="btnResetStaging">초기화</button>
+      <button class="btn-commit" id="btnSaveToGist">
+        <span>💾</span> 저장 적용
+      </button>
+    </div>
+  </div>
+
+  <!-- 일정 편집/추가 바텀 시트 모달 -->
+  <div class="modal-overlay" id="editModalOverlay">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 class="sheet-title" id="modalHeaderTitle">일정 수정</h3>
+        <button class="sheet-close" id="btnCloseModal">✕</button>
+      </div>
+
+      <form id="scheduleEditForm">
+        <input type="hidden" id="editItemIndex">
+        <input type="hidden" id="editIsNew">
+
+        <div class="form-group">
+          <label class="form-label">일정 제목 *</label>
+          <input type="text" class="form-input" id="formTitle" placeholder="예: [LIVE] MAY 생일 라이브" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">날짜 *</label>
+            <input type="date" class="form-input" id="formDate" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">시작 시간</label>
+            <input type="time" class="form-input" id="formTime">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">분류</label>
+            <select class="form-select" id="formType">
+              <option value="영상">영상 (유튜브/클립)</option>
+              <option value="방송">방송 (음방/라디오/예능)</option>
+              <option value="공연">행사/공연 (팬싸/페스티벌)</option>
+              <option value="기념일">기념일</option>
+              <option value="기타">기타 일정</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">채널 / 방송사</label>
+            <input type="text" class="form-input" id="formChannel" placeholder="예: RESCENE, KBS2">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">관련 링크 (유튜브/공지/티켓 URL)</label>
+          <input type="url" class="form-input" id="formUrl" placeholder="https://www.youtube.com/watch?v=...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">장소 (오프라인 일정)</label>
+          <input type="text" class="form-input" id="formLocation" placeholder="예: KBS 신관 공개홀, 영등포 타임스퀘어">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">메모 / 안내 문구</label>
+          <textarea class="form-textarea" id="formMessage" placeholder="일정 세부 안내 내용"></textarea>
+        </div>
+
+        <div class="sheet-buttons">
+          <button type="button" class="btn-sheet-del" id="btnModalDelete">🗑️ 숨기기/삭제</button>
+          <button type="submit" class="btn-sheet-save" id="btnModalSave">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 상태 관리
+    let allSchedules = [];
+    let currentViewDate = new Date();
+    let activeCategory = 'all';
+    let searchQuery = '';
+    let pendingOverrides = {
+      modified: {}, // key -> item
+      deleted: new Set(),  // key set
+      created: []   // items
+    };
+
+    const GIST_ID = '44b49b328233ef6157499debe03f165c';
+    const GIST_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedules.json`;
+    const GIST_OVERRIDES_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json`;
+
+    // 토큰 관리
+    function getStoredToken() {
+      return localStorage.getItem('RESCENE_OPS_TOKEN') || sessionStorage.getItem('RESCENE_OPS_TOKEN') || '';
+    }
+
+    function setStoredToken(token, remember = true) {
+      if (token) {
+        if (remember) {
+          localStorage.setItem('RESCENE_OPS_TOKEN', token);
+          sessionStorage.removeItem('RESCENE_OPS_TOKEN');
+        } else {
+          sessionStorage.setItem('RESCENE_OPS_TOKEN', token);
+          localStorage.removeItem('RESCENE_OPS_TOKEN');
+        }
+      } else {
+        localStorage.removeItem('RESCENE_OPS_TOKEN');
+        sessionStorage.removeItem('RESCENE_OPS_TOKEN');
+      }
+    }
+
+    // 도어락 화면 / 메인 앱 화면 전환
+    function showApp() {
+      document.getElementById('gatekeeperScreen').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'block';
+    }
+
+    function showGatekeeper() {
+      document.getElementById('gatekeeperScreen').style.display = 'flex';
+      document.getElementById('appHeader').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('stagingBar').classList.remove('visible');
+      // 404 스텔스 폼 초기화
+      const form = document.getElementById('gatekeeperForm');
+      const homeBtn = document.getElementById('btnFakeHome');
+      if (form) form.style.display = 'none';
+      if (homeBtn) homeBtn.style.display = 'inline-block';
+      const tokenInput = document.getElementById('gateTokenInput');
+      if (tokenInput) tokenInput.value = '';
+      const errorMsg = document.getElementById('gateErrorMsg');
+      if (errorMsg) errorMsg.style.display = 'none';
+    }
+
+    // 날짜 헬퍼
+    function getKstDate(dateStr) {
+      if (!dateStr) return new Date();
+      const d = new Date(dateStr);
+      return new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
+    }
+
+    function formatDateYMD(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDisplayDate(d) {
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${days[d.getDay()]})`;
+    }
+
+    function getScheduleKey(item) {
+      const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
+      return `${d}_${item.title}`;
+    }
+
+    // 데이터 로드 (기본 스케줄 + 기존 Gist 오버라이드 병합)
+    async function loadSchedules() {
+      const container = document.getElementById('scheduleListContainer');
+      container.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <span>최신 일정 및 보정 규칙 동기화 중...</span>
+        </div>
+      `;
+
+      try {
+        // 1. 기본 schedules.json 로드
+        const res = await fetch(`${GIST_RAW_URL}?t=${Date.now()}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        allSchedules = data.items || [];
+
+        // 2. 기존 schedule-overrides.json 로드 시도
+        try {
+          const overRes = await fetch(`${GIST_OVERRIDES_RAW_URL}?t=${Date.now()}`);
+          if (overRes.ok) {
+            const overData = await overRes.json();
+            if (overData && typeof overData === 'object') {
+              if (Array.isArray(overData.deleted)) {
+                overData.deleted.forEach(k => pendingOverrides.deleted.add(k));
+              }
+              if (overData.modified && typeof overData.modified === 'object') {
+                Object.assign(pendingOverrides.modified, overData.modified);
+              }
+              if (Array.isArray(overData.created)) {
+                overData.created.forEach(c => {
+                  if (!allSchedules.some(s => getScheduleKey(s) === getScheduleKey(c))) {
+                    allSchedules.unshift({ ...c, _isCustom: true });
+                  }
+                });
+              }
+            }
+          }
+        } catch (e) { }
+
+        renderSchedules();
+        updateStagingBar();
+      } catch (err) {
+        container.innerHTML = `
+          <div style="text-align:center; padding: 40px 0; color: #fb7185;">
+            <div style="font-size:32px; margin-bottom:10px;">⚠️</div>
+            <div>원격 일정을 불러오지 못했습니다.</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">${err.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    // 렌더링
+    function renderSchedules() {
+      const container = document.getElementById('scheduleListContainer');
+      const year = currentViewDate.getFullYear();
+      const month = currentViewDate.getMonth();
+
+      document.getElementById('currentMonthText').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+
+      // 필터링
+      const filtered = allSchedules.filter(item => {
+        if (!item.startTime) return false;
+        const d = new Date(item.startTime);
+        if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+
+        // 카테고리 필터
+        if (activeCategory !== 'all') {
+          const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
+          if (activeCategory === '영상' && !type.includes('영상')) return false;
+          if (activeCategory === '방송' && !type.includes('방송')) return false;
+          if (activeCategory === '공연' && !type.includes('공연') && !type.includes('행사')) return false;
+          if (activeCategory === '기념일' && !type.includes('기념일')) return false;
+        }
+
+        // 검색 필터
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const targetText = [item.title, item.channel, item.location, item.message].filter(Boolean).join(' ').toLowerCase();
+          if (!targetText.includes(q)) return false;
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
+            <div style="font-size:32px; margin-bottom:8px;">📅</div>
+            <div>해당 월에 표시할 일정이 없습니다.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // 날짜별 그루핑
+      const groups = {};
+      filtered.forEach((item, index) => {
+        const d = new Date(item.startTime);
+        const ymd = formatDateYMD(d);
+        if (!groups[ymd]) groups[ymd] = [];
+        groups[ymd].push({ item, originalIndex: index });
+      });
+
+      const todayYMD = formatDateYMD(new Date());
+
+      let html = '';
+      Object.keys(groups).sort().forEach(ymd => {
+        const groupItems = groups[ymd];
+        const dateObj = new Date(ymd + 'T00:00:00');
+        const isToday = ymd === todayYMD;
+
+        html += `
+          <div class="date-group">
+            <div class="date-header ${isToday ? 'today' : ''}">
+              ${formatDisplayDate(dateObj)} ${isToday ? '• 오늘' : ''}
+            </div>
+        `;
+
+        groupItems.forEach(({ item, originalIndex }) => {
+          const key = getScheduleKey(item);
+          const isDeleted = pendingOverrides.deleted.has(key);
+          const isModified = Boolean(pendingOverrides.modified[key]);
+          const isCustom = Boolean(item._isCustom);
+
+          let statusClass = '';
+          let stateBadge = '';
+          if (isDeleted) {
+            statusClass = 'status-excluded';
+            stateBadge = '<span class="state-badge badge-del">삭제 예정</span>';
+          } else if (isModified) {
+            statusClass = 'status-modified';
+            stateBadge = '<span class="state-badge badge-mod">수정됨</span>';
+          } else if (isCustom) {
+            statusClass = 'status-custom';
+            stateBadge = '<span class="state-badge badge-new">수동 추가</span>';
+          }
+
+          // 타입 뱃지
+          const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
+          let typeBadgeClass = 'badge-default';
+          if (type.includes('영상')) typeBadgeClass = 'badge-video';
+          else if (type.includes('방송')) typeBadgeClass = 'badge-broadcast';
+          else if (type.includes('공연') || type.includes('행사')) typeBadgeClass = 'badge-event';
+          else if (type.includes('기념일')) typeBadgeClass = 'badge-special';
+
+          // 시간 표기
+          let timeStr = '종일';
+          if (!item.isAllday && item.startTime) {
+            const timeD = new Date(item.startTime);
+            const hours = String(timeD.getHours()).padStart(2, '0');
+            const mins = String(timeD.getMinutes()).padStart(2, '0');
+            timeStr = `${hours}:${mins}`;
+          }
+
+          html += `
+            <div class="schedule-card ${statusClass}" data-key="${key}">
+              <div class="card-top">
+                <div class="thumb-box">
+                  ${item.thumbnail ? `<img src="${item.thumbnail}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${type.includes('영상') ? '🎬' : (type.includes('방송') ? '📺' : '📅')}</div>`}
+                </div>
+                <div class="card-meta">
+                  <div class="meta-badges">
+                    <span class="type-badge ${typeBadgeClass}">${type}</span>
+                    ${item.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${item.channel}</span>` : ''}
+                    ${stateBadge}
+                  </div>
+                  <div class="card-title">${item.title}</div>
+                  ${item.location ? `<div class="card-subtext">📍 ${item.location}</div>` : ''}
+                </div>
+              </div>
+
+              <div class="card-bottom">
+                <div class="card-time">⏰ ${timeStr}</div>
+                <div class="card-actions">
+                  ${item.url ? `<a href="${item.url}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
+                  ${isDeleted ? 
+                    `<button class="btn-action btn-restore" onclick="restoreItem('${key}')">복구</button>` : 
+                    `<button class="btn-action" onclick="openEditModalByKey('${key}')">✏️ 수정</button>
+                     <button class="btn-action btn-del" onclick="toggleDeleteItem('${key}')">🗑️ 숨김</button>`
+                  }
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // 모달 열기
+    function openEditModalByKey(key) {
+      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      if (!item) return;
+
+      document.getElementById('modalHeaderTitle').textContent = '일정 세부 수정';
+      document.getElementById('editItemIndex').value = key;
+      document.getElementById('editIsNew').value = '0';
+
+      document.getElementById('formTitle').value = item.title || '';
+      if (item.startTime) {
+        const d = new Date(item.startTime);
+        document.getElementById('formDate').value = formatDateYMD(d);
+        if (!item.isAllday) {
+          const h = String(d.getHours()).padStart(2, '0');
+          const m = String(d.getMinutes()).padStart(2, '0');
+          document.getElementById('formTime').value = `${h}:${m}`;
+        } else {
+          document.getElementById('formTime').value = '';
+        }
+      }
+
+      document.getElementById('formType').value = item.typeText || '기타';
+      document.getElementById('formChannel').value = item.channel || '';
+      document.getElementById('formUrl').value = item.url || item.link || '';
+      document.getElementById('formLocation').value = item.location || '';
+      document.getElementById('formMessage').value = item.message || '';
+
+      document.getElementById('btnModalDelete').style.display = 'block';
+      document.getElementById('editModalOverlay').classList.add('active');
+    }
+
+    function openAddModal() {
+      document.getElementById('modalHeaderTitle').textContent = '새 일정 등록';
+      document.getElementById('editItemIndex').value = '';
+      document.getElementById('editIsNew').value = '1';
+
+      document.getElementById('scheduleEditForm').reset();
+      document.getElementById('formDate').value = formatDateYMD(new Date());
+      document.getElementById('btnModalDelete').style.display = 'none';
+      document.getElementById('editModalOverlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('editModalOverlay').classList.remove('active');
+    }
+
+    // 아이템 숨김/삭제 토글
+    function toggleDeleteItem(key) {
+      if (pendingOverrides.deleted.has(key)) {
+        pendingOverrides.deleted.delete(key);
+      } else {
+        pendingOverrides.deleted.add(key);
+      }
+      updateStagingBar();
+      renderSchedules();
+    }
+
+    function restoreItem(key) {
+      pendingOverrides.deleted.delete(key);
+      delete pendingOverrides.modified[key];
+      updateStagingBar();
+      renderSchedules();
+    }
+
+    // 폼 저장
+    document.getElementById('scheduleEditForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const isNew = document.getElementById('editIsNew').value === '1';
+      const key = document.getElementById('editItemIndex').value;
+
+      const title = document.getElementById('formTitle').value.trim();
+      const dateStr = document.getElementById('formDate').value;
+      const timeStr = document.getElementById('formTime').value;
+      const typeText = document.getElementById('formType').value;
+      const channel = document.getElementById('formChannel').value.trim();
+      const url = document.getElementById('formUrl').value.trim();
+      const location = document.getElementById('formLocation').value.trim();
+      const message = document.getElementById('formMessage').value.trim();
+
+      const startTime = timeStr ? `${dateStr}T${timeStr}:00+09:00` : `${dateStr}T00:00:00+09:00`;
+      const isAllday = !timeStr;
+
+      // 유튜브 썸네일 자동 감지
+      let thumbnail = undefined;
+      let isOfficialYoutube = undefined;
+      const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/))([\w-]{11})/);
+      if (ytMatch) {
+        thumbnail = `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+        isOfficialYoutube = true;
+      }
+
+      if (isNew) {
+        const newItem = {
+          title,
+          startTime,
+          endTime: startTime,
+          isAllday,
+          typeText,
+          channel,
+          url,
+          location,
+          message,
+          thumbnail,
+          isOfficialYoutube,
+          _isCustom: true
+        };
+        allSchedules.unshift(newItem);
+        pendingOverrides.created.push(newItem);
+      } else {
+        const item = allSchedules.find(s => getScheduleKey(s) === key);
+        if (item) {
+          item.title = title;
+          item.startTime = startTime;
+          item.endTime = startTime;
+          item.isAllday = isAllday;
+          item.typeText = typeText;
+          item.channel = channel;
+          item.url = url;
+          item.location = location;
+          item.message = message;
+          if (thumbnail) item.thumbnail = thumbnail;
+          if (isOfficialYoutube) item.isOfficialYoutube = isOfficialYoutube;
+
+          pendingOverrides.modified[key] = { ...item };
+        }
+      }
+
+      closeModal();
+      updateStagingBar();
+      renderSchedules();
+    });
+
+    // 바텀시트 내 삭제 버튼 클릭
+    document.getElementById('btnModalDelete').addEventListener('click', () => {
+      const key = document.getElementById('editItemIndex').value;
+      if (key) {
+        toggleDeleteItem(key);
+        closeModal();
+      }
+    });
+
+    // 변경사항 스테이징 바 업데이트
+    function updateStagingBar() {
+      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length;
+      const bar = document.getElementById('stagingBar');
+      const badge = document.getElementById('stagingCountBadge');
+
+      badge.textContent = `${count}건`;
+      if (count > 0) {
+        bar.classList.add('visible');
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+
+    // 스텔스 트리거 (404 글자 3회 연속 탭 시 시크릿 입력창 토글)
+    let stealthTapCount = 0;
+    let stealthTapTimer = null;
+    document.getElementById('stealthTrigger').addEventListener('click', () => {
+      stealthTapCount++;
+      clearTimeout(stealthTapTimer);
+      stealthTapTimer = setTimeout(() => {
+        stealthTapCount = 0;
+      }, 1000);
+
+      if (stealthTapCount >= 3) {
+        stealthTapCount = 0;
+        const form = document.getElementById('gatekeeperForm');
+        const homeBtn = document.getElementById('btnFakeHome');
+        if (form.style.display === 'none' || !form.style.display) {
+          form.style.display = 'block';
+          homeBtn.style.display = 'none';
+          document.getElementById('gateTokenInput').focus();
+        } else {
+          form.style.display = 'none';
+          homeBtn.style.display = 'inline-block';
+        }
+      }
+    });
+
+    // 도어락 인증 처리 (스텔스)
+    document.getElementById('gatekeeperForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = document.getElementById('gateTokenInput').value.trim();
+      const remember = document.getElementById('chkRememberDevice').checked;
+      const errorDiv = document.getElementById('gateErrorMsg');
+      const unlockBtn = document.getElementById('btnGateUnlock');
+
+      if (!token) return;
+
+      unlockBtn.textContent = 'Verifying...';
+      unlockBtn.disabled = true;
+      errorDiv.style.display = 'none';
+
+      try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          throw new Error('Access Denied');
+        }
+        setStoredToken(token, remember);
+        showApp();
+        loadSchedules();
+      } catch (err) {
+        errorDiv.textContent = 'Access Denied';
+        errorDiv.style.display = 'inline';
+      } finally {
+        unlockBtn.textContent = 'Confirm';
+        unlockBtn.disabled = false;
+      }
+    });
+
+    // 로그아웃 (다시 잠금)
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      if (confirm('로그아웃하고 도어락 잠금 화면으로 돌아가시겠습니까?')) {
+        setStoredToken('');
+        document.getElementById('gateTokenInput').value = '';
+        showGatekeeper();
+      }
+    });
+
+    // Gist에 최종 저장
+    document.getElementById('btnSaveToGist').addEventListener('click', async () => {
+      const token = getStoredToken();
+      if (!token) {
+        showGatekeeper();
+        alert('Gist에 저장하려면 먼저 관리자 인증이 필요합니다.');
+        return;
+      }
+
+      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length;
+      if (count === 0) {
+        alert('저장할 변경사항이 없습니다.');
+        return;
+      }
+
+      if (!confirm(`총 ${count}건의 보정 규칙을 원격 Gist에 영구 저장하시겠습니까?`)) {
+        return;
+      }
+
+      const commitBtn = document.getElementById('btnSaveToGist');
+      commitBtn.innerHTML = '<span>⏳</span> 저장 중...';
+      commitBtn.disabled = true;
+
+      try {
+        const payload = {
+          files: {
+            "schedule-overrides.json": {
+              content: JSON.stringify({
+                updatedAt: new Date().toISOString(),
+                deleted: Array.from(pendingOverrides.deleted),
+                modified: pendingOverrides.modified,
+                created: pendingOverrides.created
+              }, null, 2)
+            }
+          }
+        };
+
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`저장 실패 (HTTP ${res.status}). 토큰 권한(gist scope)을 확인해 주세요.`);
+        }
+
+        alert('🎉 [저장 완료] Gist에 보정 규칙이 영구 저장되었습니다!\n수집 엔진이 15분마다 돌아도 이 규칙이 항상 우선 적용됩니다.');
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        loadSchedules();
+      } catch (err) {
+        alert('⚠️ 저장 중 오류: ' + err.message);
+      } finally {
+        commitBtn.innerHTML = '<span>💾</span> 저장 적용';
+        commitBtn.disabled = false;
+      }
+    });
+
+    // 이벤트 리스너 등록
+    document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+    document.getElementById('btnOpenAddModal').addEventListener('click', openAddModal);
+    document.getElementById('btnRefresh').addEventListener('click', loadSchedules);
+
+    document.getElementById('btnPrevMonth').addEventListener('click', () => {
+      currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+      renderSchedules();
+    });
+
+    document.getElementById('btnNextMonth').addEventListener('click', () => {
+      currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+      renderSchedules();
+    });
+
+    document.getElementById('btnToday').addEventListener('click', () => {
+      currentViewDate = new Date();
+      renderSchedules();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      renderSchedules();
+    });
+
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeCategory = chip.getAttribute('data-type');
+        renderSchedules();
+      });
+    });
+
+    document.getElementById('btnResetStaging').addEventListener('click', () => {
+      if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        updateStagingBar();
+        loadSchedules();
+      }
+    });
+
+    // 앱 초기화 진입점
+    const initialToken = getStoredToken();
+    if (initialToken) {
+      showApp();
+      loadSchedules();
+    } else {
+      showGatekeeper();
+    }
+  </script>
+</body>
+</html>

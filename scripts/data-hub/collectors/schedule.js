@@ -7,6 +7,8 @@ const __dirname = path.dirname(__filename);
 const CACHE_DIR = path.resolve(__dirname, '../../../.cache');
 const OEMBED_CACHE_FILE = path.join(CACHE_DIR, 'oembed-cache.json');
 const STREAMS_CACHE_FILE = path.join(CACHE_DIR, 'streams-cache.json');
+const OVERRIDES_CACHE_FILE = path.join(CACHE_DIR, 'schedule-overrides.json');
+const GIST_ID = process.env.GIST_ID || "44b49b328233ef6157499debe03f165c";
 
 // 캐시 디렉터리 준비
 function ensureCacheDir() {
@@ -782,11 +784,14 @@ export async function collectScheduleData(allYtVideos = []) {
     console.log(`  ✂️ [Schedule Filter] 스케줄 목록에서 쇼츠(Shorts) ${removedShortsCount}건 원천 제외 완료`);
   }
 
+  // [수동 보정 규칙 적용] Gist의 schedule-overrides.json (수정/삭제/추가) 최우선 반영!
+  const overriddenList = await applyScheduleOverrides(nonShortsList);
+
   // 날짜 순 정렬
-  nonShortsList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
+  overriddenList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
 
   // [초강력 데이터 다이어트] 불필요한 공백, 빈 배열, 중복 필드 제거
-  const slimmedList = nonShortsList.map(item => {
+  const slimmedList = overriddenList.map(item => {
     const slim = {
       title: item.title,
       startTime: item.startTime,
@@ -818,4 +823,92 @@ export async function collectScheduleData(allYtVideos = []) {
     totalCount: slimmedList.length,
     items: slimmedList
   };
+}
+
+// [Gist 보정 규칙] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
+async function applyScheduleOverrides(scheduleList) {
+  let overridesData = null;
+
+  // 1. Gist에서 최신 schedule-overrides.json 로드 시도
+  try {
+    const res = await fetch(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json?t=${Date.now()}`);
+    if (res.ok) {
+      overridesData = await res.json();
+      try {
+        ensureCacheDir();
+        fs.writeFileSync(OVERRIDES_CACHE_FILE, JSON.stringify(overridesData), 'utf8');
+      } catch (e) { }
+    }
+  } catch (err) { }
+
+  // 2. 실패 시 로컬 캐시 사용
+  if (!overridesData && fs.existsSync(OVERRIDES_CACHE_FILE)) {
+    try {
+      overridesData = JSON.parse(fs.readFileSync(OVERRIDES_CACHE_FILE, 'utf8'));
+    } catch (e) { }
+  }
+
+  if (!overridesData || typeof overridesData !== 'object') {
+    return scheduleList;
+  }
+
+  let modCount = 0;
+  let delCount = 0;
+  let addCount = 0;
+
+  const deletedSet = new Set(Array.isArray(overridesData.deleted) ? overridesData.deleted : []);
+  const modifiedMap = overridesData.modified && typeof overridesData.modified === 'object' ? overridesData.modified : {};
+  const createdList = Array.isArray(overridesData.created) ? overridesData.created : [];
+
+  const getItemKey = (item) => {
+    const d = item.startTime ? parseSafeDate(item.startTime) : null;
+    if (!d) return `no-date_${item.title}`;
+    const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const ymd = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}-${String(kstD.getUTCDate()).padStart(2, '0')}`;
+    return `${ymd}_${item.title}`;
+  };
+
+  // (1) 삭제 및 수정 적용
+  const result = [];
+  scheduleList.forEach(item => {
+    const key = getItemKey(item);
+
+    // 삭제 대상
+    if (deletedSet.has(key) || deletedSet.has(item.title)) {
+      delCount++;
+      return;
+    }
+
+    // 수정 대상
+    const mod = modifiedMap[key] || modifiedMap[item.title];
+    if (mod) {
+      if (mod.title) item.title = mod.title;
+      if (mod.url !== undefined) item.url = mod.url || undefined;
+      if (mod.channel !== undefined) item.channel = mod.channel || undefined;
+      if (mod.location !== undefined) item.location = mod.location || undefined;
+      if (mod.typeText !== undefined) item.typeText = mod.typeText || undefined;
+      if (mod.message !== undefined) item.message = mod.message || "";
+      if (mod.thumbnail !== undefined) item.thumbnail = mod.thumbnail || undefined;
+      if (mod.isOfficialYoutube !== undefined) item.isOfficialYoutube = mod.isOfficialYoutube;
+      modCount++;
+    }
+
+    result.push(item);
+  });
+
+  // (2) 신규 등록 항목 반영
+  createdList.forEach(c => {
+    if (!c.title || !c.startTime) return;
+    const cKey = getItemKey(c);
+    if (!result.some(r => getItemKey(r) === cKey)) {
+      result.push({ ...c });
+      addCount++;
+    }
+  });
+
+  if (modCount > 0 || delCount > 0 || addCount > 0) {
+    console.log(`  🛠️ [Schedule Overrides] 수동 보정 규칙 적용 완료: 수정 ${modCount}건, 삭제 ${delCount}건, 신규 ${addCount}건`);
+  }
+
+  return result;
 }
