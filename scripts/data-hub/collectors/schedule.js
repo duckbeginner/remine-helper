@@ -868,6 +868,29 @@ async function applyScheduleOverrides(scheduleList) {
     return `${ymd}_${item.title}`;
   };
 
+  // 연쇄 수정 체인 추적 및 최신 속성 통합 (A -> B -> C)
+  const resolvedModifiedMap = {};
+  Object.keys(modifiedMap).forEach(k => {
+    resolvedModifiedMap[k] = { ...modifiedMap[k] };
+  });
+
+  Object.keys(resolvedModifiedMap).forEach(startKey => {
+    const visited = new Set([startKey]);
+    let current = resolvedModifiedMap[startKey];
+    const datePart = startKey.split('_')[0];
+
+    while (current && current.title) {
+      const nextKey = `${datePart}_${current.title}`;
+      if (nextKey !== startKey && resolvedModifiedMap[nextKey] && !visited.has(nextKey)) {
+        visited.add(nextKey);
+        current = { ...current, ...resolvedModifiedMap[nextKey] };
+        resolvedModifiedMap[startKey] = current;
+      } else {
+        break;
+      }
+    }
+  });
+
   // (1) 삭제 및 수정 적용
   const result = [];
   scheduleList.forEach(item => {
@@ -879,8 +902,20 @@ async function applyScheduleOverrides(scheduleList) {
       return;
     }
 
-    // 수정 대상
-    const mod = modifiedMap[key] || modifiedMap[item.title];
+    // 수정 대상 (체인 반영 최신본 매칭 및 역방향 폴백)
+    let mod = resolvedModifiedMap[key] || resolvedModifiedMap[item.title];
+    if (!mod) {
+      const datePart = key.split('_')[0];
+      for (const [mKey, mVal] of Object.entries(resolvedModifiedMap)) {
+        if (mKey.startsWith(datePart + '_')) {
+          if (mVal.title === item.title || (mVal._originTitle && mVal._originTitle === item.title)) {
+            mod = mVal;
+            break;
+          }
+        }
+      }
+    }
+
     if (mod) {
       if (mod.title) item.title = mod.title;
       if (mod.url !== undefined) item.url = mod.url || undefined;

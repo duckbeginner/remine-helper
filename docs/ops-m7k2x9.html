@@ -994,11 +994,65 @@
       return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${days[d.getDay()]})`;
     }
 
+    function getRawScheduleKey(item) {
+      if (!item) return '';
+      const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
+      return `${d}_${item.title}`;
+    }
+
     function getScheduleKey(item) {
       if (!item) return '';
       if (item._originKey) return item._originKey;
-      const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
-      return `${d}_${item.title}`;
+      return getRawScheduleKey(item);
+    }
+
+    // 연쇄 수정 체인 추적 및 최신 속성 통합 (A -> B -> C)
+    function resolveModifiedChain(modifiedMap) {
+      if (!modifiedMap || typeof modifiedMap !== 'object') return {};
+      const resolved = {};
+      Object.keys(modifiedMap).forEach(k => {
+        resolved[k] = { ...modifiedMap[k] };
+      });
+
+      Object.keys(resolved).forEach(startKey => {
+        const visited = new Set([startKey]);
+        let current = resolved[startKey];
+        const datePart = startKey.split('_')[0];
+
+        while (current && current.title) {
+          const nextKey = `${datePart}_${current.title}`;
+          if (nextKey !== startKey && resolved[nextKey] && !visited.has(nextKey)) {
+            visited.add(nextKey);
+            current = { ...current, ...resolved[nextKey] };
+            resolved[startKey] = current;
+          } else {
+            break;
+          }
+        }
+      });
+
+      return resolved;
+    }
+
+    // 아이템과 일치하는 오버라이드 객체 검색 (직접 키, 제목, 체인 등 다각도 매칭)
+    function findMatchingOverride(item, modifiedMap) {
+      if (!item || !modifiedMap) return null;
+      const rawKey = getRawScheduleKey(item);
+      const originKey = item._originKey || rawKey;
+      const datePart = rawKey.split('_')[0];
+
+      if (modifiedMap[originKey]) return modifiedMap[originKey];
+      if (modifiedMap[rawKey]) return modifiedMap[rawKey];
+      if (modifiedMap[item.title]) return modifiedMap[item.title];
+
+      for (const [mKey, mVal] of Object.entries(modifiedMap)) {
+        if (mKey.startsWith(datePart + '_')) {
+          if (mVal.title === item.title || (mVal._originTitle && mVal._originTitle === item.title)) {
+            return mVal;
+          }
+        }
+      }
+      return null;
     }
 
     // 데이터 로드 (기본 스케줄 + 기존 Gist 오버라이드 실시간 병합)
@@ -1057,7 +1111,7 @@
             overridesJson.deleted.forEach(k => appliedOverrides.deleted.add(k));
           }
           if (overridesJson.modified && typeof overridesJson.modified === 'object') {
-            appliedOverrides.modified = { ...overridesJson.modified };
+            appliedOverrides.modified = resolveModifiedChain(overridesJson.modified);
           }
           if (Array.isArray(overridesJson.created)) {
             appliedOverrides.created = overridesJson.created.map(c => ({ ...c, _isCustom: true }));
@@ -1067,18 +1121,18 @@
         // 3. baseItems에 appliedOverrides 병합 (실제 화면 덮어쓰기!)
         allSchedules = baseItems.map(item => {
           const itemCopy = { ...item };
-          const originKey = getScheduleKey(itemCopy);
-          itemCopy._originKey = originKey;
+          const rawKey = getRawScheduleKey(itemCopy);
+          itemCopy._originKey = rawKey;
 
-          // Gist에 저장된 수정본이 있으면 실제 속성 덮어쓰기!
-          const mod = appliedOverrides.modified[originKey] || appliedOverrides.modified[itemCopy.title];
+          // Gist에 저장된 수정본이 있으면 실제 속성 덮어쓰기! (체인 반영 최신본 매칭)
+          const mod = findMatchingOverride(itemCopy, appliedOverrides.modified);
           if (mod) {
             Object.assign(itemCopy, mod);
-            itemCopy._originKey = originKey; // 고유 원본 키 유지
+            itemCopy._originKey = rawKey; // 고유 원본 키 유지
             itemCopy._isModified = true;
           }
 
-          if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(itemCopy.title)) {
+          if (appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(itemCopy.title)) {
             itemCopy._isDeleted = true;
           }
 
@@ -1270,11 +1324,13 @@
 
     // 모달 열기
     function openEditModalByKey(key) {
-      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
       if (!item) return;
 
       document.getElementById('modalHeaderTitle').textContent = '일정 세부 수정';
-      document.getElementById('editItemIndex').value = key;
+      const stableKey = item._originKey || getScheduleKey(item);
+      item._originKey = stableKey;
+      document.getElementById('editItemIndex').value = stableKey;
       document.getElementById('editIsNew').value = '0';
 
       document.getElementById('formTitle').value = item.title || '';
@@ -1317,16 +1373,23 @@
 
     // 아이템 숨김/삭제 토글
     function toggleDeleteItem(key) {
-      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const stableKey = item ? (item._originKey || key) : key;
+      const rawKey = item ? getRawScheduleKey(item) : key;
+
       if (item && item._isDeleted) {
-        appliedOverrides.deleted.delete(key);
+        appliedOverrides.deleted.delete(stableKey);
+        appliedOverrides.deleted.delete(rawKey);
         item._isDeleted = false;
-        pendingOverrides.deleted.delete(key);
+        pendingOverrides.deleted.delete(stableKey);
+        pendingOverrides.deleted.delete(rawKey);
       } else {
-        if (pendingOverrides.deleted.has(key)) {
-          pendingOverrides.deleted.delete(key);
+        if (pendingOverrides.deleted.has(stableKey) || pendingOverrides.deleted.has(rawKey)) {
+          pendingOverrides.deleted.delete(stableKey);
+          pendingOverrides.deleted.delete(rawKey);
         } else {
-          pendingOverrides.deleted.add(key);
+          pendingOverrides.deleted.add(stableKey);
+          if (rawKey !== stableKey) pendingOverrides.deleted.add(rawKey);
         }
       }
       updateStagingBar();
@@ -1334,13 +1397,19 @@
     }
 
     function restoreItem(key) {
-      const item = allSchedules.find(s => getScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const stableKey = item ? (item._originKey || key) : key;
+      const rawKey = item ? getRawScheduleKey(item) : key;
+
       if (item) {
         item._isDeleted = false;
-        appliedOverrides.deleted.delete(key);
+        appliedOverrides.deleted.delete(stableKey);
+        appliedOverrides.deleted.delete(rawKey);
       }
-      pendingOverrides.deleted.delete(key);
-      delete pendingOverrides.modified[key];
+      pendingOverrides.deleted.delete(stableKey);
+      pendingOverrides.deleted.delete(rawKey);
+      delete pendingOverrides.modified[stableKey];
+      delete pendingOverrides.modified[rawKey];
       updateStagingBar();
       renderSchedules();
     }
@@ -1387,13 +1456,16 @@
           isOfficialYoutube,
           _isCustom: true
         };
-        const nKey = getScheduleKey(newItem);
+        const nKey = getRawScheduleKey(newItem);
         newItem._originKey = nKey;
         allSchedules.unshift(newItem);
         pendingOverrides.created.push(newItem);
       } else {
-        const item = allSchedules.find(s => getScheduleKey(s) === key);
+        const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
         if (item) {
+          const stableKey = item._originKey || key;
+          item._originKey = stableKey;
+
           item.title = title;
           item.startTime = startTime;
           item.endTime = startTime;
@@ -1407,7 +1479,7 @@
           if (isOfficialYoutube) item.isOfficialYoutube = isOfficialYoutube;
           item._isModified = true;
 
-          pendingOverrides.modified[key] = {
+          const modObj = {
             title,
             startTime,
             endTime: startTime,
@@ -1420,6 +1492,18 @@
             thumbnail,
             isOfficialYoutube
           };
+
+          // 1) 원본 불변 키로 저장
+          pendingOverrides.modified[stableKey] = modObj;
+
+          // 2) 만약 제목/날짜가 바뀌었다면 새 키 및 기존 파생 키도 최신본으로 상호 동기화
+          const newRawKey = getRawScheduleKey(item);
+          if (newRawKey !== stableKey) {
+            pendingOverrides.modified[newRawKey] = { ...modObj };
+          }
+          if (key !== stableKey && key !== newRawKey) {
+            pendingOverrides.modified[key] = { ...modObj };
+          }
         }
       }
 
@@ -1577,8 +1661,24 @@
       try {
         // 1. 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합
         const mergedDeleted = new Set([...appliedOverrides.deleted, ...pendingOverrides.deleted]);
-        const mergedModified = { ...appliedOverrides.modified, ...pendingOverrides.modified };
+        const resolvedApplied = resolveModifiedChain(appliedOverrides.modified);
+        const resolvedPending = resolveModifiedChain(pendingOverrides.modified);
+        const mergedModified = { ...resolvedApplied, ...resolvedPending };
         
+        // 연쇄 수정본 속성을 상호 모든 연관 키에 일괄 동기화 (원본 키 & 파생 키 양방향 갱신)
+        Object.keys(mergedModified).forEach(k => {
+          const datePart = k.split('_')[0];
+          const val = mergedModified[k];
+          if (val && val.title) {
+            const derivedKey = `${datePart}_${val.title}`;
+            if (derivedKey !== k && mergedModified[derivedKey]) {
+              const combined = { ...mergedModified[k], ...mergedModified[derivedKey] };
+              mergedModified[k] = { ...combined };
+              mergedModified[derivedKey] = { ...combined };
+            }
+          }
+        });
+
         mergedDeleted.forEach(dKey => {
           delete mergedModified[dKey];
         });
@@ -1621,9 +1721,9 @@
 
         const confirmedOverrides = JSON.parse(savedFile.content);
 
-        // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정
+        // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정 (체인 최신화)
         appliedOverrides.deleted = new Set(Array.isArray(confirmedOverrides.deleted) ? confirmedOverrides.deleted : []);
-        appliedOverrides.modified = confirmedOverrides.modified && typeof confirmedOverrides.modified === 'object' ? confirmedOverrides.modified : {};
+        appliedOverrides.modified = resolveModifiedChain(confirmedOverrides.modified && typeof confirmedOverrides.modified === 'object' ? confirmedOverrides.modified : {});
         appliedOverrides.created = Array.isArray(confirmedOverrides.created) ? confirmedOverrides.created.map(c => ({ ...c, _isCustom: true })) : [];
 
         // 3. 대기열(pendingOverrides) 비우기
@@ -1631,13 +1731,15 @@
 
         // 4. 화면 목록에 확정 반영 덮어쓰기 & re-render (수정 대기 뱃지 -> [수정됨] 초록 뱃지로 확정)
         allSchedules = allSchedules.map(item => {
-          const originKey = getScheduleKey(item);
-          const mod = appliedOverrides.modified[originKey] || appliedOverrides.modified[item.title];
+          const rawKey = getRawScheduleKey(item);
+          const originKey = item._originKey || rawKey;
+          const mod = findMatchingOverride(item, appliedOverrides.modified);
           if (mod) {
             Object.assign(item, mod);
+            item._originKey = originKey;
             item._isModified = true;
           }
-          if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(item.title)) {
+          if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(item.title)) {
             item._isDeleted = true;
           }
           return item;
