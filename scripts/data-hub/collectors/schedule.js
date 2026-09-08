@@ -321,6 +321,13 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
   });
   console.log(`  🎥 [Live Stream] 공식 라이브 스트림 총 ${officialStreams.length}건 확보 완료`);
 
+  const targetDebug = schedules.find(s => (s.title && s.title.includes('생일 기념 라이브')) || (s.message && s.message.includes('생일 기념 라이브')));
+  if (targetDebug) {
+    console.log(`  🔎 [Debug Live Target] 발견: title="${targetDebug.title}", _isShorts=${targetDebug._isShorts}, _isExcluded=${targetDebug._isExcluded}, channel="${targetDebug.channel}", extField=${JSON.stringify(targetDebug.extField)}`);
+  } else {
+    console.log(`  🔎 [Debug Live Target] 스케줄 목록 내 없음 (전체: ${schedules.length}건)`);
+  }
+
   schedules.forEach(item => {
     if (item._isShorts || item._isExcluded) return;
     const text = [item.title, item.message, item.url, item.link, item.channel, item.extField?.value].filter(Boolean).join(' ');
