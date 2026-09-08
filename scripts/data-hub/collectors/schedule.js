@@ -320,6 +320,7 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
     }
   });
   console.log(`  🎥 [Live Stream] 공식 라이브 스트림 총 ${officialStreams.length}건 확보 완료`);
+  console.log(`  🔎 [Debug Streams]: ${officialStreams.map(s => `${s.id}(${s.published})`).join(', ')}`);
 
   const targetDebug = schedules.find(s => (s.title && s.title.includes('생일 기념 라이브')) || (s.message && s.message.includes('생일 기념 라이브')));
   if (targetDebug) {
