@@ -118,21 +118,64 @@ function setupRefreshAlarms(intervalMinutes = 15) {
   });
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  executeAllBackgroundRefreshes();
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get(['userSettings'], (res) => {
-      const settings = res && res.userSettings ? res.userSettings : {};
-      setupRefreshAlarms(settings.refreshInterval || 15);
+// 당일 종합 스케줄 정밀 알람 설정 (설정된 시각 정각에 정확히 발화)
+function setupDailyScheduleAlarm(dailyTimeStr = "09:00") {
+  const [targetHour, targetMinute] = (dailyTimeStr || "09:00").split(':').map(val => parseInt(val, 10) || 0);
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMinute, 0, 0);
+
+  // 만약 오늘의 지정 시각이 이미 지났다면 다음 날로 예약
+  if (now.getTime() >= target.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const when = target.getTime();
+  chrome.alarms.clear("dailyScheduleAlarm", () => {
+    chrome.alarms.create("dailyScheduleAlarm", {
+      when: when,
+      periodInMinutes: 24 * 60 // 24시간마다 정각에 반복
+    });
+    console.log(`⏰ [Alarm] 당일 스케줄 정밀 알람 예약 완료: ${target.toLocaleString()} (주기: 24시간)`);
+  });
+}
+
+function initBackgroundAlarms() {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['userSettings'], (res) => {
+      const settings = (res && res.userSettings) || {};
+      const refreshMin = settings.refreshInterval || 15;
+      const dailyTime = (settings.notifications && settings.notifications.dailyScheduleTime) || "09:00";
+      setupRefreshAlarms(refreshMin);
+      setupDailyScheduleAlarm(dailyTime);
     });
   } else {
     setupRefreshAlarms(15);
+    setupDailyScheduleAlarm("09:00");
   }
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  executeAllBackgroundRefreshes();
+  initBackgroundAlarms();
 });
+
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    initBackgroundAlarms();
+  });
+}
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "refreshData" || alarm.name === "fetchSocialFeeds") {
     executeAllBackgroundRefreshes();
+  } else if (alarm.name === "dailyScheduleAlarm") {
+    console.log("⏰ [Alarm] dailyScheduleAlarm 정각 발화 -> 당일 일정 브리핑 알림 실행");
+    chrome.storage.local.get(['blipSchedules', 'activeSchedules'], (res) => {
+      const currentList = (res && (res.blipSchedules || res.activeSchedules)) || [];
+      if (currentList.length > 0) {
+        checkDailyScheduleNotification(currentList);
+      }
+    });
   }
 });
 
@@ -302,6 +345,45 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // =========================================================================
 // 스케줄 알림 검사 (당일 종합 요약 & 임박 알림)
 // =========================================================================
+
+// 스케줄 항목이 유튜브 VOD/자체예능/티저 등 '영상 공개' 일정인지 판별
+function isVideoScheduleItem(item) {
+  if (!item) return false;
+
+  // 1. 방송(음악방송 본방/사전녹화 등), 라디오, 행사, 공연, 팬사인회는 제외하지 않음 (순수 스케줄)
+  if (item.typeText === "방송" || item.typeText === "라디오" || item.typeText === "행사" || item.typeText === "공연" || item.typeText === "팬사인회") {
+    // 단, 음악방송 직캠/풀캠/쇼츠는 영상으로 분류
+    if (/직캠|풀캠|페이스캠|입덕직캠|안방1열|#shorts|#쇼츠|\/shorts\//i.test(item.title || '')) {
+      return true;
+    }
+    return false;
+  }
+
+  // 2. 순수 영상 카테고리
+  if (item.typeText === "영상") return true;
+
+  const title = item.title || "";
+
+  // 3. 제목 머릿말에 [영상], [공식 영상], [🎬] 등이 붙은 경우
+  if (/^\[(?:영상|공식\s*영상|🎬)\]/i.test(title)) return true;
+  if (/^\[🐦\]\s*\[🎬\]/i.test(title)) return true;
+
+  // 4. 직캠, 쇼츠, 티저, 브이로그 패턴
+  if (/직캠|풀캠|페이스캠|입덕직캠|안방1열|#shorts|#쇼츠|\/shorts\//i.test(title)) return true;
+  if (/Teaser|티저|vlog|브이로그/i.test(title)) {
+    if (!/뮤직뱅크|인기가요|엠카운트다운|음악중심|더쇼|쇼챔피언/.test(title)) return true;
+  }
+
+  // 5. 유튜브 URL이 포함된 자체 VOD 일정
+  if (item.url && (item.url.includes("youtube.com/watch") || item.url.includes("youtu.be/"))) {
+    if (item.channel === "RESCENE" || item.typeId === 1) {
+      if (!/뮤직뱅크|인기가요|엠카운트다운|음악중심|더쇼|쇼챔피언|KBS|MBC|SBS|Mnet|JTBC/.test(title)) return true;
+    }
+  }
+
+  return false;
+}
+
 function checkDailyScheduleNotification(schedules) {
   if (!Array.isArray(schedules) || schedules.length === 0) return;
 
@@ -323,7 +405,9 @@ function checkDailyScheduleNotification(schedules) {
       return;
     }
 
+    // 영상 일정을 제외한 순수 스케줄만 필터링
     const todaySchedules = schedules.filter(item => {
+      if (isVideoScheduleItem(item)) return false;
       const d = parseSafeDate(item.startTime);
       const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       return itemDateStr === todayStr;
@@ -391,7 +475,8 @@ function checkUpcomingScheduleAlerts(schedules = []) {
       let hasNewNotification = false;
 
       schedules.forEach(item => {
-        if (!item.startTime || item.isAllday) return;
+        // 영상 일정은 임박 알림에서도 제외 (신규 영상 업로드 알림에서 처리)
+        if (!item.startTime || item.isAllday || isVideoScheduleItem(item)) return;
         const startTimeMs = parseSafeDate(item.startTime).getTime();
         const diffMs = startTimeMs - now;
 
@@ -771,6 +856,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     setupRefreshAlarms(minutes);
     executeAllBackgroundRefreshes();
     sendResponse({ success: true, intervalMinutes: minutes });
+    return true;
+  }
+
+  if (request.action === "UPDATE_DAILY_SCHEDULE_TIME") {
+    const dailyTime = request.dailyScheduleTime || "09:00";
+    setupDailyScheduleAlarm(dailyTime);
+    sendResponse({ success: true, dailyScheduleTime: dailyTime });
     return true;
   }
 

@@ -987,7 +987,15 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
     };
     if (subOpts) subOpts.style.opacity = currentSettings.notifications.enabled ? '1' : '0.4';
     if (dailyScheduleTimeRow) dailyScheduleTimeRow.style.opacity = (currentSettings.notifications.schedule && currentSettings.notifications.enabled) ? '1' : '0.4';
-    saveUserSettings(currentSettings, () => showSaveNotice());
+    saveUserSettings(currentSettings, () => {
+      showSaveNotice();
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({
+          action: "UPDATE_DAILY_SCHEDULE_TIME",
+          dailyScheduleTime: currentSettings.notifications.dailyScheduleTime
+        }).catch(() => {});
+      }
+    });
   }
 
   if (notiMaster) notiMaster.addEventListener('change', syncNotiSettings);
