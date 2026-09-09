@@ -1,7 +1,7 @@
 // common/modules/modals.js - 설정 모달, 스케줄 상세 모달, 미디어 파서
 import { DEFAULT_USER_SETTINGS, FANPAGE_LIST, TAB_CONFIG_LIST, CHANNEL_DATA_MAP } from '../../constants.js';
 import { escapeHtml, createScheduleModalHTML, createSettingsModalHTML } from '../templates.js';
-import { parseSafeDate, cleanDisplayTitle, getScheduleTypeInfo, getChannelIconHTML } from './calendar.js';
+import { getChannelIconHTML } from './calendar.js';
 import { initNavPosition, enableIframeScrollGuard, stopAllIframeMedia } from './tabs.js';
 import { getMemberDisplayName, getMemberAvatarUrl } from './storage.js';
 import { setupIframeAutoHeight } from './sns-embeds.js';
@@ -41,7 +41,7 @@ export function linkifyMessage(text) {
   };
 
   // 손가락/화살표/재생/링크 이모지와 '보러 가기' / '보러가기' / '바로 가기' / '바로가기' 패턴을 '관련 링크'로 통일 치환
-  safeText = safeText.replace(/(?:[👉👇👈👆▶️🔗📎]+\s*)?(?:[가-힣a-zA-Z0-9\s]*?)?(?:보러\s*가기|바로\s*가기)/g, `${svgIcons.link} 관련 링크`);
+  safeText = safeText.replace(/(?:(?:[👉👇👈👆🔗📎]|▶️)+\s*)?(?:[가-힣a-zA-Z0-9\s]*?)?(?:보러\s*가기|바로\s*가기)/gu, `${svgIcons.link} 관련 링크`);
   // 손가락/화살표/재생 이모지 바로 뒤에 링크가 오는 경우 링크 아이콘으로 치환
   safeText = safeText.replace(/(?:👉|👇|👈|👆|👉🏻|👉🏼|👉🏽|👉🏾|👉🏿|👇🏻|👇🏼|👇🏽|👇🏾|👇🏿|➡️|▶️?)\s*(?=https?:\/\/)/g, `${svgIcons.link} `);
   // 남은 단독 링크 이모지 치환 (🔗, 📎)
@@ -394,8 +394,6 @@ export function initScheduleModal() {
    9. 인스타 & X 공식 위젯 자동 높이 조절 (postMessage Auto-Height Engine)
    ========================================================================= */
 
-let isAutoHeightSetup = false;
-
 export function parseUserSettings(savedSettings) {
   const baseTabMap = {};
   TAB_CONFIG_LIST.forEach(t => { baseTabMap[t.id] = t; });
@@ -447,8 +445,8 @@ export function parseUserSettings(savedSettings) {
   return {
     navPosition: savedSettings.navPosition || DEFAULT_USER_SETTINGS.navPosition,
     refreshInterval: savedSettings.refreshInterval || DEFAULT_USER_SETTINGS.refreshInterval,
-    notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...(savedSettings.notifications || {}) },
-    sound: { ...DEFAULT_USER_SETTINGS.sound, ...(savedSettings.sound || {}) },
+    notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...savedSettings.notifications },
+    sound: { ...DEFAULT_USER_SETTINGS.sound, ...savedSettings.sound },
     tabList: mergedTabs,
     fanpages: mergedFanpages,
     dismissedFanpages: dismissedFanpages

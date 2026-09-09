@@ -200,7 +200,7 @@ export async function collectSnsData() {
     if (!item) return '';
     if (item.shortcode) return item.shortcode;
     const link = item.link || item.permalink || item.url || '';
-    const m = link.match(/\/(?:p|reel|reels)\/([^\/?#]+)/i);
+    const m = link.match(/\/(?:p|reel|reels)\/([^/?#]+)/i);
     if (m) return m[1];
     return String(item.id || '');
   }
@@ -290,7 +290,7 @@ export async function collectSnsData() {
     }
     if (platform === 'instagram') {
       const link = f.link || (f.shortcode ? `https://www.instagram.com/p/${f.shortcode}/` : '') || '';
-      const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+      const m = link.match(/\/(p|reel|reels)\/([^/?#]+)/i);
       const shortcode = m ? m[2] : (f.shortcode || f.id);
       const type = m ? m[1].toLowerCase() : (f.type || 'p');
       return {

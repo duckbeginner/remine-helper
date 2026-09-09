@@ -1,5 +1,5 @@
 // common/modules/youtube.js - 유튜브 공식/개인 채널 목록 및 쇼츠 렌더러
-import { escapeHtml, createVideoCardHTML } from '../templates.js';
+import { createVideoCardHTML } from '../templates.js';
 
 export function renderOfficialYoutubeList(container, videos = []) {
   if (!container) return;
@@ -59,7 +59,6 @@ export function extractAllShortsVideos(data = {}) {
 }
 
 // --- YouTube Iframe Player API SDK 공식 로더 ---
-let isYTReady = false;
 /**
  * YouTube iframe 제어 명령 전송 (공식 규격)
  */

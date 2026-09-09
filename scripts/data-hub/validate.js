@@ -11,7 +11,6 @@ const OUTPUT_DIR = path.resolve(__dirname, '../../docs/api/v1');
 
 const CORE_FILE = path.join(OUTPUT_DIR, 'core.json');
 const SCHEDULES_FILE = path.join(OUTPUT_DIR, 'schedules.json');
-const DATA_FILE = path.join(OUTPUT_DIR, 'data.json');
 
 function runValidation() {
   console.log("==================================================");

@@ -19,7 +19,7 @@ export function renderInstaEmbeds(container, feeds = [], isDark = false) {
     let type = (feed.type || "p").toLowerCase();
     let id = feed.shortcode || feed.id;
     const link = feed.link || feed.permalink || feed.url || "";
-    const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+    const m = link.match(/\/(p|reel|reels)\/([^/?#]+)/i);
     if (m) {
       type = (m[1] || "p").toLowerCase();
       id = m[2];
@@ -41,7 +41,7 @@ export function renderInstaEmbeds(container, feeds = [], isDark = false) {
       let type = (feed.type || "p").toLowerCase();
       let id = feed.shortcode || feed.id;
       const link = feed.link || feed.permalink || feed.url || "";
-      const m = link.match(/\/(p|reel|reels)\/([^\/?#]+)/i);
+      const m = link.match(/\/(p|reel|reels)\/([^/?#]+)/i);
       if (m) {
         type = (m[1] || "p").toLowerCase();
         id = m[2];
@@ -138,7 +138,7 @@ export function closeTiktokModal() {
 }
 
 // 탭 전환 또는 외부 요청 시 모든 틱톡 일괄 닫기/정지
-export function pauseAllTiktokEmbeds(container) {
+export function pauseAllTiktokEmbeds(_container) {
   closeTiktokModal();
 }
 
@@ -212,7 +212,7 @@ async function fetchTiktokThumb(videoId, imgElem, titleElem) {
   } catch (e) {}
 }
 
-export function renderTiktokEmbeds(container, feeds = [], isDark = false) {
+export function renderTiktokEmbeds(container, feeds = [], _isDark = false) {
   if (!container) return;
 
   if (feeds && feeds.length > 0) {

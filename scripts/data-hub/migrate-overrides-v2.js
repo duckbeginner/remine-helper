@@ -4,7 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { migrateOverridesV1toV2, generateScheduleId } from './collectors/schedule.js';
+import { migrateOverridesV1toV2 } from './collectors/schedule.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

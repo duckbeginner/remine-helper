@@ -125,7 +125,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   const resolvedOverrides = {};
   Object.entries(sourceOverrides).forEach(([k, v]) => {
     const realId = legacyAliases[k] || k;
-    resolvedOverrides[realId] = { ...(resolvedOverrides[realId] || {}), ...v };
+    resolvedOverrides[realId] = { ...resolvedOverrides[realId], ...v };
   });
 
   // (D) 개별 삭제 및 필터 규칙 적용 (독립 동작)
@@ -271,7 +271,7 @@ export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
 
     const targetId = matchedRaw ? matchedRaw.id : `del_${crypto.createHash('sha256').update(delKey).digest('hex').slice(0, 8)}`;
     v2.sourceOverrides[targetId] = {
-      ...(v2.sourceOverrides[targetId] || {}),
+      ...v2.sourceOverrides[targetId],
       id: targetId,
       isDeleted: true
     };

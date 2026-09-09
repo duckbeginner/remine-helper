@@ -1,5 +1,5 @@
 // dashboard.js - 0.05초 초고속 대시보드 진입점 (Page Visibility Throttling & Lazy Mounting)
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS, ICONS } from './constants.js';
+import { OFFICIAL_CHANNELS, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS, ICONS } from './constants.js';
 import {
   createTabBarHTML,
   createTabContainersHTML,
@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFanpages = initialSettings.fanpages;
   let isScheduleModalMounted = false;
   let isSettingsModalMounted = false;
-  let isSyncPending = false;
 
   let fullStorageData = microCache || null;
 
@@ -264,10 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncTask = () => {
     // 탭이 백그라운드에 있으면 사이드패널 오픈 중 자원 경합을 방지하기 위해 동기화 보류
     if (document.hidden) {
-      isSyncPending = true;
       return;
     }
-    isSyncPending = false;
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(

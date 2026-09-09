@@ -1,5 +1,5 @@
 // sidepanel.js - 0.01초 극한 가속 (Two-Phase Progressive Mount + Micro-SWR + On-Demand Modals)
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS } from './constants.js';
+import { DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS } from './constants.js';
 import {
   createVerticalSidebarHTML,
   createTabContainersHTML,

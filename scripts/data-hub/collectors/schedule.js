@@ -231,28 +231,6 @@ function parseSafeDate(dateStr) {
   return new Date(s);
 }
 
-// 제목 정규화 및 정리
-function cleanDisplayTitle(title, maxLength = 0) {
-  if (!title) return "";
-  let clean = title
-    .replace(/^(\[(?:방송|영상|공식\s*영상|행사|팬이벤트|기념일|릴리즈|일정|🎬|📺|📻|🎉|🎤|💿)\]\s*)+/gi, '')
-    .replace(/(?:\s*#[^\s#]+)+$/g, '')
-    .replace(/\s*\|\s*(?:RESCENE|리센느|안녕하세요원이입니다잘부탁드립니다|안녕하세요\s*원이입니다|helloiamwoni)\s*$/i, '')
-    .trim();
-
-  if (maxLength > 0 && clean.length > maxLength) {
-    clean = clean.slice(0, maxLength).trim() + '...';
-  }
-  return clean;
-}
-
-// 방송사 명칭 판별 헬퍼 (공식 TV/라디오 방송사 및 주요 KPOP 방송 미디어)
-function isBroadcasterName(name) {
-  if (!name) return false;
-  const n = String(name).trim();
-  return /^(?:MBC|KBS|KBS2|SBS|Mnet|JTBC|tvN|ENA|EBS|TV조선|채널A|MBN|Arirang|아리랑|CJ\s*ENM|M2|SBSKPOP|MBCkpop|KBS\s*Kpop|스튜디오\s*춤|STUDIO\s*CHOOM|1theK|원더케이|it's\s*Live|잇츠라이브)/i.test(n);
-}
-
 // 실제 TV 정규 방송 프로그램 판별 (본방 제목 유지 대상)
 function isTvMainBroadcast(item, channel) {
   const t = (item.title || '').replace(/[<>]/g, '').trim();
@@ -576,7 +554,7 @@ function cleanScheduleText(text) {
   if (!text) return "";
   return text
     .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
-    .replace(/[<>\[\]{}()_!?,.~`'"•\-\/]/g, ' ')
+    .replace(/[<>[\]{}()_!?,.~`'"•\-/]/g, ' ')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
@@ -926,7 +904,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   const resolvedOverrides = {};
   Object.entries(sourceOverrides).forEach(([k, v]) => {
     const realId = legacyAliases[k] || k;
-    resolvedOverrides[realId] = { ...(resolvedOverrides[realId] || {}), ...v };
+    resolvedOverrides[realId] = { ...resolvedOverrides[realId], ...v };
   });
 
   let delCount = 0;
@@ -1089,7 +1067,7 @@ export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
 
     const targetId = matchedRaw ? matchedRaw.id : `del_${crypto.createHash('sha256').update(delKey).digest('hex').slice(0, 8)}`;
     v2.sourceOverrides[targetId] = {
-      ...(v2.sourceOverrides[targetId] || {}),
+      ...v2.sourceOverrides[targetId],
       id: targetId,
       isDeleted: true
     };
@@ -1107,7 +1085,7 @@ export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
 
     const targetId = matchedRaw ? matchedRaw.id : `mod_${crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8)}`;
     v2.sourceOverrides[targetId] = {
-      ...(v2.sourceOverrides[targetId] || {}),
+      ...v2.sourceOverrides[targetId],
       ...mVal,
       id: targetId
     };

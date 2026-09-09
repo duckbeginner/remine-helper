@@ -50,16 +50,16 @@ FIREFOX_DIR="$BASE_DIR/remine-helper-firefox"
 CHROME_ZIP="$PUBLISH_DIR/remine-helper-chrome-v$VERSION.zip"
 echo "Creating Chrome package: $CHROME_ZIP"
 rm -f "$CHROME_ZIP"
-(cd "$CHROME_DIR" && zip -r "$CHROME_ZIP" . -x "*.DS_Store" "*_metadata/*")
+(cd "$CHROME_DIR" && zip -r "$CHROME_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*")
 
 # Firefox Packaging
 FIREFOX_ZIP="$PUBLISH_DIR/remine-helper-firefox-v$VERSION.zip"
 echo "Creating Firefox package: $FIREFOX_ZIP"
 rm -f "$FIREFOX_ZIP"
 if [ -d "$FIREFOX_DIR" ]; then
-  (cd "$FIREFOX_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*")
+  (cd "$FIREFOX_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*")
 else
-  (cd "$CHROME_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*")
+  (cd "$CHROME_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*")
 fi
 
 echo "=== Packaging Completed Successfully! ==="

@@ -13,8 +13,6 @@
 })();
 
 const OFFICIAL_CHANNEL_ID = "UCtKtCiaWRz-d3EZn2xd1mdA";
-const OFFICIAL_PLAYLIST_ID = "PL7zZDePsdYwPNu51o8b9MKQ_eGk520SFt";
-const WONI_CHANNEL_ID = "UCWpY0eSJtyO-qNAPbKFRSSg";
 
 // Firefox/older browsers에서 DNR 대신 webRequest로 CSP를 조정하는 처리
 const FIREFOX_FRAME_ANCESTORS = "frame-ancestors https: http: moz-extension:";

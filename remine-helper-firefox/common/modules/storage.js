@@ -2,7 +2,7 @@
 import { MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
 import { renderOfficialYoutubeList, renderWoniYoutubeList, extractAllShortsVideos, renderShortsList } from './youtube.js';
 import { setupHorizontalScroller, setupHubIconReordering } from './tabs.js';
-import { renderScheduleList, deduplicateScheduleList } from './calendar.js';
+import { renderScheduleList } from './calendar.js';
 
 export function getMemberDisplayName(rawNickname) {
   if (!rawNickname) return '멤버';
@@ -232,14 +232,14 @@ export function initAppStorageData({
 export function requestBackgroundRefresh(force = false) {
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
     try {
-      chrome.runtime.sendMessage({ action: "REFRESH_ALL_DATA", force }, (response) => {
+      chrome.runtime.sendMessage({ action: "REFRESH_ALL_DATA", force }, (_response) => {
         if (chrome.runtime.lastError) {
           // 백그라운드 서비스 워커 준비 중이거나 응답 채널 종료 시 에러 무시
           console.debug('[RemineHelper] Background refresh message skipped:', chrome.runtime.lastError.message);
         }
       });
-    } catch (e) {
-      console.debug('[RemineHelper] Failed to send refresh message:', e);
+    } catch (_e) {
+      console.debug('[RemineHelper] Failed to send refresh message:', _e);
     }
   }
 }
