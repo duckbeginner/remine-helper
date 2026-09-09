@@ -11,6 +11,8 @@
     "webRequest",
     "webRequestBlocking",
     "https://*.youtube.com/*",
+    "https://gist.githubusercontent.com/*",
+    "https://duckbeginner.github.io/*",
     "https://blip.kr/*",
     "https://*.mnetplus.world/*",
     "https://*.bstage.in/*",

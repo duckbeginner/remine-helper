@@ -12,7 +12,8 @@
   ],
   "host_permissions": [
     "https://gist.githubusercontent.com/*",
-    "https://duckbeginner.github.io/*"
+    "https://duckbeginner.github.io/*",
+    "https://*.youtube.com/*"
   ],
   "background": {
     "service_worker": "background.js",

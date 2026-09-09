@@ -40,6 +40,18 @@ export async function run() {
     });
   });
 
+  runner.test('Host Permissions: YouTube 및 API 원격 도메인 CORS 허용 완비 검증', () => {
+    // Chrome MV3는 host_permissions에 등록
+    assert(chromeManifest.host_permissions.includes('https://*.youtube.com/*'), 'Chrome host_permissions에 YouTube 권한 누락');
+    assert(chromeManifest.host_permissions.includes('https://gist.githubusercontent.com/*'), 'Chrome host_permissions에 Gist 권한 누락');
+    assert(chromeManifest.host_permissions.includes('https://duckbeginner.github.io/*'), 'Chrome host_permissions에 GitHub Pages 권한 누락');
+
+    // Firefox MV2는 permissions에 등록
+    assert(firefoxManifest.permissions.includes('https://*.youtube.com/*'), 'Firefox permissions에 YouTube 권한 누락');
+    assert(firefoxManifest.permissions.includes('https://gist.githubusercontent.com/*'), 'Firefox permissions에 Gist 권한 누락');
+    assert(firefoxManifest.permissions.includes('https://duckbeginner.github.io/*'), 'Firefox permissions에 GitHub Pages 권한 누락');
+  });
+
   return runner.summary();
 }
 
