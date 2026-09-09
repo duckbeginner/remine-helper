@@ -25,12 +25,12 @@ if [[ ! -d "$DEST_DIR" ]]; then
   mkdir -p "$DEST_DIR"
 fi
 
-# Keep only manifest.json and icons in the Firefox folder before syncing.
-find "$DEST_DIR" -maxdepth 1 -type f ! -name 'manifest.json' ! -name '.DS_Store' -delete 2>/dev/null || true
+# Keep manifest.json, rules.json, and icons in the Firefox folder before syncing.
+find "$DEST_DIR" -maxdepth 1 -type f ! -name 'manifest.json' ! -name 'rules.json' ! -name '.DS_Store' -delete 2>/dev/null || true
 find "$DEST_DIR" -mindepth 2 -type f ! -path "$DEST_DIR/icons/*" ! -path "$DEST_DIR/.git/*" -delete 2>/dev/null || true
 
-# Copy shared extension files, preserving the Firefox manifest and icons.
-rsync -a --delete --exclude='manifest.json' --exclude='.DS_Store' --exclude='.git/' "$SRC_DIR/" "$DEST_DIR/"
+# Copy shared extension files, preserving the Firefox manifest, rules.json, and icons.
+rsync -a --delete --exclude='manifest.json' --exclude='rules.json' --exclude='icons/' --exclude='.DS_Store' --exclude='.git/' "$SRC_DIR/" "$DEST_DIR/"
 
 printf "Firefox extension sync complete.
 "

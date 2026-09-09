@@ -25,16 +25,16 @@ body {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
+}
 
-  :is(html.dark-mode, body.dark-mode) &,
-  &.dark-mode {
-    background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
-    color: #f1f5f9 !important;
-    scrollbar-color: #4a385c transparent;
+html.dark-mode body,
+body.dark-mode {
+  background: radial-gradient(circle at 30% 20%, #302042 0%, #1e1b29 55%, #181520 100%) !important;
+  color: #f1f5f9 !important;
+  scrollbar-color: #4a385c transparent;
 
-    &::-webkit-scrollbar-thumb {
-      background: #4a385c;
-    }
+  &::-webkit-scrollbar-thumb {
+    background: #4a385c;
   }
 }
 

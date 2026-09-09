@@ -21,7 +21,12 @@ import {
   initNavPosition,
   renderInstaEmbeds,
   renderXEmbeds,
-  renderTiktokEmbeds
+  renderTiktokEmbeds,
+  requestBackgroundRefresh,
+  extractAllShortsVideos,
+  renderShortsList,
+  pauseAllShortsVideos,
+  pauseAllTiktokEmbeds
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -213,35 +218,72 @@ document.addEventListener('DOMContentLoaded', () => {
       onTabChange: (targetId, tabConfig, loadedMap) => {
         const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
 
+        if (targetId !== 'tabShorts') {
+          pauseAllShortsVideos();
+        }
+
+        if (targetId !== 'tabTiktok') {
+          pauseAllTiktokEmbeds(document.getElementById('tiktokFeedList'));
+        }
+
         if (targetId === 'tabSchedule') {
           ensureCalendarManager();
-        } else if (targetId === 'tabInsta' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.insta) {
-            renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
-          } else {
-            chrome.storage.local.get(['instaFeeds'], (res) => {
-              if (res && res.instaFeeds) {
-                feedCache.insta = res.instaFeeds;
-                renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
-              }
-            });
+        } else if (targetId === 'tabShorts') {
+          const shortsContainer = document.getElementById('tabShorts');
+          if (shortsContainer && !loadedMap[targetId]) {
+            loadedMap[targetId] = true;
+            const themeParam = isDark ? '?theme=dark' : '?theme=light';
+            shortsContainer.innerHTML = `
+              <iframe credentialless id="shortsTabFrame" class="shorts-tab-iframe" src="https://duckbeginner.github.io/remine-helper/shorts/${themeParam}" frameborder="0" style="background: transparent;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            `;
+            const iframe = document.getElementById('shortsTabFrame');
+            if (iframe) {
+              iframe.onload = () => {
+                chrome.storage.local.get(['latestVideos', 'officialPlaylistVideos', 'woniVideos'], (res) => {
+                  const shorts = extractAllShortsVideos(res || fullStorageData || microCache);
+                  renderShortsList(shortsContainer, shorts);
+                });
+              };
+            }
           }
-        } else if (targetId === 'tabX' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.x) {
-            renderXEmbeds(document.getElementById('xFeedList'), feedCache.x, isDark);
-          } else {
-            chrome.storage.local.get(['xFeeds'], (res) => {
-              if (res && res.xFeeds) {
-                feedCache.x = res.xFeeds;
-                renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
+          chrome.storage.local.get(['latestVideos', 'officialPlaylistVideos', 'woniVideos'], (res) => {
+            const shorts = extractAllShortsVideos(res || fullStorageData || microCache);
+            renderShortsList(shortsContainer, shorts);
+          });
+        } else if (targetId === 'tabInsta') {
+          chrome.storage.local.get(['instaFeeds'], (res) => {
+            const feeds = (res && res.instaFeeds) || feedCache.insta;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.shortcode || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.insta = feeds;
+                renderInstaEmbeds(document.getElementById('instaFeedList'), feeds, isDark);
               }
-            });
-          }
-        } else if (targetId === 'tabTiktok' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feedCache.tiktok || DEFAULT_TIKTOK_FEEDS, isDark);
+            }
+          });
+        } else if (targetId === 'tabX') {
+          chrome.storage.local.get(['xFeeds'], (res) => {
+            const feeds = (res && res.xFeeds) || feedCache.x;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.x = feeds;
+                renderXEmbeds(document.getElementById('xFeedList'), feeds, isDark);
+              }
+            }
+          });
+        } else if (targetId === 'tabTiktok') {
+          chrome.storage.local.get(['tiktokFeeds'], (res) => {
+            const feeds = (res && res.tiktokFeeds) || feedCache.tiktok || DEFAULT_TIKTOK_FEEDS;
+            const hash = JSON.stringify((feeds || []).map(f => f.id || f.link));
+            if (loadedMap[targetId] !== hash) {
+              loadedMap[targetId] = hash;
+              feedCache.tiktok = feeds;
+              renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feeds, isDark);
+            }
+          });
         }
       }
     });
@@ -275,6 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
           'woniVideos',
           'blipSchedules',
           'isLive',
+          'isLiveStreaming',
+          'liveVideoInfo',
           'channelOrder',
           'instaFeeds',
           'xFeeds',
@@ -294,6 +338,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (res.tiktokFeeds && res.tiktokFeeds.length > 0) feedCache.tiktok = res.tiktokFeeds;
 
           const settings = parseUserSettings(res.userSettings);
+          try {
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+          } catch (e) { }
           if (settings.navPosition) {
             initNavPosition(settings.navPosition);
           }
@@ -304,6 +351,23 @@ document.addEventListener('DOMContentLoaded', () => {
           if (tabListChanged || fanpagesChanged) {
             renderAppViews(settings.tabList, settings.fanpages, { isInitial: false, cachedStorage: res });
           } else {
+            // [스마트 렌더링 가드] 이미 마이크로 캐시 등으로 렌더링 완료된 상태이고 핵심 데이터가 동일하면 무거운 DOM 전체 재렌더링 스킵!
+            const prevCore = fullStorageData ? `${fullStorageData.latestVideos?.[0]?.id}-${fullStorageData.isLive}-${fullStorageData.blipSchedules?.length}` : '';
+            const newCore = `${res.latestVideos?.[0]?.id}-${res.isLive}-${res.blipSchedules?.length}`;
+            if (prevCore && prevCore === newCore && document.getElementById('youtubeList')?.children.length > 0) {
+              // 라이브 배너 상태만 경량 업데이트
+              const liveBanner = document.getElementById('liveBanner');
+              if (liveBanner) {
+                if ((res.isLive || res.isLiveStreaming) && res.liveVideoInfo) {
+                  liveBanner.style.display = 'block';
+                  liveBanner.href = res.liveVideoInfo.url;
+                } else if (!res.isLive && !res.isLiveStreaming) {
+                  liveBanner.style.display = 'none';
+                }
+              }
+              return;
+            }
+
             initAppStorageData({
               hubContainerId: 'hubContainer',
               liveBannerId: 'liveBanner',
@@ -325,10 +389,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(syncTask, { timeout: 100 });
+    window.requestIdleCallback(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, { timeout: 100 });
   } else {
-    setTimeout(syncTask, 30);
+    setTimeout(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, 30);
   }
+
+  // 사용자가 사이드패널로 돌아올 때(Focus/Visibility) 즉시 최신 상태 재동기화
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      syncTask();
+    }
+  });
 
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('#openDashboardBtn');

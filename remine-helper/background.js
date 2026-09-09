@@ -482,8 +482,10 @@ function checkUpcomingScheduleAlerts(schedules = []) {
 
         if (diffMs > 0 && diffMs <= thirtyMinutesMs) {
           const id = item.id || `${item.title}_${item.startTime}`;
-          if (!notifiedMap[id]) {
+          const legacyKey = `${item.title}_${item.startTime}`;
+          if (!notifiedMap[id] && !notifiedMap[legacyKey]) {
             notifiedMap[id] = now;
+            notifiedMap[legacyKey] = now;
             hasNewNotification = true;
 
             const minutesLeft = Math.max(1, Math.round(diffMs / 60000));

@@ -1,9 +1,10 @@
 // dashboard.js - 0.05초 초고속 대시보드 진입점 (Page Visibility Throttling & Lazy Mounting)
-import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS } from './constants.js';
+import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, DEFAULT_TIKTOK_FEEDS, DEFAULT_USER_SETTINGS, ICONS } from './constants.js';
 import {
   createTabBarHTML,
   createTabContainersHTML,
   createLiveBannerHTML,
+  createDashboardHeaderControlsHTML,
   createHubCardHTML,
   createYoutubeSectionHTML,
   createWoniSectionHTML,
@@ -24,7 +25,9 @@ import {
   initNavPosition,
   renderInstaEmbeds,
   renderXEmbeds,
-  renderTiktokEmbeds
+  renderTiktokEmbeds,
+  pauseAllTiktokEmbeds,
+  requestBackgroundRefresh
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -70,7 +73,7 @@ function setMicroCache(data) {
       channelOrder: data.channelOrder
     };
     localStorage.setItem(MICRO_CACHE_KEY, JSON.stringify(micro));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -133,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentFanpages = fanpages;
     const effectiveStorage = cachedStorage || fullStorageData || microCache;
 
-    const dashboardTabs = tabList.filter(t => t.id !== 'tabHome').map(t => ({
+    const dashboardTabs = tabList.filter(t => t.id !== 'tabHome' && t.id !== 'tabShorts').map(t => ({
       ...t,
       defaultActive: t.id === 'tabSchedule'
     }));
@@ -164,33 +167,45 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabEngine(document.getElementById('dashboardTabBar'), document.getElementById('tabGlassSlider'), dashboardTabs, {
       onTabChange: (targetId, tabConfig, loadedMap) => {
         const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
-        if (targetId === 'tabInsta' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.insta) {
-            renderInstaEmbeds(document.getElementById('instaFeedList'), feedCache.insta, isDark);
-          } else {
-            chrome.storage.local.get(['instaFeeds'], (res) => {
-              if (res && res.instaFeeds) {
-                feedCache.insta = res.instaFeeds;
-                renderInstaEmbeds(document.getElementById('instaFeedList'), res.instaFeeds, isDark);
+
+        if (targetId !== 'tabTiktok') {
+          pauseAllTiktokEmbeds(document.getElementById('tiktokFeedList'));
+        }
+
+        if (targetId === 'tabInsta') {
+          chrome.storage.local.get(['instaFeeds'], (res) => {
+            const feeds = (res && res.instaFeeds) || feedCache.insta;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.shortcode || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.insta = feeds;
+                renderInstaEmbeds(document.getElementById('instaFeedList'), feeds, isDark);
               }
-            });
-          }
-        } else if (targetId === 'tabX' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          if (feedCache.x) {
-            renderXEmbeds(document.getElementById('xFeedList'), feedCache.x, isDark);
-          } else {
-            chrome.storage.local.get(['xFeeds'], (res) => {
-              if (res && res.xFeeds) {
-                feedCache.x = res.xFeeds;
-                renderXEmbeds(document.getElementById('xFeedList'), res.xFeeds, isDark);
+            }
+          });
+        } else if (targetId === 'tabX') {
+          chrome.storage.local.get(['xFeeds'], (res) => {
+            const feeds = (res && res.xFeeds) || feedCache.x;
+            if (feeds && feeds.length > 0) {
+              const hash = JSON.stringify(feeds.map(f => f.id || f.link));
+              if (loadedMap[targetId] !== hash) {
+                loadedMap[targetId] = hash;
+                feedCache.x = feeds;
+                renderXEmbeds(document.getElementById('xFeedList'), feeds, isDark);
               }
-            });
-          }
-        } else if (targetId === 'tabTiktok' && !loadedMap[targetId]) {
-          loadedMap[targetId] = true;
-          renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feedCache.tiktok || DEFAULT_TIKTOK_FEEDS, isDark);
+            }
+          });
+        } else if (targetId === 'tabTiktok') {
+          chrome.storage.local.get(['tiktokFeeds'], (res) => {
+            const feeds = (res && res.tiktokFeeds) || feedCache.tiktok || DEFAULT_TIKTOK_FEEDS;
+            const hash = JSON.stringify((feeds || []).map(f => f.id || f.link));
+            if (loadedMap[targetId] !== hash) {
+              loadedMap[targetId] = hash;
+              feedCache.tiktok = feeds;
+              renderTiktokEmbeds(document.getElementById('tiktokFeedList'), feeds, isDark);
+            }
+          });
         }
       }
     });
@@ -211,8 +226,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // Step 1: 0ms 동기식 즉시 마운트 (SWR Instant Mount)
+  // Step 1: 0ms 동기식 즉시 마운트 (SWR Instant Mount & Hydration)
   // =========================================================================
+  const headerControlsMount = document.getElementById('dashboardHeaderControls');
+  if (headerControlsMount) {
+    headerControlsMount.innerHTML = createDashboardHeaderControlsHTML();
+  }
+
   initNavPosition(initialSettings.navPosition || 'left');
   renderDashboardViews(initialSettings.tabList, initialSettings.fanpages, { cachedStorage: microCache });
 
@@ -222,8 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
     maximizeBtn.addEventListener('click', () => {
       const isMaximized = document.body.classList.toggle('calendar-maximized');
       maximizeBtn.innerHTML = isMaximized
-        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>축소`
-        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>최대화`;
+        ? `${ICONS.minimize}축소`
+        : `${ICONS.maximize}최대화`;
     });
   }
 
@@ -257,6 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
           'woniVideos',
           'blipSchedules',
           'isLive',
+          'isLiveStreaming',
+          'liveVideoInfo',
           'channelOrder',
           'instaFeeds',
           'xFeeds',
@@ -304,16 +326,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 대시보드 탭으로 다시 돌아왔을 때 보류된 동기화 실행
+  // 대시보드 탭으로 다시 돌아왔을 때 즉시 최신 상태 재동기화
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && isSyncPending) {
+    if (!document.hidden) {
       syncTask();
     }
   });
 
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(syncTask, { timeout: 100 });
+    window.requestIdleCallback(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, { timeout: 100 });
   } else {
-    setTimeout(syncTask, 30);
+    setTimeout(() => {
+      syncTask();
+      requestBackgroundRefresh();
+    }, 30);
   }
 });
+
