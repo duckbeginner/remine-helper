@@ -110,11 +110,15 @@ if (actionApi && actionApi.onClicked && sidebarApi && sidebarApi.open) {
 
 function setupRefreshAlarms(intervalMinutes = 15) {
   const period = Math.max(Number(intervalMinutes) || 15, 1);
-  chrome.alarms.clear("refreshData", () => {
-    chrome.alarms.create("refreshData", { periodInMinutes: period });
+  // Chrome Alarms API: create는 이름이 같으면 기존 알람을 자동으로 즉시 교체(replace)함
+  // delayInMinutes를 함께 지정하여 첫 알람 발화 시점을 안정적으로 보장
+  chrome.alarms.create("refreshData", {
+    delayInMinutes: period,
+    periodInMinutes: period
   });
-  chrome.alarms.clear("fetchSocialFeeds", () => {
-    chrome.alarms.create("fetchSocialFeeds", { periodInMinutes: Math.max(period, 30) });
+  chrome.alarms.create("fetchSocialFeeds", {
+    delayInMinutes: Math.max(period, 30),
+    periodInMinutes: Math.max(period, 30)
   });
 }
 
@@ -130,13 +134,11 @@ function setupDailyScheduleAlarm(dailyTimeStr = "09:00") {
   }
 
   const when = target.getTime();
-  chrome.alarms.clear("dailyScheduleAlarm", () => {
-    chrome.alarms.create("dailyScheduleAlarm", {
-      when: when,
-      periodInMinutes: 24 * 60 // 24시간마다 정각에 반복
-    });
-    console.log(`⏰ [Alarm] 당일 스케줄 정밀 알람 예약 완료: ${target.toLocaleString()} (주기: 24시간)`);
+  chrome.alarms.create("dailyScheduleAlarm", {
+    when: when,
+    periodInMinutes: 24 * 60 // 24시간마다 정각에 반복
   });
+  console.log(`⏰ [Alarm] 당일 스케줄 정밀 알람 예약 완료: ${target.toLocaleString()} (주기: 24시간)`);
 }
 
 function initBackgroundAlarms() {
@@ -153,6 +155,9 @@ function initBackgroundAlarms() {
     setupDailyScheduleAlarm("09:00");
   }
 }
+
+// 서비스 워커 기동 시 최상위 레벨에서 알람 상태 즉시 보장
+initBackgroundAlarms();
 
 chrome.runtime.onInstalled.addListener(() => {
   executeAllBackgroundRefreshes();
@@ -586,6 +591,103 @@ function checkLiveAndNotify(liveInfo) {
   });
 }
 
+function decodeHtmlEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+// 0초 딜레이 초고속 공식 유튜브 RSS & 라이브 직접 감지 엔진 (알림 전용)
+async function checkDirectYouTubeUpdates() {
+  try {
+    // 1. 공식 채널 RSS 초경량 직접 조회 (약 3KB)
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${OFFICIAL_CHANNEL_ID}&_t=${Date.now()}`;
+    const rssRes = await fetch(rssUrl, { cache: 'no-cache' });
+    if (rssRes.ok) {
+      const xmlText = await rssRes.text();
+      const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+      let match;
+      const parsedVideos = [];
+
+      while ((match = entryRegex.exec(xmlText)) !== null) {
+        const entry = match[1];
+        const vidMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/) || entry.match(/<id>[^<]*?video:([^<]+)<\/id>/);
+        const titleMatch = entry.match(/<title>([^<]+)<\/title>/);
+        const pubMatch = entry.match(/<published>([^<]+)<\/published>/);
+
+        if (vidMatch && titleMatch) {
+          const vid = vidMatch[1].trim();
+          const title = decodeHtmlEntities(titleMatch[1].trim());
+          parsedVideos.push({
+            id: vid,
+            title: title,
+            publishedAt: pubMatch ? pubMatch[1].trim() : new Date().toISOString(),
+            thumbnail: `https://img.youtube.com/vi/${vid}/hqdefault.jpg`,
+            url: `https://www.youtube.com/watch?v=${vid}`,
+            isLive: false
+          });
+        }
+      }
+
+      if (parsedVideos.length > 0) {
+        // 신규 VOD 알림 검사 (notifiedVideoIds 맵과 자동 대조하여 신규 영상 즉시 알림)
+        checkNewVideosAndNotify(parsedVideos);
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ [Direct YouTube] RSS 직접 조회 실패:", err);
+  }
+
+  try {
+    // 2. 공식 유튜브 라이브 온에어 직접 감지
+    const liveRes = await fetch(`https://www.youtube.com/@RESCENE_official/live?_t=${Date.now()}`, { cache: 'no-cache' });
+    if (liveRes.ok) {
+      const liveHtml = await liveRes.text();
+      if (liveHtml.includes('"isLiveNow":true') || liveHtml.includes('"isLive":true')) {
+        let liveVideoId = null;
+        const ogUrlMatch = liveHtml.match(/<meta property="og:url" content="([^"]+)"/i);
+        if (ogUrlMatch) {
+          const vMatch = ogUrlMatch[1].match(/[?&]v=([^&#]+)/);
+          if (vMatch) liveVideoId = vMatch[1];
+        }
+        if (!liveVideoId) {
+          const vIdMatch = liveHtml.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+          if (vIdMatch) liveVideoId = vIdMatch[1];
+        }
+
+        let liveTitle = "지금 RESCENE 공식 유튜브 라이브가 진행 중입니다!";
+        const titleMatch = liveHtml.match(/<meta name="title" content="([^"]+)"/i) || liveHtml.match(/<title>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          liveTitle = decodeHtmlEntities(titleMatch[1].replace(/ - YouTube$/i, '').trim());
+        }
+
+        const liveInfo = {
+          id: liveVideoId || `live_${Date.now()}`,
+          title: liveTitle,
+          url: liveVideoId ? `https://www.youtube.com/watch?v=${liveVideoId}` : 'https://www.youtube.com/@RESCENE_official/live',
+          thumbnail: liveVideoId ? `https://img.youtube.com/vi/${liveVideoId}/hqdefault.jpg` : 'icons/rescene-logo.png'
+        };
+
+        checkLiveAndNotify(liveInfo);
+
+        // UI 라이브 배너 즉시 반영을 위한 경량 플래그 업데이트
+        chrome.storage.local.set({
+          isLive: true,
+          isLiveStreaming: true,
+          liveVideoInfo: liveInfo
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ [Direct YouTube] 라이브 직접 확인 실패:", err);
+  }
+}
+
 // =========================================================================
 // 중앙 데이터 허브 (Central Data Hub) 연동 엔진
 // =========================================================================
@@ -611,11 +713,14 @@ async function fetchFromCentralDataHub(force = false) {
   for (const baseUrl of CENTRAL_CORE_URLS) {
     try {
       const url = `${baseUrl}?_t=${Date.now()}`;
-      const headers = {};
+      const headers = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      };
       if (savedEtag) {
         headers['If-None-Match'] = savedEtag;
       }
-      const res = await fetch(url, { headers, cache: 'no-cache' });
+      const res = await fetch(url, { headers, cache: 'no-store' });
 
       // 304 Not Modified: 원격 데이터에 변경 없음 (전송량 0바이트)
       if (res.status === 304) {
@@ -771,33 +876,43 @@ async function executeAllBackgroundRefreshes(force = false) {
   }
   backgroundRefreshPromise = (async () => {
     try {
-      const centralData = await fetchFromCentralDataHub(force);
-      if (centralData && centralData.notModified) {
-        lastBackgroundRefreshTime = Date.now();
-        console.log("⚡ [Central Hub] 304 Not Modified - 원격 변경 없음 (전송량 0B 유지)");
+      // 1. 공식 유튜브 RSS & 라이브 초고속 직접 감지 (알림 딜레이 0초 복원)
+      const directYtPromise = checkDirectYouTubeUpdates().catch(err => {
+        console.warn("⚠️ [Direct YouTube] 직접 감지 일시 실패 (Central Hub 백업 동작):", err);
+      });
 
-        // 데이터 변경이 없어도 시간이 경과함에 따른 스케줄 알림은 로컬 데이터로 점검
-        const local = await chrome.storage.local.get(['blipSchedules', 'activeSchedules']);
-        const currentList = local.blipSchedules || local.activeSchedules || [];
-        if (currentList.length > 0) {
-          checkUpcomingScheduleAlerts(currentList);
-          checkDailyScheduleNotification(currentList);
-        }
-        return;
-      }
-
-      if (centralData) {
-        const applied = await applyCentralDataToStorage(centralData);
-        if (applied) {
+      // 2. 중앙 데이터 허브 동기화 (전체 아카이브 및 SNS, 스케줄)
+      const centralPromise = (async () => {
+        const centralData = await fetchFromCentralDataHub(force);
+        if (centralData && centralData.notModified) {
           lastBackgroundRefreshTime = Date.now();
-          console.log("⚡ [Central Hub] 중앙 데이터 허브에서 최신 데이터 즉시 동기화 완료!", {
-            updatedAt: centralData.updatedAt,
-            schedules: centralData.schedules?.totalCount
-          });
+          console.log("⚡ [Central Hub] 304 Not Modified - 원격 변경 없음 (전송량 0B 유지)");
+
+          // 데이터 변경이 없어도 시간이 경과함에 따른 스케줄 알림은 로컬 데이터로 점검
+          const local = await chrome.storage.local.get(['blipSchedules', 'activeSchedules']);
+          const currentList = local.blipSchedules || local.activeSchedules || [];
+          if (currentList.length > 0) {
+            checkUpcomingScheduleAlerts(currentList);
+            checkDailyScheduleNotification(currentList);
+          }
           return;
         }
-      }
-      console.warn("⚠️ [Central Hub] 중앙 데이터 허브 동기화 실패 또는 데이터 없음");
+
+        if (centralData) {
+          const applied = await applyCentralDataToStorage(centralData);
+          if (applied) {
+            lastBackgroundRefreshTime = Date.now();
+            console.log("⚡ [Central Hub] 중앙 데이터 허브에서 최신 데이터 즉시 동기화 완료!", {
+              updatedAt: centralData.updatedAt,
+              schedules: centralData.schedules?.totalCount
+            });
+            return;
+          }
+        }
+        console.warn("⚠️ [Central Hub] 중앙 데이터 허브 동기화 실패 또는 데이터 없음");
+      })();
+
+      await Promise.allSettled([directYtPromise, centralPromise]);
     } finally {
       backgroundRefreshPromise = null;
     }
