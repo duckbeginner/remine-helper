@@ -320,6 +320,42 @@
       transform: translateY(0);
     }
 
+    /* 필터 설정 모달 스타일 */
+    .switch input:checked + .slider {
+      background-color: var(--accent-purple) !important;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    .switch input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .filter-chip-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      background: rgba(124, 92, 252, 0.15);
+      border: 1px solid rgba(124, 92, 252, 0.3);
+      color: #c4b5fd;
+      border-radius: 14px;
+      font-size: 12px;
+    }
+    .filter-chip-del {
+      cursor: pointer;
+      font-weight: bold;
+      color: #f87171;
+      margin-left: 2px;
+    }
+
     .staging-info {
       display: flex;
       align-items: center;
@@ -784,6 +820,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <button class="btn-icon" id="btnOpenFilterModal" title="제외 필터 설정 (투표/직캠 등)">⚙️</button>
         <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>
         <button class="btn-icon" id="btnRefresh" title="새로고침">🔄</button>
         <button class="btn-add-schedule" id="btnOpenAddModal">
@@ -913,6 +950,53 @@
     </div>
   </div>
 
+  <!-- 필터 설정 바텀 시트 모달 -->
+  <div class="modal-overlay" id="filterModalOverlay">
+    <div class="modal-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 class="sheet-title">⚙️ 자동 제외 필터 설정</h3>
+        <button class="sheet-close" id="btnCloseFilterModal">✕</button>
+      </div>
+
+      <div style="padding: 10px 0; overflow-y: auto; flex: 1;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
+          아래 키워드가 포함된 일정(투표, 직캠, 럭키드로우 등)은 수집 시 캘린더에서 자동으로 제외됩니다.
+        </p>
+
+        <!-- 필터 활성화 토글 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+          <span style="font-size: 14px; font-weight: 600;">제외 필터 엔진 작동</span>
+          <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+            <input type="checkbox" id="filterEngineToggle" checked style="opacity: 0; width: 0; height: 0;">
+            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
+          </label>
+        </div>
+
+        <!-- 새 키워드 추가 -->
+        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+          <input type="text" class="form-input" id="inputNewKeyword" placeholder="제외할 키워드 입력 (예: 영통팬싸)" style="flex: 1;">
+          <button type="button" class="btn-action" id="btnAddKeyword" style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
+        </div>
+
+        <!-- 현재 등록된 키워드 태그들 -->
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">등록된 제외 키워드 (<span id="keywordCount">0</span>개):</div>
+        <div id="filterKeywordsContainer" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <!-- 칩들이 동적으로 들어감 -->
+        </div>
+
+        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+          <button type="button" class="btn-action" id="btnResetDefaultKeywords" style="font-size: 12px; color: var(--text-muted);">🔄 기본 필터 세트 불러오기</button>
+        </div>
+      </div>
+
+      <div class="sheet-buttons" style="margin-top: 10px;">
+        <button type="button" class="btn-sheet-del" id="btnCancelFilterModal" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle);">취소</button>
+        <button type="button" class="btn-sheet-save" id="btnApplyFilterModal">적용 (저장 대기)</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 상태 관리
     let allSchedules = [];
@@ -920,6 +1004,20 @@
     let currentViewDate = new Date();
     let activeCategory = 'all';
     let searchQuery = '';
+
+    // 기본 제외 필터 규칙
+    const DEFAULT_EXCLUDE_KEYWORDS = [
+      '투표', '사전투표', '실시간투표', 'vote', 'voting', 'poll',
+      '덕애드', '스타패스', '아이돌챔프', '뮤빗', '팬플러스', '포도알', '케이돌', '엠넷플러스 투표',
+      '직캠', '풀캠', '팬캠', '페이스캠', '입덕직캠', '최애직캠', '팔로우캠', '안방1열', '음중직캠', 'fancam', 'choreo',
+      '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
+    ];
+
+    let currentFilterRules = {
+      enabled: true,
+      excludeKeywords: [...DEFAULT_EXCLUDE_KEYWORDS]
+    };
+    let pendingFilterRules = null;
 
     // Gist에 이미 영구 저장된 오버라이드 데이터 (서버 상태)
     let appliedOverrides = {
@@ -1124,6 +1222,13 @@
         }
 
         if (overridesJson && typeof overridesJson === 'object') {
+          // filterRules 로드
+          if (overridesJson.filterRules && Array.isArray(overridesJson.filterRules.excludeKeywords)) {
+            currentFilterRules = {
+              enabled: overridesJson.filterRules.enabled !== false,
+              excludeKeywords: [...overridesJson.filterRules.excludeKeywords]
+            };
+          }
           // v2.0 customSchedules 로드
           if (overridesJson.customSchedules && typeof overridesJson.customSchedules === 'object') {
             Object.values(overridesJson.customSchedules).forEach(c => {
@@ -1259,16 +1364,28 @@
       const container = document.getElementById('scheduleListContainer');
       const year = currentViewDate.getFullYear();
       const month = currentViewDate.getMonth();
+      const isSearching = Boolean(searchQuery && searchQuery.trim());
 
-      document.getElementById('currentMonthText').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+      document.getElementById('currentMonthText').textContent = isSearching ? '전체 기간 검색' : `${year}. ${String(month + 1).padStart(2, '0')}`;
+
+      // 월 범위 계산 (연속 일정 월간 교차 판별용)
+      const monthStart = new Date(year, month, 1, 0, 0, 0).getTime();
+      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
 
       // 필터링
       const filtered = allSchedules.filter(item => {
         if (!item.startTime) return false;
         const d = new Date(item.startTime);
-        if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+        const startT = d.getTime();
+        const endT = item.endTime ? new Date(item.endTime).getTime() : startT;
 
-        // 카테고리 필터
+        // 1. 검색 중이 아닐 때는 해당 월에 포함(교차)되는지 확인
+        if (!isSearching) {
+          const overlapsMonth = (startT <= monthEnd && endT >= monthStart);
+          if (!overlapsMonth) return false;
+        }
+
+        // 2. 카테고리 필터
         if (activeCategory !== 'all') {
           const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
           if (activeCategory === '영상' && !type.includes('영상')) return false;
@@ -1277,8 +1394,8 @@
           if (activeCategory === '기념일' && !type.includes('기념일')) return false;
         }
 
-        // 검색 필터
-        if (searchQuery) {
+        // 3. 검색 필터
+        if (isSearching) {
           const q = searchQuery.toLowerCase();
           const targetText = [item.title, item.channel, item.location, item.message].filter(Boolean).join(' ').toLowerCase();
           if (!targetText.includes(q)) return false;
@@ -1288,7 +1405,12 @@
       });
 
       if (filtered.length === 0) {
-        container.innerHTML = `
+        container.innerHTML = isSearching ? `
+          <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
+            <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+            <div>검색어 "<strong style="color:var(--text-main);">${escapeHtml(searchQuery)}</strong>"와 일치하는 일정이 전체 기간에 없습니다.</div>
+          </div>
+        ` : `
           <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
             <div style="font-size:32px; margin-bottom:8px;">📅</div>
             <div>해당 월에 표시할 일정이 없습니다.</div>
@@ -1309,6 +1431,14 @@
       const todayYMD = formatDateYMD(new Date());
 
       let html = '';
+      if (isSearching) {
+        html += `
+          <div style="background: rgba(124, 92, 252, 0.15); border: 1px solid rgba(124, 92, 252, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #c4b5fd; display:flex; justify-content:space-between; align-items:center;">
+            <span>🔍 전체 기간 검색 결과: <strong>${filtered.length}건</strong> (검색어: "${escapeHtml(searchQuery)}")</span>
+            <button onclick="document.getElementById('searchInput').value=''; searchQuery=''; renderSchedules();" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">✕ 검색 닫기</button>
+          </div>
+        `;
+      }
       Object.keys(groups).sort().forEach(ymd => {
         const groupItems = groups[ymd];
         const dateObj = new Date(ymd + 'T00:00:00');
@@ -1541,6 +1671,94 @@
       renderSchedules();
     }
 
+    // === 제외 필터 설정 모달 제어 ===
+    let tempFilterKeywords = [];
+    let tempFilterEnabled = true;
+
+    function openFilterModal() {
+      const activeRules = pendingFilterRules || currentFilterRules;
+      tempFilterEnabled = activeRules.enabled !== false;
+      tempFilterKeywords = [...(activeRules.excludeKeywords || DEFAULT_EXCLUDE_KEYWORDS)];
+
+      document.getElementById('filterEngineToggle').checked = tempFilterEnabled;
+      document.getElementById('inputNewKeyword').value = '';
+      renderFilterChips();
+      document.getElementById('filterModalOverlay').classList.add('active');
+    }
+
+    function closeFilterModal() {
+      document.getElementById('filterModalOverlay').classList.remove('active');
+    }
+
+    function renderFilterChips() {
+      const container = document.getElementById('filterKeywordsContainer');
+      document.getElementById('keywordCount').textContent = tempFilterKeywords.length;
+      if (tempFilterKeywords.length === 0) {
+        container.innerHTML = '<span style="font-size:12px; color:var(--text-muted); padding:4px;">등록된 제외 키워드가 없습니다.</span>';
+        return;
+      }
+      let html = '';
+      tempFilterKeywords.forEach((kw, idx) => {
+        html += `
+          <span class="filter-chip-tag">
+            <span>${escapeHtml(kw)}</span>
+            <span class="filter-chip-del" onclick="window.removeFilterKeyword(${idx})" title="삭제">✕</span>
+          </span>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    window.removeFilterKeyword = function(idx) {
+      if (idx >= 0 && idx < tempFilterKeywords.length) {
+        tempFilterKeywords.splice(idx, 1);
+        renderFilterChips();
+      }
+    };
+
+    function addFilterKeyword() {
+      const input = document.getElementById('inputNewKeyword');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!tempFilterKeywords.includes(val)) {
+        tempFilterKeywords.push(val);
+        renderFilterChips();
+      }
+      input.value = '';
+      input.focus();
+    }
+
+    document.getElementById('btnOpenFilterModal').addEventListener('click', openFilterModal);
+    document.getElementById('btnCloseFilterModal').addEventListener('click', closeFilterModal);
+    document.getElementById('btnCancelFilterModal').addEventListener('click', closeFilterModal);
+
+    document.getElementById('btnAddKeyword').addEventListener('click', addFilterKeyword);
+    document.getElementById('inputNewKeyword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addFilterKeyword();
+      }
+    });
+
+    document.getElementById('btnResetDefaultKeywords').addEventListener('click', () => {
+      if (confirm('기본 필터 세트(투표/직캠/이벤트 36개 키워드)로 복원하시겠습니까?')) {
+        tempFilterKeywords = [...DEFAULT_EXCLUDE_KEYWORDS];
+        tempFilterEnabled = true;
+        document.getElementById('filterEngineToggle').checked = true;
+        renderFilterChips();
+      }
+    });
+
+    document.getElementById('btnApplyFilterModal').addEventListener('click', () => {
+      const enabled = document.getElementById('filterEngineToggle').checked;
+      pendingFilterRules = {
+        enabled,
+        excludeKeywords: [...tempFilterKeywords]
+      };
+      closeFilterModal();
+      updateStagingBar();
+    });
+
     // 폼 저장
     document.getElementById('scheduleEditForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1689,11 +1907,12 @@
 
     // 변경사항 스테이징 바 업데이트
     function updateStagingBar() {
-      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length;
+      const filterRulesChanged = Boolean(pendingFilterRules);
+      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length + (filterRulesChanged ? 1 : 0);
       const bar = document.getElementById('stagingBar');
       const badge = document.getElementById('stagingCountBadge');
 
-      if (badge) badge.textContent = `${count}건`;
+      if (badge) badge.textContent = `${count}건${filterRulesChanged ? ' (필터포함)' : ''}`;
       if (count > 0) {
         bar.style.display = 'flex';
         void bar.offsetHeight;
@@ -1808,7 +2027,8 @@
         return;
       }
 
-      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length;
+      const filterRulesChanged = Boolean(pendingFilterRules);
+      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length + (filterRulesChanged ? 1 : 0);
       if (count === 0) {
         alert('저장할 변경사항이 없습니다.');
         return;
@@ -1899,12 +2119,14 @@
           sourceOverrides[mKey] = { ...(sourceOverrides[mKey] || {}), ...mVal, id: mKey };
         });
 
+        const finalFilterRules = pendingFilterRules || currentFilterRules;
         const payload = {
           files: {
             "schedule-overrides.json": {
               content: JSON.stringify({
                 version: "2.0.0",
                 updatedAt: new Date().toISOString(),
+                filterRules: finalFilterRules,
                 customSchedules,
                 sourceOverrides,
                 legacyAliases,
@@ -1945,8 +2167,12 @@
         appliedOverrides.modified = resolveModifiedChain(confirmedOverrides.modified && typeof confirmedOverrides.modified === 'object' ? confirmedOverrides.modified : {});
         appliedOverrides.created = Array.isArray(confirmedOverrides.created) ? confirmedOverrides.created.map(c => ({ ...c, _isCustom: true })) : [];
 
-        // 3. 대기열(pendingOverrides) 비우기
+        // 3. 대기열(pendingOverrides) 비우기 & 필터 규칙 확정
         pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        if (pendingFilterRules) {
+          currentFilterRules = { ...pendingFilterRules };
+          pendingFilterRules = null;
+        }
 
         // 4. 화면 목록에 확정 반영 덮어쓰기 & re-render (수정 대기 뱃지 -> [수정됨] 초록 뱃지로 확정)
         allSchedules = allSchedules.map(item => {
@@ -1999,6 +2225,7 @@
     function onResetStagingClick() {
       if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
         pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        pendingFilterRules = null;
         updateStagingBar();
         loadSchedules();
       }

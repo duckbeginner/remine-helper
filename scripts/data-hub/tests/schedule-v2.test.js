@@ -70,12 +70,35 @@ export function generateScheduleId(source, item) {
 /**
  * 2. v2.0 연관 일정 상호 합성 및 오버라이드 엔진
  */
+export const DEFAULT_EXCLUDE_KEYWORDS = [
+  '투표', '사전투표', '실시간투표', 'vote', 'voting', 'poll',
+  '덕애드', '스타패스', '아이돌챔프', '뮤빗', '팬플러스', '포도알', '케이돌', '엠넷플러스 투표',
+  '직캠', '풀캠', '팬캠', '페이스캠', '입덕직캠', '최애직캠', '팔로우캠', '안방1열', '음중직캠', 'fancam', 'choreo',
+  '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
+];
+
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
+    filterRules = {},
     customSchedules = {},
     sourceOverrides = {},
     legacyAliases = {}
   } = (overridesV2 || {});
+
+  const filterEnabled = filterRules.enabled !== false;
+  const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
+    ? filterRules.excludeKeywords
+    : DEFAULT_EXCLUDE_KEYWORDS;
+
+  const matchFilter = (item) => {
+    if (!filterEnabled || excludeKeywords.length === 0) return false;
+    const text = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ').toLowerCase();
+    return excludeKeywords.some(kw => {
+      const cleanKw = kw.trim().toLowerCase();
+      if (!cleanKw) return false;
+      return text.includes(cleanKw);
+    });
+  };
 
   // (A) 원본 아이템에 ID 부여 및 소스 오버라이드 맵 준비
   const itemMap = new Map();
@@ -105,13 +128,17 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     resolvedOverrides[realId] = { ...(resolvedOverrides[realId] || {}), ...v };
   });
 
-  // (D) 개별 삭제 필터링 (독립 동작)
+  // (D) 개별 삭제 및 필터 규칙 적용 (독립 동작)
   const activeItems = [];
   itemMap.forEach(item => {
     const ov = resolvedOverrides[item.id];
     // 만약 해당 아이템이 삭제 대상(isDeleted: true)이면 제외
     if (ov && ov.isDeleted) return;
     if (item.isDeleted) return;
+
+    // 관리자 작성 또는 명시적 수정본은 필터링에서 보호
+    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+    if (!isProtected && matchFilter(item)) return;
 
     // 수정 필드 적용 (수정된 것만 덮어쓰고 원본은 보존)
     if (ov) {
@@ -470,6 +497,48 @@ runTest("Test 7: 관리자가 링크만 추가했을 때 기존 날짜/시간/�
   assert.strictEqual(res.startTime, "2026-09-15T18:00:00+09:00");
   assert.strictEqual(res.location, "상암동 SBS");
   assert.strictEqual(res.channel, "SBS M");
+});
+
+// [Test 8] 동적 제외 필터 규칙(filterRules) 검증
+runTest("Test 8: filterRules 동적 필터링 및 관리자 작성/수정 일정 보호 검증", () => {
+  const items = [
+    { id: "blip_vote1", title: "<2026 SKA> '베스트 스팟라이트' 투표", source: "blip", startTime: "2026-08-24" },
+    { id: "blip_cam1", title: "[입덕직캠] RESCENE Woni 4K", source: "blip", startTime: "2026-08-25" },
+    { id: "blip_event1", title: "공식 팬사인회 럭키드로우 이벤트 안내", source: "blip", startTime: "2026-08-26" },
+    { id: "blip_broadcast", title: "SBS 인기가요 생방송", source: "blip", startTime: "2026-08-27" },
+    // 관리자가 등록한 커스텀 일정 (투표 단어가 들어가도 보호되어야 함)
+    { id: "custom_vote_notice", title: "팬덤 특별 투표 독려 안내", source: "custom", _isCustom: true, startTime: "2026-08-28" }
+  ];
+
+  // 1) 기본 필터 규칙 동작 검증
+  const defaultMerged = mergeSchedulesV2(items, {});
+  const titles1 = defaultMerged.map(x => x.title);
+  assert.ok(!titles1.includes("<2026 SKA> '베스트 스팟라이트' 투표"), "투표 일정이 기본 제외되어야 함");
+  assert.ok(!titles1.includes("[입덕직캠] RESCENE Woni 4K"), "직캠 일정이 기본 제외되어야 함");
+  assert.ok(!titles1.includes("공식 팬사인회 럭키드로우 이벤트 안내"), "럭키드로우 일정이 기본 제외되어야 함");
+  assert.ok(titles1.includes("SBS 인기가요 생방송"), "정규 방송 일정은 정상 보존되어야 함");
+  assert.ok(titles1.includes("팬덤 특별 투표 독려 안내"), "관리자가 수동 등록한 일정은 보호되어야 함");
+
+  // 2) 사용자 커스텀 제외 키워드 추가 검증 (예: '인기가요' 추가)
+  const customFilterOverrides = {
+    filterRules: {
+      enabled: true,
+      excludeKeywords: [...DEFAULT_EXCLUDE_KEYWORDS, "인기가요"]
+    }
+  };
+  const customMerged = mergeSchedulesV2(items, customFilterOverrides);
+  const titles2 = customMerged.map(x => x.title);
+  assert.ok(!titles2.includes("SBS 인기가요 생방송"), "커스텀 추가된 '인기가요' 키워드 일정도 정상 제외되어야 함");
+
+  // 3) 필터 엔진 비활성화(enabled: false) 검증
+  const disabledFilterOverrides = {
+    filterRules: {
+      enabled: false,
+      excludeKeywords: DEFAULT_EXCLUDE_KEYWORDS
+    }
+  };
+  const disabledMerged = mergeSchedulesV2(items, disabledFilterOverrides);
+  assert.strictEqual(disabledMerged.length, 5, "필터 비활성화 시 모든 5개 일정이 그대로 통과되어야 함");
 });
 
 console.log("==================================================");

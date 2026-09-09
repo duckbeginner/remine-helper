@@ -868,13 +868,40 @@ export async function collectScheduleData(allYtVideos = []) {
   };
 }
 
+export const DEFAULT_EXCLUDE_KEYWORDS = [
+  // 투표
+  '투표', '사전투표', '실시간투표', 'vote', 'voting', 'poll',
+  '덕애드', '스타패스', '아이돌챔프', '뮤빗', '팬플러스', '포도알', '케이돌', '엠넷플러스 투표',
+  // 직캠
+  '직캠', '풀캠', '팬캠', '페이스캠', '입덕직캠', '최애직캠', '팔로우캠', '안방1열', '음중직캠', 'fancam', 'choreo',
+  // 단순 이벤트 및 공지
+  '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
+];
+
 // [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
+    filterRules = {},
     customSchedules = {},
     sourceOverrides = {},
     legacyAliases = {}
   } = (overridesV2 || {});
+
+  // 필터 규칙 설정
+  const filterEnabled = filterRules.enabled !== false;
+  const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
+    ? filterRules.excludeKeywords
+    : DEFAULT_EXCLUDE_KEYWORDS;
+
+  const matchFilter = (item) => {
+    if (!filterEnabled || excludeKeywords.length === 0) return false;
+    const text = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ').toLowerCase();
+    return excludeKeywords.some(kw => {
+      const cleanKw = kw.trim().toLowerCase();
+      if (!cleanKw) return false;
+      return text.includes(cleanKw);
+    });
+  };
 
   // (A) 원본 아이템에 ID 부여 및 소스 오버라이드 맵 준비
   const itemMap = new Map();
@@ -904,8 +931,9 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
 
   let delCount = 0;
   let modCount = 0;
+  let filterCount = 0;
 
-  // (D) 개별 삭제 필터링 (100% 독립 동작)
+  // (D) 개별 삭제 및 필터 규칙 적용 (100% 독립 동작)
   const activeItems = [];
   itemMap.forEach(item => {
     const ov = resolvedOverrides[item.id];
@@ -915,6 +943,13 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     }
     if (item.isDeleted) {
       delCount++;
+      return;
+    }
+
+    // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드가 있는 항목은 필터링에서 보호
+    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+    if (!isProtected && matchFilter(item)) {
+      filterCount++;
       return;
     }
 
@@ -933,6 +968,10 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
       activeItems.push(item);
     }
   });
+
+  if (filterCount > 0) {
+    console.log(`  ✂️ [Filter Rules] 제외 필터 규칙에 의해 ${filterCount}건 자동 제외 완료 (투표/직캠/이벤트 등)`);
+  }
 
   // (E) 연관 일정 상호 합성 (linkedScheduleIds 기준 양방향 클러스터링 및 대표 선출)
   const adj = new Map();
