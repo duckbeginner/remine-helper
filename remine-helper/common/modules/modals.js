@@ -425,13 +425,33 @@ export function parseUserSettings(savedSettings) {
     mergedTabs = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS.tabList));
   }
 
+  // 팬페이지 스마트 마이그레이션:
+  // 1. 기존 사용자가 설정한 fanpages 목록 온전히 보존
+  // 2. 기본값(FANPAGE_LIST)에 새롭게 추가된 항목 중, 아직 없고 사용자가 삭제(dismissed)한 적도 없는 항목은 목록 끝에 1회 자동 추가
+  const dismissedFanpages = Array.isArray(savedSettings.dismissedFanpages) ? [...savedSettings.dismissedFanpages] : [];
+  let mergedFanpages = [];
+
+  if (Array.isArray(savedSettings.fanpages) && savedSettings.fanpages.length > 0) {
+    mergedFanpages = [...savedSettings.fanpages];
+    FANPAGE_LIST.forEach(baseFp => {
+      const exists = mergedFanpages.some(fp => fp.id === baseFp.id || (fp.url && baseFp.url && fp.url.replace(/\/$/, '') === baseFp.url.replace(/\/$/, '')));
+      const isDismissed = dismissedFanpages.includes(baseFp.id);
+      if (!exists && !isDismissed) {
+        mergedFanpages.push({ ...baseFp });
+      }
+    });
+  } else {
+    mergedFanpages = JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS.fanpages));
+  }
+
   return {
     navPosition: savedSettings.navPosition || DEFAULT_USER_SETTINGS.navPosition,
     refreshInterval: savedSettings.refreshInterval || DEFAULT_USER_SETTINGS.refreshInterval,
     notifications: { ...DEFAULT_USER_SETTINGS.notifications, ...(savedSettings.notifications || {}) },
     sound: { ...DEFAULT_USER_SETTINGS.sound, ...(savedSettings.sound || {}) },
     tabList: mergedTabs,
-    fanpages: (savedSettings.fanpages && savedSettings.fanpages.length > 0) ? savedSettings.fanpages : DEFAULT_USER_SETTINGS.fanpages
+    fanpages: mergedFanpages,
+    dismissedFanpages: dismissedFanpages
   };
 }
 
@@ -777,6 +797,14 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
       const row = document.createElement('div');
       row.className = 'reorder-item-row';
       row.setAttribute('data-index', String(index));
+      let iconHtml = '';
+      if (fp.icon) {
+        if (fp.icon.startsWith('icons/') || fp.icon.startsWith('http') || /\.(png|svg|ico|jpg)/i.test(fp.icon)) {
+          iconHtml = `<img src="${escapeHtml(fp.icon)}" alt="" style="width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; border-radius: 3px; display: inline-block;">`;
+        } else {
+          iconHtml = `${fp.icon} `;
+        }
+      }
       row.innerHTML = `
         <div class="reorder-item-left">
           ${dragHandleSvg}
@@ -784,7 +812,7 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
             <input type="checkbox" class="fp-toggle-cb" data-id="${fp.id}" ${fp.enabled !== false ? 'checked' : ''}>
             <span class="slider round"></span>
           </label>
-          <span class="reorder-item-label">${fp.icon ? fp.icon + ' ' : ''}<strong>${escapeHtml(fp.name)}</strong></span>
+          <span class="reorder-item-label">${iconHtml}<strong>${escapeHtml(fp.name)}</strong></span>
           <span class="reorder-item-sub">${escapeHtml(fp.url)}</span>
         </div>
         <div class="reorder-btn-group">
@@ -907,6 +935,12 @@ export function initSettingsModal({ onTabsChanged, onFanpagesChanged, onNavPosit
         const id = btn.getAttribute('data-id');
         if (confirm('이 팬페이지 바로가기를 삭제하시겠습니까?')) {
           currentSettings.fanpages = currentSettings.fanpages.filter(f => f.id !== id);
+          if (!Array.isArray(currentSettings.dismissedFanpages)) {
+            currentSettings.dismissedFanpages = [];
+          }
+          if (!currentSettings.dismissedFanpages.includes(id)) {
+            currentSettings.dismissedFanpages.push(id);
+          }
           renderFanpageReorderList(currentSettings.fanpages);
           saveUserSettings(currentSettings, () => {
             showSaveNotice();

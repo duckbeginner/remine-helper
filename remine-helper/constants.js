@@ -212,10 +212,7 @@ export const OFFICIAL_CHANNELS = [
 
 // 3. 팬페이지 바로가기 메타데이터 목록
 export const FANPAGE_LIST = [
-  { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
-  { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
-  { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
-  { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
+  { id: "fp_remine_helper", name: "리마인헬퍼", url: "https://duckbeginner.github.io/remine-helper/", icon: "icons/logo16.png", enabled: true }
 ];
 
 // 5. 새로고침 주기 옵션 (분 단위)
@@ -259,9 +256,7 @@ export const DEFAULT_USER_SETTINGS = {
     enabled: tab.enabled !== false
   })),
   fanpages: [
-    { id: "fp_todo", name: "To DO", url: "https://rescenefan.com/", icon: "📝", enabled: true },
-    { id: "fp_muzip", name: "muzip chart", url: "https://rescene.muzip.link/chart/", icon: "📊", enabled: true },
-    { id: "fp_love", name: "rescene.love", url: "https://rescene.love/", icon: "💖", enabled: true },
-    { id: "fp_fan", name: "rescene.fan", url: "https://rescene.fan/", icon: "🌸", enabled: true }
-  ]
+    { id: "fp_remine_helper", name: "리마인헬퍼", url: "https://duckbeginner.github.io/remine-helper/", icon: "icons/logo16.png", enabled: true }
+  ],
+  dismissedFanpages: []
 };

@@ -186,7 +186,7 @@ export function createGlassCardHTML(contentHtml, { extraClass = '', id = '' } = 
 
 export function createVideoCardHTML(video) {
   const title = escapeHtml(video.title || '영상');
-  const rawDate = video.published || video.date;
+  const rawDate = video.publishedAt || video.published || video.date;
   const dateStr = rawDate ? (getTimeAgo(rawDate) || rawDate) : '';
   const url = video.url || video.videoUrl || (video.id ? `https://www.youtube.com/watch?v=${video.id}` : '#');
   const thumbnail = video.thumbnail || 'icons/rescene_official_profile.jpg';
@@ -205,9 +205,16 @@ export function createVideoCardHTML(video) {
 }
 
 export function createFanpageLinkCardHTML(fanpage) {
-  const iconStr = fanpage.icon ? `${fanpage.icon} ` : '';
+  let iconHtml = '';
+  if (fanpage.icon) {
+    if (fanpage.icon.startsWith('icons/') || fanpage.icon.startsWith('http') || /\.(png|svg|ico|jpg)/i.test(fanpage.icon)) {
+      iconHtml = `<img src="${escapeHtml(fanpage.icon)}" alt="" class="fanpage-icon-img" style="width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; border-radius: 3px; display: inline-block;">`;
+    } else {
+      iconHtml = `${fanpage.icon} `;
+    }
+  }
   return `
-    <a href="${fanpage.url}" target="_blank" class="fanpage-link-card">${iconStr}${escapeHtml(fanpage.name)}</a>
+    <a href="${fanpage.url}" target="_blank" class="fanpage-link-card">${iconHtml}${escapeHtml(fanpage.name)}</a>
   `;
 }
 
