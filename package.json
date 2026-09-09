@@ -11,7 +11,7 @@
     "test": "node tests/run-all.js",
     "build:firefox": "bash scripts/build-firefox.sh",
     "package": "bash scripts/package.sh",
-    "lint": "oxlint",
+    "lint": "npx oxlint",
     "check": "node --check remine-helper/background.js remine-helper/sidepanel.js remine-helper/options.js remine-helper/constants.js remine-helper/common/storage.js remine-helper/common/templates.js remine-helper/common/modules/*.js scripts/data-hub/*.js scripts/data-hub/collectors/*.js"
   }
 }

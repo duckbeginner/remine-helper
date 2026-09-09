@@ -4,7 +4,8 @@
 import { TestRunner, assert } from '../test-helper.js';
 import {
   filterAndDeduplicateSchedules,
-  getMemberDisplayName
+  getMemberDisplayName,
+  getMemberAvatarUrl
 } from '../../remine-helper/common/modules/storage.js';
 
 export async function run() {
@@ -21,6 +22,21 @@ export async function run() {
     assert.strictEqual(getMemberDisplayName('minami'), '미나미');
     assert.strictEqual(getMemberDisplayName('일반팬'), '일반팬');
     assert.strictEqual(getMemberDisplayName(''), '멤버');
+  });
+
+  runner.test('getMemberAvatarUrl: 멤버 이름 기반 프로필 이미지 URL 매핑 및 폴백', () => {
+    const fallback = 'icons/default.png';
+    const woniAvatar = getMemberAvatarUrl('원이', fallback);
+    assert(woniAvatar.includes('woni'));
+
+    const minamiAvatar = getMemberAvatarUrl('미나미', fallback);
+    assert(minamiAvatar.includes('minami'));
+
+    const unknownAvatar = getMemberAvatarUrl('알수없음', fallback);
+    assert.strictEqual(unknownAvatar, fallback);
+
+    const emptyAvatar = getMemberAvatarUrl('', fallback);
+    assert.strictEqual(emptyAvatar, fallback);
   });
 
   // 2. filterAndDeduplicateSchedules

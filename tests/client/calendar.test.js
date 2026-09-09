@@ -8,7 +8,8 @@ import {
   normalizeTitle,
   parseTitleStructure,
   areSchedulesDuplicate,
-  deduplicateScheduleList
+  deduplicateScheduleList,
+  pickBestTitle
 } from '../../remine-helper/common/modules/calendar.js';
 
 export async function run() {
@@ -90,6 +91,15 @@ export async function run() {
     const result = deduplicateScheduleList(list);
     assert.strictEqual(result.length, 2);
     assert.deepStrictEqual(deduplicateScheduleList([]), []);
+  });
+
+  // 6. pickBestTitle
+  runner.test('pickBestTitle: 괄호 유무 및 길이 기반 최적 제목 판별', () => {
+    assert.strictEqual(pickBestTitle('인기가요 (생방송)', '인기가요'), '인기가요 (생방송)');
+    assert.strictEqual(pickBestTitle('뮤직뱅크', '뮤직뱅크 (본방)'), '뮤직뱅크 (본방)');
+    assert.strictEqual(pickBestTitle('더쇼 생방송 리센느', '더쇼'), '더쇼 생방송 리센느');
+    assert.strictEqual(pickBestTitle('', '음악중심'), '음악중심');
+    assert.strictEqual(pickBestTitle('음악중심', ''), '음악중심');
   });
 
   return runner.summary();

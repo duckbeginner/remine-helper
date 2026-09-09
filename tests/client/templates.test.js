@@ -5,7 +5,10 @@ import { TestRunner, assert } from '../test-helper.js';
 import {
   escapeHtml,
   createVideoCardHTML,
-  createLiveBannerHTML
+  createLiveBannerHTML,
+  getTimeAgo,
+  createFanpageLinkCardHTML,
+  createTabButtonHTML
 } from '../../remine-helper/common/templates.js';
 
 export async function run() {
@@ -47,6 +50,54 @@ export async function run() {
     assert(html.includes('id="liveBanner"'));
     assert(html.includes('[LIVE] 리센느 실시간 라이브 중!'));
     assert(html.includes('class="live-pulse-dot"'));
+  });
+
+  // 4. getTimeAgo
+  runner.test('getTimeAgo: 상대 시간 포맷팅 계산 및 빈 값 방어', () => {
+    assert.strictEqual(getTimeAgo(''), '');
+    const now = new Date();
+    // 30초 전
+    const recent = new Date(now.getTime() - 30 * 1000).toISOString();
+    assert.strictEqual(getTimeAgo(recent), '방금 전');
+
+    // 10분 전
+    const minsAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
+    assert.strictEqual(getTimeAgo(minsAgo), '10분 전');
+
+    // 3시간 전
+    const hoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString();
+    assert.strictEqual(getTimeAgo(hoursAgo), '3시간 전');
+
+    // 2일 전
+    const daysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    assert.strictEqual(getTimeAgo(daysAgo), '2일 전');
+  });
+
+  // 5. createFanpageLinkCardHTML
+  runner.test('createFanpageLinkCardHTML: 팬페이지 링크 카드 렌더링 검증', () => {
+    const fp = {
+      name: '리센느 갤러리',
+      url: 'https://gall.dcinside.com/rescene',
+      icon: '🏛️'
+    };
+    const html = createFanpageLinkCardHTML(fp);
+    assert(html.includes('class="fanpage-link-card"'));
+    assert(html.includes('href="https://gall.dcinside.com/rescene"'));
+    assert(html.includes('리센느 갤러리'));
+    assert(html.includes('🏛️'));
+  });
+
+  // 6. createTabButtonHTML
+  runner.test('createTabButtonHTML: 탭 버튼 마크업 및 라벨 렌더링 검증', () => {
+    const tab = {
+      id: 'tabHome',
+      label: '홈',
+      defaultActive: true
+    };
+    const html = createTabButtonHTML(tab);
+    assert(html.includes('data-target="tabHome"'));
+    assert(html.includes('active'));
+    assert(html.includes('홈'));
   });
 
   return runner.summary();

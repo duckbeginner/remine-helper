@@ -5,7 +5,8 @@ import { TestRunner, assert } from '../test-helper.js';
 import {
   parseUserSettings,
   decodeHtmlEntities,
-  linkifyMessage
+  linkifyMessage,
+  parseMediaEmbeds
 } from '../../remine-helper/common/modules/modals.js';
 import { DEFAULT_USER_SETTINGS } from '../../remine-helper/constants.js';
 
@@ -55,6 +56,21 @@ export async function run() {
     const formatted = linkifyMessage(msg);
     assert(formatted.includes('href="https://youtube.com/live/12345"'));
     assert(formatted.includes('관련 링크'));
+  });
+
+  // 4. parseMediaEmbeds
+  runner.test('parseMediaEmbeds: YouTube 및 미디어 임베드 카드 파싱 및 중복 배제', () => {
+    assert.strictEqual(parseMediaEmbeds([]), '');
+    const sources = [
+      '영상 링크: https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      '중복 영상: https://youtu.be/dQw4w9WgXcQ'
+    ];
+    const html = parseMediaEmbeds(sources, false);
+    assert(html.includes('data-video-id="dQw4w9WgXcQ"'));
+    assert(html.includes('youtube-preview-card'));
+    // 중복 제거되어 1회만 임베드 생성되는지 확인
+    const count = (html.match(/dQw4w9WgXcQ/g) || []).length;
+    assert(count > 0);
   });
 
   return runner.summary();

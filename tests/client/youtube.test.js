@@ -2,7 +2,10 @@
 // 유튜브 모듈 단위 테스트 (Shorts 동영상 자동 판별 및 풀 정렬)
 
 import { TestRunner, assert } from '../test-helper.js';
-import { extractAllShortsVideos } from '../../remine-helper/common/modules/youtube.js';
+import {
+  extractAllShortsVideos,
+  sendYouTubeCommand
+} from '../../remine-helper/common/modules/youtube.js';
 
 export async function run() {
   const runner = new TestRunner('Client - YouTube Module');
@@ -42,6 +45,34 @@ export async function run() {
   runner.test('extractAllShortsVideos: 빈 데이터 입력 안전 처리', () => {
     assert.deepStrictEqual(extractAllShortsVideos({}), []);
     assert.deepStrictEqual(extractAllShortsVideos(null), []);
+  });
+
+  runner.test('sendYouTubeCommand: iframe postMessage 규격 JSON 전송 검증', () => {
+    let postedMessage = null;
+    let targetOrigin = null;
+
+    const mockIframe = {
+      contentWindow: {
+        postMessage: (msg, origin) => {
+          postedMessage = msg;
+          targetOrigin = origin;
+        }
+      }
+    };
+
+    sendYouTubeCommand(mockIframe, 'pauseVideo');
+    assert(postedMessage !== null);
+    const parsed = JSON.parse(postedMessage);
+    assert.strictEqual(parsed.event, 'command');
+    assert.strictEqual(parsed.func, 'pauseVideo');
+    assert.deepStrictEqual(parsed.args, []);
+    assert.strictEqual(targetOrigin, '*');
+
+    // null / 빈 iframe 방어
+    assert.doesNotThrow(() => {
+      sendYouTubeCommand(null, 'playVideo');
+      sendYouTubeCommand({}, 'playVideo');
+    });
   });
 
   return runner.summary();

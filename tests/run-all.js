@@ -30,6 +30,7 @@ import { run as runSeoTest } from './docs/seo.test.js';
 import { run as runManifestTest } from './cross/manifest.test.js';
 import { run as runBrowserSyncTest } from './cross/browser-sync.test.js';
 import { run as runConstantsSyncTest } from './cross/constants-sync.test.js';
+import { run as runEntrypointsTest } from './cross/entrypoints.test.js';
 
 import { run as runScriptsTest } from './build/scripts.test.js';
 import { run as runPackageZipTest } from './build/package-zip.test.js';
@@ -133,7 +134,8 @@ async function main() {
   const crossSuites = [
     runManifestTest,
     runBrowserSyncTest,
-    runConstantsSyncTest
+    runConstantsSyncTest,
+    runEntrypointsTest
   ];
 
   for (const suite of crossSuites) {
