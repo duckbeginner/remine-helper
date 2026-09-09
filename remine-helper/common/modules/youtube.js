@@ -33,10 +33,11 @@ export function renderWoniYoutubeList(container, videos = []) {
  * 스토리지 내 모든 비디오 풀에서 Shorts 영상만 추출하여 최신순 정렬
  */
 export function extractAllShortsVideos(data = {}) {
+  const safeData = data || {};
   const pool = [
-    ...(data.latestVideos || []),
-    ...(data.officialPlaylistVideos || []),
-    ...(data.woniVideos || [])
+    ...(safeData.latestVideos || []),
+    ...(safeData.officialPlaylistVideos || []),
+    ...(safeData.woniVideos || [])
   ];
   const seen = new Set();
   const shorts = [];

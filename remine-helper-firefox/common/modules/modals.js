@@ -8,9 +8,17 @@ import { setupIframeAutoHeight } from './sns-embeds.js';
 
 export function decodeHtmlEntities(str) {
   if (!str) return '';
-  const txt = document.createElement('textarea');
-  txt.innerHTML = str;
-  return txt.value;
+  if (typeof document !== 'undefined') {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = str;
+    return txt.value;
+  }
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }
 
 export function linkifyMessage(text) {
