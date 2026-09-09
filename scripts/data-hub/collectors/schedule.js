@@ -989,7 +989,23 @@ async function applyScheduleOverrides(scheduleList) {
     if (isItemDeleted(c, cKey)) return;
 
     if (!result.some(r => getItemKey(r) === cKey)) {
-      result.push({ ...c });
+      const item = { ...c };
+      const mod = resolvedModifiedMap[cKey] || resolvedModifiedMap[item.title];
+      if (mod) {
+        if (mod.title !== undefined) item.title = mod.title;
+        if (mod.startTime !== undefined) item.startTime = mod.startTime;
+        if (mod.endTime !== undefined) item.endTime = mod.endTime || mod.startTime;
+        if (mod.isAllday !== undefined) item.isAllday = Boolean(mod.isAllday);
+        if (mod.url !== undefined) item.url = mod.url || undefined;
+        if (mod.channel !== undefined) item.channel = mod.channel || undefined;
+        if (mod.location !== undefined) item.location = mod.location || undefined;
+        if (mod.typeText !== undefined) item.typeText = mod.typeText || undefined;
+        if (mod.message !== undefined) item.message = mod.message || "";
+        if (mod.thumbnail !== undefined) item.thumbnail = mod.thumbnail || undefined;
+        if (mod.isOfficialYoutube !== undefined) item.isOfficialYoutube = mod.isOfficialYoutube;
+        modCount++;
+      }
+      result.push(item);
       addCount++;
     }
   });
