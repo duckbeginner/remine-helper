@@ -6,6 +6,7 @@
   "description": "RESCENE Remine Helper Extension & Data Hub",
   "scripts": {
     "fetch-data": "node scripts/data-hub/fetch-all.js",
-    "test": "node scripts/data-hub/validate.js"
+    "test:v2": "node scripts/data-hub/tests/schedule-v2.test.js",
+    "test": "node scripts/data-hub/tests/schedule-v2.test.js && node scripts/data-hub/validate.js"
   }
 }
