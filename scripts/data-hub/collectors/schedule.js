@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -179,6 +180,44 @@ async function fetchOfficialLiveStreams() {
   }
 
   return Object.values(cache);
+}
+
+// 소스별 불변 고유 ID 생성기 (v2.0)
+export function generateScheduleId(source, item) {
+  if (!item) return null;
+  if (item.id && typeof item.id === 'string' && item.id.trim()) {
+    return item.id.trim();
+  }
+
+  // 1) Blip 공식 일정
+  if (source === 'blip' || item.source === 'blip') {
+    const sId = item.scheduleId || item.id;
+    if (sId) return `blip_${sId}`;
+  }
+
+  // 2) Mnet Plus 공식 일정
+  if (source === 'mnet' || item.source === 'mnet') {
+    const eId = item.eventId || item.id;
+    if (eId) return `mnet_${eId}`;
+  }
+
+  // 3) YouTube 공식/라이브 영상
+  if (source === 'youtube' || item.source === 'youtube') {
+    const vId = item.videoId || item.id;
+    if (vId) return `yt_${vId}`;
+  }
+
+  // 4) 커스텀/관리자 수동 일정
+  if (item._isCustom || source === 'custom' || item.source === 'custom' || item.source === 'namu') {
+    const dateStr = item.startTime ? item.startTime.slice(2, 10).replace(/-/g, '') : '000000';
+    const rand = crypto.randomBytes(3).toString('hex');
+    return `custom_${dateStr}_${rand}`;
+  }
+
+  // 5) 레거시 구버전 호환용 결정론적 해시 ID
+  const rawKey = `${(item.startTime || '').slice(0, 10)}_${item.title || ''}`;
+  const hash = crypto.createHash('sha256').update(rawKey).digest('hex').slice(0, 8);
+  return `legacy_${hash}`;
 }
 
 // 날짜 파싱 헬퍼
@@ -638,6 +677,7 @@ async function fetchMonthRawSchedules(year, month) {
             })) : [];
 
             return {
+              id: generateScheduleId('mnet', ev),
               title: ev.title ? ev.title.trim() : "",
               startTime: ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""),
               endTime: ev.endAt || (ev.endAtForAllDay ? `${ev.endAtForAllDay}T23:59:59Z` : (ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""))),
@@ -688,6 +728,7 @@ async function fetchMonthRawSchedules(year, month) {
           })) : [];
 
           return {
+            id: generateScheduleId('blip', item),
             title: item.title ? item.title.trim() : "",
             startTime: item.startTime,
             endTime: item.endTime || item.startTime,
@@ -793,6 +834,7 @@ export async function collectScheduleData(allYtVideos = []) {
   // [초강력 데이터 다이어트] 불필요한 공백, 빈 배열, 중복 필드 제거
   const slimmedList = overriddenList.map(item => {
     const slim = {
+      id: item.id || undefined,
       title: item.title,
       startTime: item.startTime,
       endTime: item.endTime,
@@ -805,7 +847,8 @@ export async function collectScheduleData(allYtVideos = []) {
       source: item.source || undefined,
       thumbnail: item.thumbnail || undefined,
       isOfficialYoutube: item.isOfficialYoutube || undefined,
-      extField: item.extField || undefined
+      extField: item.extField || undefined,
+      linkedScheduleIds: (Array.isArray(item.linkedScheduleIds) && item.linkedScheduleIds.length > 0) ? item.linkedScheduleIds : undefined
     };
 
     // 무의미한 줄바꿈/공백이 아닌 유효한 메시지만 포함 (120KB+ 절감)
@@ -825,7 +868,217 @@ export async function collectScheduleData(allYtVideos = []) {
   };
 }
 
-// [Gist 보정 규칙] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
+// [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
+export function mergeSchedulesV2(rawItems, overridesV2) {
+  const {
+    customSchedules = {},
+    sourceOverrides = {},
+    legacyAliases = {}
+  } = (overridesV2 || {});
+
+  // (A) 원본 아이템에 ID 부여 및 소스 오버라이드 맵 준비
+  const itemMap = new Map();
+  rawItems.forEach(raw => {
+    const id = generateScheduleId(raw.source, raw);
+    const item = { ...raw, id };
+    itemMap.set(id, item);
+  });
+
+  // (B) 커스텀 일정들을 itemMap에 등록
+  Object.entries(customSchedules).forEach(([cId, cData]) => {
+    const item = {
+      ...cData,
+      id: cId,
+      _isCustom: true,
+      source: cData.source || 'custom'
+    };
+    itemMap.set(cId, item);
+  });
+
+  // (C) 소스 오버라이드(수정 및 개별 삭제) 적용 (legacyAliases 구버전 키 호환)
+  const resolvedOverrides = {};
+  Object.entries(sourceOverrides).forEach(([k, v]) => {
+    const realId = legacyAliases[k] || k;
+    resolvedOverrides[realId] = { ...(resolvedOverrides[realId] || {}), ...v };
+  });
+
+  let delCount = 0;
+  let modCount = 0;
+
+  // (D) 개별 삭제 필터링 (100% 독립 동작)
+  const activeItems = [];
+  itemMap.forEach(item => {
+    const ov = resolvedOverrides[item.id];
+    if (ov && ov.isDeleted) {
+      delCount++;
+      return;
+    }
+    if (item.isDeleted) {
+      delCount++;
+      return;
+    }
+
+    // 수정 필드 적용 (수정된 것만 덮어쓰고 원본은 보존)
+    if (ov) {
+      const merged = { ...item };
+      ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'].forEach(f => {
+        if (ov[f] !== undefined) merged[f] = ov[f];
+      });
+      if (ov.linkedScheduleIds) {
+        merged.linkedScheduleIds = Array.from(new Set([...(merged.linkedScheduleIds || []), ...ov.linkedScheduleIds]));
+      }
+      activeItems.push(merged);
+      modCount++;
+    } else {
+      activeItems.push(item);
+    }
+  });
+
+  // (E) 연관 일정 상호 합성 (linkedScheduleIds 기준 양방향 클러스터링 및 대표 선출)
+  const adj = new Map();
+  activeItems.forEach(item => {
+    if (!adj.has(item.id)) adj.set(item.id, new Set());
+    const linked = item.linkedScheduleIds || [];
+    linked.forEach(targetId => {
+      adj.get(item.id).add(targetId);
+      if (!adj.has(targetId)) adj.set(targetId, new Set());
+      adj.get(targetId).add(item.id);
+    });
+  });
+
+  const finalResults = [];
+  const visited = new Set();
+
+  activeItems.forEach(item => {
+    if (visited.has(item.id)) return;
+
+    // BFS 클러스터 탐색
+    const cluster = [];
+    const queue = [item.id];
+    visited.add(item.id);
+
+    while (queue.length > 0) {
+      const curId = queue.shift();
+      const curItem = activeItems.find(x => x.id === curId);
+      if (curItem) cluster.push(curItem);
+
+      const neighbors = adj.get(curId) || new Set();
+      neighbors.forEach(nId => {
+        if (!visited.has(nId)) {
+          visited.add(nId);
+          queue.push(nId);
+        }
+      });
+    }
+
+    if (cluster.length === 1) {
+      finalResults.push(cluster[0]);
+      return;
+    }
+
+    // 대표 선출 규칙: 커스텀(수동) 일정 우선 > 공식 소스
+    let primary = cluster.find(c => c._isCustom) || cluster[0];
+    const secondaries = cluster.filter(c => c.id !== primary.id);
+
+    // 필드별 합성: 대표가 빈 필드는 서브 공식 정보에서 채우고, 공식 메타데이터(멤버 등) 흡수
+    const synthetic = { ...primary };
+
+    secondaries.forEach(sec => {
+      if (!synthetic.url && sec.url) synthetic.url = sec.url;
+      if (!synthetic.location && sec.location) synthetic.location = sec.location;
+      if (!synthetic.channel && sec.channel) synthetic.channel = sec.channel;
+      if (!synthetic.message && sec.message) synthetic.message = sec.message;
+      if (!synthetic.typeText && sec.typeText) synthetic.typeText = sec.typeText;
+      if ((!synthetic.starAttendees || synthetic.starAttendees.length === 0) && sec.starAttendees && sec.starAttendees.length > 0) {
+        synthetic.starAttendees = sec.starAttendees;
+      }
+      if (!synthetic.extField && sec.extField) synthetic.extField = sec.extField;
+    });
+
+    // 상호 등록: 연결된 모든 ID를 linkedScheduleIds에 상호 반영
+    synthetic.linkedScheduleIds = Array.from(new Set(cluster.flatMap(c => [c.id, ...(c.linkedScheduleIds || [])])));
+    finalResults.push(synthetic);
+  });
+
+  const addCount = Object.keys(customSchedules).length;
+  if (modCount > 0 || delCount > 0 || addCount > 0) {
+    console.log(`  🛠️ [Schedule Overrides v2.0] 수동 보정 적용: 수정 ${modCount}건, 삭제 ${delCount}건, 신규 ${addCount}건`);
+  }
+
+  return finalResults;
+}
+
+// v1.0 레거시 데이터 ➡️ v2.0 스키마 변환기
+export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
+  const v2 = {
+    version: "2.0.0",
+    updatedAt: v1Data.updatedAt || new Date().toISOString(),
+    customSchedules: {},
+    sourceOverrides: {},
+    legacyAliases: {}
+  };
+
+  const createdList = v1Data.created || [];
+  const modifiedMap = v1Data.modified || {};
+  const deletedList = v1Data.deleted || [];
+
+  // 1) created 항목 마이그레이션
+  createdList.forEach(c => {
+    const rawKey = `${(c.startTime || '').slice(0, 10)}_${c.title}`;
+    const id = generateScheduleId('custom', c);
+
+    const mod = modifiedMap[rawKey] || modifiedMap[c.title] || {};
+    const merged = {
+      ...c,
+      ...mod,
+      id,
+      _isCustom: true,
+      source: c.source || 'custom'
+    };
+
+    v2.customSchedules[id] = merged;
+    v2.legacyAliases[rawKey] = id;
+    if (c._originKey) v2.legacyAliases[c._originKey] = id;
+  });
+
+  // 2) deleted 항목 마이그레이션
+  deletedList.forEach(delKey => {
+    const matchedRaw = sampleRawItems.find(r => {
+      const rKey = `${(r.startTime || '').slice(0, 10)}_${r.title}`;
+      return rKey === delKey || r.title === delKey;
+    });
+
+    const targetId = matchedRaw ? matchedRaw.id : `del_${crypto.createHash('sha256').update(delKey).digest('hex').slice(0, 8)}`;
+    v2.sourceOverrides[targetId] = {
+      ...(v2.sourceOverrides[targetId] || {}),
+      id: targetId,
+      isDeleted: true
+    };
+    v2.legacyAliases[delKey] = targetId;
+  });
+
+  // 3) modified 중 created에 속하지 않은 원본 오버라이드 마이그레이션
+  Object.entries(modifiedMap).forEach(([mKey, mVal]) => {
+    if (v2.legacyAliases[mKey]) return; // 이미 custom에 매핑됨
+
+    const matchedRaw = sampleRawItems.find(r => {
+      const rKey = `${(r.startTime || '').slice(0, 10)}_${r.title}`;
+      return rKey === mKey || r.title === mVal.title;
+    });
+
+    const targetId = matchedRaw ? matchedRaw.id : `mod_${crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8)}`;
+    v2.sourceOverrides[targetId] = {
+      ...(v2.sourceOverrides[targetId] || {}),
+      ...mVal,
+      id: targetId
+    };
+    v2.legacyAliases[mKey] = targetId;
+  });
+
+  return v2;
+}
+
+// [Gist 보정 규칙] 최신 오버라이드 데이터 로드 및 v2.0 적용
 async function applyScheduleOverrides(scheduleList) {
   let overridesData = null;
 
@@ -857,7 +1110,6 @@ async function applyScheduleOverrides(scheduleList) {
     }
   } catch (err) { }
 
-  // 3. Gist 실패 시 로컬 캐시 사용
   if (!overridesData) {
     overridesData = localData;
   }
@@ -866,153 +1118,11 @@ async function applyScheduleOverrides(scheduleList) {
     return scheduleList;
   }
 
-  let modCount = 0;
-  let delCount = 0;
-  let addCount = 0;
-
-  const deletedSet = new Set(Array.isArray(overridesData.deleted) ? overridesData.deleted : []);
-  const modifiedMap = overridesData.modified && typeof overridesData.modified === 'object' ? overridesData.modified : {};
-  const createdList = Array.isArray(overridesData.created) ? overridesData.created : [];
-
-  const getItemKey = (item) => {
-    const d = item.startTime ? parseSafeDate(item.startTime) : null;
-    if (!d) return `no-date_${item.title}`;
-    const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-    const ymd = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}-${String(kstD.getUTCDate()).padStart(2, '0')}`;
-    return `${ymd}_${item.title}`;
-  };
-
-  // 연쇄 수정 체인 추적 및 최신 속성 통합 (A -> B -> C)
-  const resolvedModifiedMap = {};
-  Object.keys(modifiedMap).forEach(k => {
-    resolvedModifiedMap[k] = { ...modifiedMap[k] };
-  });
-
-  Object.keys(resolvedModifiedMap).forEach(startKey => {
-    const visited = new Set([startKey]);
-    let current = resolvedModifiedMap[startKey];
-    const datePart = startKey.split('_')[0];
-
-    while (current && current.title) {
-      const nextKey = `${datePart}_${current.title}`;
-      if (nextKey !== startKey && resolvedModifiedMap[nextKey] && !visited.has(nextKey)) {
-        visited.add(nextKey);
-        current = { ...current, ...resolvedModifiedMap[nextKey] };
-        resolvedModifiedMap[startKey] = current;
-      } else {
-        break;
-      }
-    }
-  });
-
-  // 삭제 판별 스마트 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
-  const isItemDeleted = (item, key) => {
-    if (deletedSet.has(key) || deletedSet.has(item.title)) return true;
-    const datePart = key.split('_')[0];
-
-    // 이 아이템의 수정본(mod.title)이 deletedSet에 등록되어 있는지 검사
-    const mod = resolvedModifiedMap[key] || resolvedModifiedMap[item.title];
-    if (mod && mod.title) {
-      const derivedKey = `${datePart}_${mod.title}`;
-      if (deletedSet.has(derivedKey) || deletedSet.has(mod.title)) return true;
-    }
-
-    // deletedSet 안의 항목 중 날짜가 같고 정제 제목이 일치하는 경우
-    const cleanCur = cleanDisplayTitle(item.title);
-    for (const dKey of deletedSet) {
-      if (dKey.startsWith(datePart + '_')) {
-        const dTitle = dKey.slice(datePart.length + 1);
-        if (dTitle === item.title || (cleanCur && cleanCur === cleanDisplayTitle(dTitle))) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
-  // (1) 삭제 및 수정 적용
-  const result = [];
-  scheduleList.forEach(item => {
-    const key = getItemKey(item);
-
-    // 삭제 대상
-    if (isItemDeleted(item, key)) {
-      delCount++;
-      return;
-    }
-
-    // 수정 대상 (체인 반영 최신본 매칭 및 역방향 폴백)
-    let mod = resolvedModifiedMap[key] || resolvedModifiedMap[item.title];
-    if (!mod) {
-      const datePart = key.split('_')[0];
-      for (const [mKey, mVal] of Object.entries(resolvedModifiedMap)) {
-        if (mKey.startsWith(datePart + '_')) {
-          if (mVal.title === item.title || (mVal._originTitle && mVal._originTitle === item.title)) {
-            mod = mVal;
-            break;
-          }
-        }
-      }
-    }
-
-    if (mod) {
-      if (mod.title) item.title = mod.title;
-      if (mod.startTime !== undefined) item.startTime = mod.startTime;
-      if (mod.endTime !== undefined) item.endTime = mod.endTime || mod.startTime;
-      if (mod.isAllday !== undefined) item.isAllday = Boolean(mod.isAllday);
-      if (mod.url !== undefined) item.url = mod.url || undefined;
-      if (mod.channel !== undefined) item.channel = mod.channel || undefined;
-      if (mod.location !== undefined) item.location = mod.location || undefined;
-      if (mod.typeText !== undefined) item.typeText = mod.typeText || undefined;
-      if (mod.message !== undefined) item.message = mod.message || "";
-      if (mod.thumbnail !== undefined) item.thumbnail = mod.thumbnail || undefined;
-      if (mod.isOfficialYoutube !== undefined) item.isOfficialYoutube = mod.isOfficialYoutube;
-      modCount++;
-    }
-
-    result.push(item);
-  });
-
-  // (2) 신규 등록 항목 반영 (createdList + modified 내 _isCustom 격리 항목 자동 구출)
-  const allCreated = [...createdList];
-  Object.entries(resolvedModifiedMap).forEach(([mKey, mVal]) => {
-    if (mVal && mVal._isCustom) {
-      if (!allCreated.some(c => getItemKey(c) === mKey || c.title === mVal.title)) {
-        allCreated.push({ ...mVal });
-      }
-    }
-  });
-
-  allCreated.forEach(c => {
-    if (!c.title || !c.startTime) return;
-    const cKey = getItemKey(c);
-    if (isItemDeleted(c, cKey)) return;
-
-    if (!result.some(r => getItemKey(r) === cKey)) {
-      const item = { ...c };
-      const mod = resolvedModifiedMap[cKey] || resolvedModifiedMap[item.title];
-      if (mod) {
-        if (mod.title !== undefined) item.title = mod.title;
-        if (mod.startTime !== undefined) item.startTime = mod.startTime;
-        if (mod.endTime !== undefined) item.endTime = mod.endTime || mod.startTime;
-        if (mod.isAllday !== undefined) item.isAllday = Boolean(mod.isAllday);
-        if (mod.url !== undefined) item.url = mod.url || undefined;
-        if (mod.channel !== undefined) item.channel = mod.channel || undefined;
-        if (mod.location !== undefined) item.location = mod.location || undefined;
-        if (mod.typeText !== undefined) item.typeText = mod.typeText || undefined;
-        if (mod.message !== undefined) item.message = mod.message || "";
-        if (mod.thumbnail !== undefined) item.thumbnail = mod.thumbnail || undefined;
-        if (mod.isOfficialYoutube !== undefined) item.isOfficialYoutube = mod.isOfficialYoutube;
-        modCount++;
-      }
-      result.push(item);
-      addCount++;
-    }
-  });
-
-  if (modCount > 0 || delCount > 0 || addCount > 0) {
-    console.log(`  🛠️ [Schedule Overrides] 수동 보정 규칙 적용 완료: 수정 ${modCount}건, 삭제 ${delCount}건, 신규 ${addCount}건`);
+  // v1.0 레거시 데이터인 경우 v2.0 구조로 실시간 마이그레이션 호환 처리
+  let overridesV2 = overridesData;
+  if (overridesData.version !== "2.0.0") {
+    overridesV2 = migrateOverridesV1toV2(overridesData, scheduleList);
   }
 
-  return result;
+  return mergeSchedulesV2(scheduleList, overridesV2);
 }
