@@ -29,6 +29,32 @@ export function getMemberAvatarUrl(realName, fallbackImg) {
 }
 
 
+export const EXCLUDE_SCHEDULE_REGEX = /(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i;
+
+export function filterAndDeduplicateSchedules(schedules) {
+  if (!Array.isArray(schedules) || schedules.length === 0) return [];
+  const seen = new Set();
+  const results = [];
+
+  for (const item of schedules) {
+    if (!item) continue;
+    // 관리자가 직접 생성했거나 수정한 커스텀 일정은 키워드 매칭과 무관하게 100% 보존
+    if (!item._isCustom) {
+      const text = (item.title || "") + " " + (item.message || "");
+      if (EXCLUDE_SCHEDULE_REGEX.test(text)) continue;
+    }
+
+    // 중복 제거 가드 (동일 ID 또는 동일 시작일+제목)
+    const key = item.id || `${(item.startTime || '').slice(0, 10)}_${item.title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    results.push(item);
+  }
+
+  return results;
+}
+
 export function initAppStorageData({
   hubContainerId = 'hubContainer',
   liveBannerId = 'liveBanner',
@@ -113,12 +139,7 @@ export function initAppStorageData({
     const tabSchedEl = document.getElementById('tabScheduleList');
 
     if ((schedEl || tabSchedEl || typeof onSchedulesLoaded === 'function') && result.blipSchedules) {
-      const rawFiltered = result.blipSchedules.filter(item => {
-        const text = (item.title || "") + " " + (item.message || "");
-        return !/(직캠|풀캠|팬캠|페이스캠|입덕직캠|최애직캠|팔로우캠|안방1열|음중직캠|음중풀캠|음중팔로우캠|fan\W*cam|k\W*fancam|choreo|fancam|\bcam\b|투표|사전투표|실시간투표|\bvote\b|\bvoting\b|\bpoll\b|덕애드|스타패스|아이돌챔프|뮤빗|팬플러스|포도알|케이돌|엠넷플러스\s*투표)/i.test(text);
-      });
-
-      const cleanSchedules = deduplicateScheduleList(rawFiltered);
+      const cleanSchedules = filterAndDeduplicateSchedules(result.blipSchedules);
 
       if (schedEl && cleanSchedules) {
         renderScheduleList(schedEl, cleanSchedules);

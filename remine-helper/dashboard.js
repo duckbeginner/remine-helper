@@ -18,6 +18,7 @@ import {
   initTabEngine,
   initCalendarManager,
   initAppStorageData,
+  filterAndDeduplicateSchedules,
   initScheduleModal,
   initSettingsModal,
   parseUserSettings,
@@ -44,8 +45,9 @@ function getMicroCache() {
 
 function getRelevantSchedulesForCache(schedules) {
   if (!Array.isArray(schedules) || schedules.length === 0) return [];
+  const clean = filterAndDeduplicateSchedules(schedules);
   const now = new Date().getTime();
-  const sorted = [...schedules].sort((a, b) => {
+  const sorted = [...clean].sort((a, b) => {
     const tA = (a.startTime || a.date) ? new Date(a.startTime || a.date).getTime() : 0;
     const tB = (b.startTime || b.date) ? new Date(b.startTime || b.date).getTime() : 0;
     return tA - tB;

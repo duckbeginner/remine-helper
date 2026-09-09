@@ -14,6 +14,7 @@ import {
   initTabEngine,
   initCalendarManager,
   initAppStorageData,
+  filterAndDeduplicateSchedules,
   initScheduleModal,
   initSettingsModal,
   parseUserSettings,
@@ -43,8 +44,9 @@ function getMicroCache() {
 
 function getRelevantSchedulesForCache(schedules) {
   if (!Array.isArray(schedules) || schedules.length === 0) return [];
+  const clean = filterAndDeduplicateSchedules(schedules);
   const now = new Date().getTime();
-  const sorted = [...schedules].sort((a, b) => {
+  const sorted = [...clean].sort((a, b) => {
     const tA = (a.startTime || a.date) ? new Date(a.startTime || a.date).getTime() : 0;
     const tB = (b.startTime || b.date) ? new Date(b.startTime || b.date).getTime() : 0;
     return tA - tB;
@@ -132,8 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
       prevBtnId: 'spPrevMonthBtn',
       nextBtnId: 'spNextMonthBtn'
     });
-    if (fullStorageData && fullStorageData.blipSchedules) {
-      calendarManager.setSchedules(fullStorageData.blipSchedules);
+    const schedSource = (fullStorageData && fullStorageData.blipSchedules) || (microCache && microCache.blipSchedules);
+    if (schedSource) {
+      calendarManager.setSchedules(filterAndDeduplicateSchedules(schedSource));
     }
     return calendarManager;
   }
@@ -190,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
               scheduleListId: 'scheduleList',
               cachedData: effectiveStorage,
               onSchedulesLoaded: (schedules) => {
-                if (calendarManager) calendarManager.setSchedules(schedules);
+                ensureCalendarManager().setSchedules(schedules);
               }
             });
           }
@@ -207,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleListId: 'scheduleList',
             cachedData: effectiveStorage,
             onSchedulesLoaded: (schedules) => {
-              if (calendarManager) calendarManager.setSchedules(schedules);
+              ensureCalendarManager().setSchedules(schedules);
             }
           });
         }
@@ -351,23 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (tabListChanged || fanpagesChanged) {
             renderAppViews(settings.tabList, settings.fanpages, { isInitial: false, cachedStorage: res });
           } else {
-            // [스마트 렌더링 가드] 이미 마이크로 캐시 등으로 렌더링 완료된 상태이고 핵심 데이터가 동일하면 무거운 DOM 전체 재렌더링 스킵!
-            const prevCore = fullStorageData ? `${fullStorageData.latestVideos?.[0]?.id}-${fullStorageData.isLive}-${fullStorageData.blipSchedules?.length}` : '';
-            const newCore = `${res.latestVideos?.[0]?.id}-${res.isLive}-${res.blipSchedules?.length}`;
-            if (prevCore && prevCore === newCore && document.getElementById('youtubeList')?.children.length > 0) {
-              // 라이브 배너 상태만 경량 업데이트
-              const liveBanner = document.getElementById('liveBanner');
-              if (liveBanner) {
-                if ((res.isLive || res.isLiveStreaming) && res.liveVideoInfo) {
-                  liveBanner.style.display = 'block';
-                  liveBanner.href = res.liveVideoInfo.url;
-                } else if (!res.isLive && !res.isLiveStreaming) {
-                  liveBanner.style.display = 'none';
-                }
-              }
-              return;
-            }
-
             initAppStorageData({
               hubContainerId: 'hubContainer',
               liveBannerId: 'liveBanner',
@@ -377,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
               scheduleListId: 'scheduleList',
               cachedData: res,
               onSchedulesLoaded: (schedules) => {
-                if (calendarManager) calendarManager.setSchedules(schedules);
+                ensureCalendarManager().setSchedules(schedules);
               }
             });
           }
