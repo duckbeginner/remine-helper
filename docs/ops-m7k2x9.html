@@ -916,6 +916,7 @@
   <script>
     // 상태 관리
     let allSchedules = [];
+    let rawBaseSchedules = [];
     let currentViewDate = new Date();
     let activeCategory = 'all';
     let searchQuery = '';
@@ -1015,6 +1016,7 @@
 
     function getScheduleKey(item) {
       if (!item) return '';
+      if (item.id) return item.id;
       if (item._originKey) return item._originKey;
       return getRawScheduleKey(item);
     }
@@ -1050,6 +1052,7 @@
     // 아이템과 일치하는 오버라이드 객체 검색 (직접 키, 제목, 체인 등 다각도 매칭)
     function findMatchingOverride(item, modifiedMap) {
       if (!item || !modifiedMap) return null;
+      if (item.id && modifiedMap[item.id]) return modifiedMap[item.id];
       const rawKey = getRawScheduleKey(item);
       const originKey = item._originKey || rawKey;
       const datePart = rawKey.split('_')[0];
@@ -1086,6 +1089,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         const baseItems = data.items || [];
+        rawBaseSchedules = JSON.parse(JSON.stringify(baseItems));
 
         // 2. schedule-overrides.json 로드 (Gist API 우선 조회로 CDN 캐시 0% 실시간 최신본 획득)
         appliedOverrides = { modified: {}, deleted: new Set(), created: [] };
@@ -1120,23 +1124,45 @@
         }
 
         if (overridesJson && typeof overridesJson === 'object') {
+          // v2.0 customSchedules 로드
+          if (overridesJson.customSchedules && typeof overridesJson.customSchedules === 'object') {
+            Object.values(overridesJson.customSchedules).forEach(c => {
+              if (!appliedOverrides.created.some(x => (x.id && c.id && x.id === c.id) || (x.title === c.title && x.startTime === c.startTime))) {
+                appliedOverrides.created.push({ ...c, _isCustom: true });
+              }
+            });
+          }
+          // v2.0 sourceOverrides 로드
+          if (overridesJson.sourceOverrides && typeof overridesJson.sourceOverrides === 'object') {
+            Object.entries(overridesJson.sourceOverrides).forEach(([sId, sVal]) => {
+              if (sVal && sVal.isDeleted) {
+                appliedOverrides.deleted.add(sId);
+              } else if (sVal) {
+                appliedOverrides.modified[sId] = sVal;
+              }
+            });
+          }
+          // v1.0 호환 deleted 로드
           if (Array.isArray(overridesJson.deleted)) {
             overridesJson.deleted.forEach(k => appliedOverrides.deleted.add(k));
           }
+          // v1.0 호환 modified 로드
           if (overridesJson.modified && typeof overridesJson.modified === 'object') {
-            appliedOverrides.modified = resolveModifiedChain(overridesJson.modified);
+            const resolved = resolveModifiedChain(overridesJson.modified);
+            appliedOverrides.modified = { ...resolved, ...appliedOverrides.modified };
             // modified 내 _isCustom 격리 항목 자동 구출 -> created로 편입
             Object.entries(appliedOverrides.modified).forEach(([mKey, mVal]) => {
               if (mVal && mVal._isCustom) {
-                if (!appliedOverrides.created.some(c => getScheduleKey(c) === mKey || c.title === mVal.title)) {
+                if (!appliedOverrides.created.some(c => (c.id && c.id === mKey) || getScheduleKey(c) === mKey || c.title === mVal.title)) {
                   appliedOverrides.created.push({ ...mVal, _originKey: mKey, _isCustom: true });
                 }
               }
             });
           }
+          // v1.0 호환 created 로드
           if (Array.isArray(overridesJson.created)) {
             overridesJson.created.forEach(c => {
-              if (!appliedOverrides.created.some(x => x.title === c.title && x.startTime === c.startTime)) {
+              if (!appliedOverrides.created.some(x => (x.id && c.id && x.id === c.id) || (x.title === c.title && x.startTime === c.startTime))) {
                 appliedOverrides.created.push({ ...c, _isCustom: true });
               }
             });
@@ -1145,6 +1171,7 @@
 
         // 삭제 판별 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
         const checkIsDeleted = (item) => {
+          if (item.id && appliedOverrides.deleted.has(item.id)) return true;
           const rawKey = getRawScheduleKey(item);
           const originKey = item._originKey || rawKey;
           if (appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(item.title)) {
@@ -1356,6 +1383,7 @@
                     <span class="type-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
                     ${item.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(item.channel)}</span>` : ''}
                     ${stateBadge}
+                    ${(Array.isArray(item.linkedScheduleIds) && item.linkedScheduleIds.length > 0) ? `<span class="state-badge" style="background:rgba(56,189,248,0.2); color:#38bdf8;" title="연결된 ID: ${escapeHtml(item.linkedScheduleIds.join(', '))}">🔗 연관 연결</span>` : ''}
                   </div>
                   <div class="card-title">${escapeHtml(item.title)}</div>
                   ${item.location ? `<div class="card-subtext">📍 ${escapeHtml(item.location)}</div>` : ''}
@@ -1385,14 +1413,28 @@
 
     // 모달 열기
     function openEditModalByKey(key) {
-      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
       if (!item) return;
 
-      document.getElementById('modalHeaderTitle').textContent = '일정 세부 수정';
-      const stableKey = item._originKey || getScheduleKey(item);
+      const stableKey = item.id || item._originKey || getScheduleKey(item);
       item._originKey = stableKey;
+      document.getElementById('modalHeaderTitle').textContent = item._isCustom ? '수동 등록 일정 세부 수정' : '일정 세부 수정 (공식 원본 보존)';
       document.getElementById('editItemIndex').value = stableKey;
       document.getElementById('editIsNew').value = '0';
+
+      // 공식 원본 placeholder 안내
+      const rawItem = rawBaseSchedules.find(b => (b.id && b.id === stableKey) || getScheduleKey(b) === stableKey || getRawScheduleKey(b) === stableKey);
+      if (rawItem && !item._isCustom) {
+        document.getElementById('formTitle').placeholder = `공식 원본: ${rawItem.title || ''}`;
+        document.getElementById('formLocation').placeholder = rawItem.location ? `공식 원본: ${rawItem.location}` : '장소';
+        document.getElementById('formUrl').placeholder = rawItem.url ? `공식 원본: ${rawItem.url}` : 'https://...';
+        document.getElementById('formMessage').placeholder = rawItem.message ? `공식 원본: ${rawItem.message}` : '';
+      } else {
+        document.getElementById('formTitle').placeholder = '일정 제목';
+        document.getElementById('formLocation').placeholder = '장소 (선택)';
+        document.getElementById('formUrl').placeholder = 'https://...';
+        document.getElementById('formMessage').placeholder = '메모 또는 비고 (선택)';
+      }
 
       document.getElementById('formTitle').value = item.title || '';
       if (item.startTime) {
@@ -1423,6 +1465,10 @@
       document.getElementById('editIsNew').value = '1';
 
       document.getElementById('scheduleEditForm').reset();
+      document.getElementById('formTitle').placeholder = '일정 제목';
+      document.getElementById('formLocation').placeholder = '장소 (선택)';
+      document.getElementById('formUrl').placeholder = 'https://...';
+      document.getElementById('formMessage').placeholder = '메모 또는 비고 (선택)';
       document.getElementById('formDate').value = formatDateYMD(new Date());
       document.getElementById('btnModalDelete').style.display = 'none';
       document.getElementById('editModalOverlay').classList.add('active');
@@ -1434,10 +1480,11 @@
 
     // 아이템 숨김/삭제 토글
     function toggleDeleteItem(key) {
-      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
-      const stableKey = item ? (item._originKey || key) : key;
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const stableKey = item ? (item.id || item._originKey || key) : key;
       const rawKey = item ? getRawScheduleKey(item) : key;
       const keysToToggle = new Set([stableKey, rawKey, key]);
+      if (item && item.id) keysToToggle.add(item.id);
 
       // 만약 수정된 제목이 있다면 파생 키도 함께 토글 대상에 포함
       if (item && item.title) {
@@ -1469,10 +1516,11 @@
     }
 
     function restoreItem(key) {
-      const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
-      const stableKey = item ? (item._originKey || key) : key;
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const stableKey = item ? (item.id || item._originKey || key) : key;
       const rawKey = item ? getRawScheduleKey(item) : key;
       const keysToRestore = new Set([stableKey, rawKey, key]);
+      if (item && item.id) keysToRestore.add(item.id);
 
       if (item && item.title) {
         const datePart = rawKey.split('_')[0];
@@ -1528,7 +1576,12 @@
       }
 
       if (isNew) {
+        const datePart = startTime ? startTime.slice(2, 10).replace(/-/g, '') : '000000';
+        const rand = Math.random().toString(36).slice(2, 8);
+        const id = `custom_${datePart}_${rand}`;
+
         const newItem = {
+          id,
           title,
           startTime,
           endTime: startTime,
@@ -1543,13 +1596,13 @@
           _isCustom: true
         };
         const nKey = getRawScheduleKey(newItem);
-        newItem._originKey = nKey;
+        newItem._originKey = id;
         allSchedules.unshift(newItem);
         pendingOverrides.created.push(newItem);
       } else {
-        const item = allSchedules.find(s => (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+        const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
         if (item) {
-          const stableKey = item._originKey || key;
+          const stableKey = item.id || item._originKey || key;
           item._originKey = stableKey;
 
           item.title = title;
@@ -1568,6 +1621,7 @@
           // 수동 등록(custom) 아이템인 경우: created 목록에서 직접 갱신 (modified로 이탈 방지!)
           if (item._isCustom) {
             const customObj = {
+              id: item.id || stableKey,
               title,
               startTime,
               endTime: startTime,
@@ -1580,9 +1634,10 @@
               thumbnail,
               isOfficialYoutube,
               _isCustom: true,
-              _originKey: stableKey
+              _originKey: stableKey,
+              linkedScheduleIds: item.linkedScheduleIds || []
             };
-            const cIdx = pendingOverrides.created.findIndex(c => c._originKey === stableKey || getScheduleKey(c) === stableKey);
+            const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === stableKey) || c._originKey === stableKey || getScheduleKey(c) === stableKey);
             if (cIdx >= 0) {
               pendingOverrides.created[cIdx] = customObj;
             } else {
@@ -1826,11 +1881,34 @@
           return !mergedDeleted.has(cKey) && !mergedDeleted.has(rKey) && !mergedDeleted.has(c.title);
         });
 
+        // v2.0 형식 빌드 (Single Source of Truth)
+        const customSchedules = {};
+        const legacyAliases = {};
+        finalCreated.forEach(c => {
+          const id = c.id || `custom_${(c.startTime || '').slice(2, 10).replace(/-/g, '')}_${Math.random().toString(36).slice(2, 8)}`;
+          customSchedules[id] = { ...c, id, _isCustom: true };
+          legacyAliases[`${(c.startTime || '').slice(0, 10)}_${c.title}`] = id;
+          if (c._originKey) legacyAliases[c._originKey] = id;
+        });
+
+        const sourceOverrides = {};
+        mergedDeleted.forEach(dKey => {
+          sourceOverrides[dKey] = { id: dKey, isDeleted: true };
+        });
+        Object.entries(mergedModified).forEach(([mKey, mVal]) => {
+          sourceOverrides[mKey] = { ...(sourceOverrides[mKey] || {}), ...mVal, id: mKey };
+        });
+
         const payload = {
           files: {
             "schedule-overrides.json": {
               content: JSON.stringify({
+                version: "2.0.0",
                 updatedAt: new Date().toISOString(),
+                customSchedules,
+                sourceOverrides,
+                legacyAliases,
+                // v1.0 하위 호환 필드
                 deleted: Array.from(mergedDeleted),
                 modified: mergedModified,
                 created: finalCreated
