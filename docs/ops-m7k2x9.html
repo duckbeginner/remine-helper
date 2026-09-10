@@ -709,6 +709,18 @@
       color: #a7f3d0;
     }
 
+    .btn-action.btn-restore-mod {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      font-weight: 600;
+    }
+    .btn-action.btn-restore-mod:hover {
+      background: rgba(245, 158, 11, 0.28);
+      border-color: rgba(245, 158, 11, 0.7);
+      color: #fef08a;
+    }
+
     .new-schedule-banner {
       display: flex;
       align-items: center;
@@ -909,6 +921,179 @@
     .modal-overlay.active {
       display: flex;
       opacity: 1;
+    }
+
+    /* 자체 커스텀 확인 팝업 모달 */
+    #confirmModalOverlay {
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+    .confirm-dialog-card {
+      width: 92%;
+      max-width: 520px;
+      background: #151824;
+      border: 1px solid rgba(124, 92, 252, 0.45);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(124, 92, 252, 0.25);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      animation: scaleUpDialog 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes scaleUpDialog {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .confirm-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .confirm-dialog-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .confirm-dialog-stats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+    }
+    .confirm-changes-list {
+      max-height: 230px;
+      overflow-y: auto;
+      background: rgba(10, 12, 18, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .confirm-changes-list::-webkit-scrollbar {
+      width: 5px;
+    }
+    .confirm-changes-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    .confirm-change-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    .confirm-change-item-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .confirm-change-date {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .confirm-change-title {
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .confirm-change-detail {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding-left: 2px;
+      line-height: 1.4;
+    }
+    .confirm-diff-highlight {
+      color: #fbbf24;
+      font-weight: 600;
+    }
+    .confirm-dialog-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .btn-confirm-dialog-cancel {
+      flex: 1;
+      padding: 11px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--text-main);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-confirm-dialog-cancel:hover {
+      background: rgba(255, 255, 255, 0.13);
+      color: #fff;
+    }
+    .btn-confirm-dialog-ok {
+      flex: 1.6;
+      padding: 11px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #7c5cfc, #ec4899);
+      border: none;
+      color: #fff;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124, 92, 252, 0.4);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-confirm-dialog-ok:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+    }
+
+    /* 피드 상단/하단 이전달/다음달 불러오기 버튼 */
+    .feed-month-loader-btn {
+      width: 100%;
+      padding: 12px 16px;
+      margin: 12px 0;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .feed-month-loader-btn:hover {
+      background: rgba(124, 92, 252, 0.12);
+      border-color: rgba(124, 92, 252, 0.4);
+      color: #c4b5fd;
     }
 
     .bottom-sheet {
@@ -1115,6 +1300,24 @@
       padding-top: 12px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       flex-shrink: 0;
+    }
+
+    .btn-sheet-restore-original {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .btn-sheet-restore-original:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: rgba(245, 158, 11, 0.6);
+      color: #fef08a;
     }
 
     .btn-sheet-del {
@@ -1507,6 +1710,7 @@
         <button class="chip" data-type="릴리즈">릴리즈</button>
         <button class="chip" data-type="공지">공지</button>
         <button class="chip" data-type="기타">기타</button>
+        <button class="chip" data-type="deleted" style="border-color: rgba(244, 63, 94, 0.4); color: #fb7185;">🗑️ 숨김 일정</button>
       </div>
     </section>
   </header>
@@ -1654,6 +1858,7 @@
         </div>
 
         <div class="sheet-buttons">
+          <button type="button" class="btn-sheet-restore-original" id="btnModalRestoreOriginal" style="display: none;">↩️ 공식 원본 복원</button>
           <button type="button" class="btn-sheet-del" id="btnModalDelete">🗑️ 숨기기/삭제</button>
           <button type="submit" class="btn-sheet-save" id="btnModalSave">저장하기</button>
         </div>
@@ -1895,6 +2100,40 @@
     </div>
   </div>
 
+  <!-- 커스텀 저장 확인 팝업 모달 -->
+  <div class="modal-overlay" id="confirmModalOverlay" style="display: none; align-items: center; justify-content: center; z-index: 100000; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+    <div class="confirm-dialog-card">
+      <div class="confirm-dialog-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">💾</span>
+          <h3 id="confirmModalTitle" style="margin: 0; font-size: 16px; font-weight: 700; color: #fff;">변경사항 저장 확인</h3>
+        </div>
+        <button type="button" class="sheet-close" id="btnCancelConfirmModalX" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">✕</button>
+      </div>
+      <div class="confirm-dialog-body" id="confirmModalBody" style="display: flex; flex-direction: column; gap: 12px;">
+        <p id="confirmModalMessage" style="margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-main);"></p>
+
+        <!-- 변경 건수 뱃지 행 -->
+        <div class="confirm-dialog-stats" id="confirmModalStats"></div>
+
+        <!-- 세부 변경 내역 목록 박스 -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+            <span>📋 세부 변경 내역 (Diff)</span>
+            <span id="confirmChangesCount" style="font-size: 11px; color: #38bdf8; font-weight: 600;">총 0건</span>
+          </div>
+          <div class="confirm-changes-list" id="confirmChangesList">
+            <!-- 자바스크립트로 변경 항목별 상세 행 동적 렌더링 -->
+          </div>
+        </div>
+      </div>
+      <div class="confirm-dialog-footer">
+        <button type="button" class="btn-confirm-dialog-cancel" id="btnCancelConfirmModal">취소</button>
+        <button type="button" class="btn-confirm-dialog-ok" id="btnApproveConfirmModal"><span>💾</span> 저장 적용</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 토스트 알림 헬퍼
     function showToast(msg, duration = 2400) {
@@ -1952,7 +2191,8 @@
     let pendingOverrides = {
       modified: {},
       deleted: new Set(),
-      created: []
+      created: [],
+      restoredModified: new Set()
     };
 
     const GIST_ID = '44b49b328233ef6157499debe03f165c';
@@ -2208,6 +2448,7 @@
         const data = await res.json();
         const baseItems = data.items || [];
         rawBaseSchedules = JSON.parse(JSON.stringify(baseItems));
+        window.rawBaseSchedules = rawBaseSchedules;
 
         // 2. schedule-overrides.json 로드 (Gist API 우선 조회로 CDN 캐시 0% 실시간 최신본 획득)
         appliedOverrides = { modified: {}, deleted: new Set(), created: [] };
@@ -2256,7 +2497,12 @@
           if (overridesJson.customSchedules && typeof overridesJson.customSchedules === 'object') {
             Object.values(overridesJson.customSchedules).forEach(c => {
               if (!appliedOverrides.created.some(x => (x.id && c.id && x.id === c.id) || (x.title === c.title && x.startTime === c.startTime))) {
-                appliedOverrides.created.push({ ...c, _isCustom: true });
+                const isDel = Boolean(c.isDeleted);
+                const cKey = c.id || getScheduleKey(c);
+                if (isDel) {
+                  appliedOverrides.deleted.add(cKey);
+                }
+                appliedOverrides.created.push({ ...c, _isCustom: true, _isDeleted: isDel });
               }
             });
           }
@@ -2291,7 +2537,12 @@
           if (Array.isArray(overridesJson.created)) {
             overridesJson.created.forEach(c => {
               if (!appliedOverrides.created.some(x => (x.id && c.id && x.id === c.id) || (x.title === c.title && x.startTime === c.startTime))) {
-                appliedOverrides.created.push({ ...c, _isCustom: true });
+                const isDel = Boolean(c.isDeleted);
+                const cKey = c.id || getScheduleKey(c);
+                if (isDel) {
+                  appliedOverrides.deleted.add(cKey);
+                }
+                appliedOverrides.created.push({ ...c, _isCustom: true, _isDeleted: isDel });
               }
             });
           }
@@ -2353,6 +2604,56 @@
             allSchedules.unshift(cCopy);
           }
         });
+
+        // 4-1. Gist sourceOverrides에 등록되어 있으나 schedules.json에 누락된 서브 일정 및 숨김 일정 복원
+        if (overridesJson && overridesJson.sourceOverrides && typeof overridesJson.sourceOverrides === 'object') {
+          Object.entries(overridesJson.sourceOverrides).forEach(([k, v]) => {
+            if (!v) return;
+            const alreadyExists = allSchedules.some(s => (s.id && (s.id === k || s.id === v.id)) || getScheduleKey(s) === k || getRawScheduleKey(s) === k);
+            if (!alreadyExists) {
+              const isBlip = String(k).startsWith('blip_') || (v.id && String(v.id).startsWith('blip_'));
+              const isMnet = String(k).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(k));
+              const sourceName = isBlip ? '블립' : (isMnet ? 'Mnet' : '연관');
+              const sourceVal = v.source || (isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom'));
+
+              const resItem = {
+                ...v,
+                id: v.id || k,
+                _originKey: k,
+                title: v.title || `${sourceName} 수집 일정 (${k})`,
+                source: sourceVal,
+                _isDeleted: Boolean(v.isDeleted || appliedOverrides.deleted.has(k) || (v.id && appliedOverrides.deleted.has(v.id)))
+              };
+              if (checkIsDeleted(resItem)) resItem._isDeleted = true;
+              allSchedules.push(resItem);
+            }
+          });
+        }
+
+        // 4-2. deleted 키 목록 중 YYYY-MM-DD_제목 형식으로 남아있는 숨김 일정 복원
+        appliedOverrides.deleted.forEach(dKey => {
+          const m = String(dKey).match(/^(\d{4}-\d{2}-\d{2})_(.+)$/);
+          if (m) {
+            const dateStr = m[1];
+            const titleStr = m[2];
+            const alreadyExists = allSchedules.some(s => (s.title === titleStr && s.startTime && s.startTime.startsWith(dateStr)) || (s.id && s.id === dKey));
+            if (!alreadyExists) {
+              allSchedules.push({
+                id: dKey,
+                _originKey: dKey,
+                title: titleStr,
+                startTime: `${dateStr}T00:00:00+09:00`,
+                endTime: `${dateStr}T00:00:00+09:00`,
+                isAllday: true,
+                typeText: '기타',
+                _isDeleted: true
+              });
+            }
+          }
+        });
+
+        // 4-3. 연관 일정(linkedScheduleIds) 상대방 서브 아이템 지능형 복원 및 메타데이터 상속
+        ensureLinkedSubItemsRestored();
 
         // 5. 사용자가 현재 세션에서 아직 [저장 적용] 안 한 pendingOverrides도 화면에 임시 합성
         Object.entries(pendingOverrides.modified).forEach(([pKey, pMod]) => {
@@ -2438,7 +2739,17 @@
         }
 
         // 2. 카테고리 필터
-        if (activeCategory !== 'all') {
+        const itemKey = getScheduleKey(item);
+        const itemRawKey = getRawScheduleKey(item);
+        const isItemDeleted = Boolean(
+          item._isDeleted ||
+          (pendingOverrides && (pendingOverrides.deleted.has(itemKey) || pendingOverrides.deleted.has(itemRawKey) || (item.id && pendingOverrides.deleted.has(item.id)))) ||
+          (appliedOverrides && (appliedOverrides.deleted.has(itemKey) || appliedOverrides.deleted.has(itemRawKey) || (item.id && appliedOverrides.deleted.has(item.id))))
+        );
+
+        if (activeCategory === 'deleted') {
+          if (!isItemDeleted) return false;
+        } else if (activeCategory !== 'all') {
           const itemCat = resolveScheduleType(item);
           if (itemCat !== activeCategory) return false;
         }
@@ -2450,8 +2761,8 @@
           if (!targetText.includes(q)) return false;
         }
 
-        // 4. 제외 필터 규칙 적용 (수정 중이거나 커스텀 일정은 보호)
-        const isProtected = item._isCustom || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
+        // 4. 제외 필터 규칙 적용 (수정 중, 커스텀 일정, 삭제/숨김된 일정은 보호)
+        const isProtected = isItemDeleted || item._isCustom || (pendingOverrides && pendingOverrides.modified && (pendingOverrides.modified[item.id] || pendingOverrides.modified[itemKey])) || (appliedOverrides && appliedOverrides.modified && (appliedOverrides.modified[item.id] || appliedOverrides.modified[itemKey]));
 
         if (!isProtected) {
           // 4-1. 쇼츠 제외
@@ -2504,6 +2815,7 @@
     function renderScheduleGroupsHTML(filteredItems) {
       if (!filteredItems || filteredItems.length === 0) return '';
 
+      const renderedGlobalScheduleIds = new Set();
       const groups = {};
       filteredItems.forEach((item, index) => {
         const d = new Date(item.startTime);
@@ -2533,33 +2845,46 @@
           return tA - tB;
         });
 
-        const renderedIdsInGroup = new Set();
-
         groupItems.forEach(({ item, originalIndex }) => {
           const stableId = item.id || item._originKey || getScheduleKey(item);
-          if (renderedIdsInGroup.has(stableId)) return;
+          const rawId = getRawScheduleKey(item);
+          if (renderedGlobalScheduleIds.has(stableId) || renderedGlobalScheduleIds.has(rawId) || (item.id && renderedGlobalScheduleIds.has(item.id))) return;
 
-          // 연관 연결된 클러스터 탐색
+          // 연관 연결된 클러스터 탐색 (allSchedules 전체에서 탐색)
           let cluster = [item];
+          const allList = (Array.isArray(allSchedules) && allSchedules.length > 0) ? allSchedules : (window.allSchedules || filteredItems);
           const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
           if (linkedIds.length > 0) {
             linkedIds.forEach(tId => {
-              const matched = groupItems.find(g => {
-                const gId = g.item.id || g.item._originKey || getScheduleKey(g.item);
-                return gId === tId;
+              const matched = allList.find(cand => {
+                const candId = cand.id || cand._originKey || getScheduleKey(cand);
+                return candId === tId || (cand.id && cand.id === tId) || getRawScheduleKey(cand) === tId;
               });
-              if (matched && !cluster.includes(matched.item)) {
-                cluster.push(matched.item);
+              if (matched && !cluster.includes(matched)) {
+                cluster.push(matched);
               }
             });
           }
 
-          cluster.forEach(c => {
-            const cId = c.id || c._originKey || getScheduleKey(c);
-            renderedIdsInGroup.add(cId);
+          // 역방향 연계 탐색 (다른 일정이 이 item을 linkedScheduleIds에 포함하고 있는 경우 상호 묶음)
+          allList.forEach(cand => {
+            if (cand === item || cluster.includes(cand)) return;
+            const cLinked = Array.isArray(cand.linkedScheduleIds) ? cand.linkedScheduleIds : [];
+            const itemId = item.id || item._originKey || getScheduleKey(item);
+            if (cLinked.includes(itemId) || (item.id && cLinked.includes(item.id)) || cLinked.includes(getRawScheduleKey(item))) {
+              cluster.push(cand);
+            }
           });
 
-          let primaryItem = cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0];
+          cluster.forEach(c => {
+            const cId = c.id || c._originKey || getScheduleKey(c);
+            const rId = getRawScheduleKey(c);
+            renderedGlobalScheduleIds.add(cId);
+            renderedGlobalScheduleIds.add(rId);
+            if (c.id) renderedGlobalScheduleIds.add(c.id);
+          });
+
+          let primaryItem = (item.linkedScheduleIds && item.linkedScheduleIds.length > 0) ? item : (cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0]);
           let subItems = cluster.filter(c => c !== primaryItem);
 
           const key = getScheduleKey(primaryItem);
@@ -2567,6 +2892,12 @@
           const isPendingMod = Boolean(pendingOverrides.modified[key]);
           const isSavedMod = Boolean(primaryItem._isModified);
           const isCustom = Boolean(primaryItem._isCustom);
+          const rawListForCard = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+          const hasRawOriginal = !isCustom && Array.isArray(rawListForCard) && rawListForCard.some(b =>
+            (b.id && (b.id === key || b.id === primaryItem.id || b.id === primaryItem._originKey)) ||
+            getScheduleKey(b) === key ||
+            getRawScheduleKey(b) === key
+          );
 
           let statusClass = '';
           let stateBadge = '';
@@ -2681,6 +3012,7 @@
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-shrink: 0;">
                     ${sub.url ? `<a href="${escapeHtml(sub.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
+                    ${(sub._isModified || (pendingOverrides.modified && pendingOverrides.modified[subKey])) && !sub._isCustom && Array.isArray(rawBaseSchedules) && rawBaseSchedules.some(b => (b.id && (b.id === subKey || b.id === sub.id)) || getScheduleKey(b) === subKey || getRawScheduleKey(b) === subKey) ? `<button type="button" class="btn-action btn-restore-mod" style="padding: 2px 6px; font-size: 10.5px;" onclick="restoreModifiedItem('${subKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
                     <button class="btn-action" style="padding: 2px 6px; font-size: 10.5px;" onclick="openEditModalByKey('${subKeyJs}')">✏️ 수정</button>
                     <button class="btn-action btn-del" style="padding: 2px 6px; font-size: 10.5px;" title="연결 해제" onclick="unlinkSchedulePair('${safeKeyJs}', '${subKeyJs}')">🔗 해제</button>
                   </div>
@@ -2724,7 +3056,8 @@
                   ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
                   ${isDeleted ?
               `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` :
-              `<button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
+              `${(isPendingMod || isSavedMod) && hasRawOriginal ? `<button type="button" class="btn-action btn-restore-mod" onclick="restoreModifiedItem('${safeKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
+               <button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
                      <button class="btn-action btn-del" onclick="toggleDeleteItem('${safeKeyJs}')">🗑️ 숨김</button>`
             }
                 </div>
@@ -2941,18 +3274,80 @@
     window.prependPrevMonth = prependPrevMonth;
     window.updateCurrentVisibleMonth = updateCurrentVisibleMonth;
 
+    // 연관 일정(linkedScheduleIds) 서브 아이템 누락 방지 및 메타데이터 상속 헬퍼
+    function ensureLinkedSubItemsRestored() {
+      if (!Array.isArray(allSchedules)) return;
+      const newSubItems = [];
+      allSchedules.forEach(item => {
+        const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
+        linkedIds.forEach(tId => {
+          if (tId === item.id) return;
+          let target = allSchedules.find(s => (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId);
+          if (!target) {
+            target = newSubItems.find(s => (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId);
+          }
+          const isBlip = String(tId).startsWith('blip_');
+          const isMnet = String(tId).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(tId));
+          const sourceName = isBlip ? '블립' : (isMnet ? 'Mnet' : '연관');
+          const sourceVal = isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom');
+
+          if (!target) {
+            target = {
+              id: tId,
+              _originKey: tId,
+              source: sourceVal,
+              title: item.title ? `${item.title} (${sourceName} 연계)` : `연계 일정 (${tId})`,
+              startTime: item.startTime,
+              endTime: item.endTime || item.startTime,
+              isAllday: Boolean(item.isAllday),
+              typeText: item.typeText || '기타',
+              location: item.location || '',
+              channel: item.channel || '',
+              url: isBlip ? `https://blip.kr/schedule/${String(tId).replace('blip_', '')}` : (item.url || ''),
+              linkedScheduleIds: [item.id || item._originKey],
+              _isRestoredSub: true
+            };
+            newSubItems.push(target);
+          } else {
+            if (!target.title || target.title.startsWith('undefined') || target.title.includes('수집 일정 (')) {
+              target.title = `${item.title} (${sourceName} 연계)`;
+            }
+            if (!target.startTime) target.startTime = item.startTime;
+            if (!target.endTime) target.endTime = item.endTime || item.startTime;
+            if (!target.typeText) target.typeText = item.typeText || '기타';
+            if (!target.source) target.source = sourceVal;
+            if (!target.url && isBlip) target.url = `https://blip.kr/schedule/${String(tId).replace('blip_', '')}`;
+          }
+        });
+      });
+      if (newSubItems.length > 0) {
+        allSchedules.push(...newSubItems);
+      }
+      window.allSchedules = allSchedules;
+    }
+    window.ensureLinkedSubItemsRestored = ensureLinkedSubItemsRestored;
+
     // 메인 렌더링 진입점
     function renderSchedules() {
       const container = document.getElementById('scheduleListContainer');
       const isSearching = Boolean(searchQuery && searchQuery.trim());
 
-      // 외부(테스트 등)에서 window.allSchedules나 window.currentViewDate를 주입한 경우 동기화
+      // 외부(테스트 등)에서 window.allSchedules, window.rawBaseSchedules, window.currentViewDate를 주입한 경우 동기화
       if (window.allSchedules && Array.isArray(window.allSchedules) && window.allSchedules !== allSchedules) {
         allSchedules = window.allSchedules;
+      }
+      if (window.rawBaseSchedules && Array.isArray(window.rawBaseSchedules) && window.rawBaseSchedules !== rawBaseSchedules) {
+        rawBaseSchedules = window.rawBaseSchedules;
       }
       if (window.currentViewDate && window.currentViewDate instanceof Date && window.currentViewDate !== currentViewDate) {
         currentViewDate = window.currentViewDate;
       }
+      if (window.loadedMonths && Array.isArray(window.loadedMonths) && window.loadedMonths !== loadedMonths) {
+        loadedMonths = [...window.loadedMonths];
+      }
+
+      // 연관 서브 아이템 존재 보장
+      ensureLinkedSubItemsRestored();
 
       // 상단 신규 일정 배너 갱신
       updateNewScheduleBanner();
@@ -3010,19 +3405,39 @@
       }
 
       // 일반 모드: 연속 멀티 먼스 피드
-      hasUserScrolledDown = false;
       const year = currentViewDate.getFullYear();
       const month = currentViewDate.getMonth();
       const currentYm = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-      document.getElementById('currentMonthText').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
-      loadedMonths = [currentYm];
+      // 이미 로드된 월 목록이 있으면 유지하고 currentYm도 포함되도록 보장
+      let monthsToRender = (Array.isArray(loadedMonths) && loadedMonths.length > 0) ? [...loadedMonths] : [currentYm];
+      if (!monthsToRender.includes(currentYm)) {
+        monthsToRender.push(currentYm);
+        monthsToRender.sort();
+      }
+      loadedMonths = monthsToRender;
+      window.loadedMonths = loadedMonths;
+
+      let sectionsHtml = '';
+      loadedMonths.forEach(ym => {
+        const [y, m] = ym.split('-').map(Number);
+        sectionsHtml += buildMonthSectionHTML(y, m - 1);
+      });
 
       container.innerHTML = `
+        <div style="display: flex; justify-content: center; padding: 10px 0 6px 0;">
+          <button type="button" class="btn-action feed-month-loader-btn" onclick="prependPrevMonth()" title="이전 달 추가 불러오기">⬆️ 이전 달 더 불러오기</button>
+        </div>
         <div id="monthSectionsWrapper">
-          ${buildMonthSectionHTML(year, month)}
+          ${sectionsHtml}
+        </div>
+        <div style="display: flex; justify-content: center; padding: 14px 0 24px 0;">
+          <button type="button" class="btn-action feed-month-loader-btn" onclick="appendNextMonth()" title="다음 달 추가 불러오기">⬇️ 다음 달 더 불러오기</button>
         </div>
       `;
+
+      // 상단 현재 월 표시를 currentViewDate 기준으로 명시 동기화
+      document.getElementById('currentMonthText').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
 
       // 초기 렌더링 높이가 낮아 스크롤이 불가능한 경우, 자연스러운 스크롤을 위해 다음 달 자동 프리로드
       setTimeout(() => {
@@ -3046,7 +3461,8 @@
       document.getElementById('editIsNew').value = '0';
 
       // 공식 원본 placeholder 안내
-      const rawItem = rawBaseSchedules.find(b => (b.id && b.id === stableKey) || getScheduleKey(b) === stableKey || getRawScheduleKey(b) === stableKey);
+      const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+      const rawItem = rawList.find(b => (b.id && b.id === stableKey) || getScheduleKey(b) === stableKey || getRawScheduleKey(b) === stableKey);
       if (rawItem && !item._isCustom) {
         document.getElementById('formTitle').placeholder = `공식 원본: ${rawItem.title || ''}`;
         document.getElementById('formLocation').placeholder = rawItem.location ? `공식 원본: ${rawItem.location}` : '장소';
@@ -3145,6 +3561,45 @@
         }
       }
 
+      // 공식 원본 복원 버튼 표시 여부 제어
+      const btnModalRestoreOriginal = document.getElementById('btnModalRestoreOriginal');
+      const isItemModified = Boolean(item._isModified || (pendingOverrides.modified && pendingOverrides.modified[stableKey]));
+      if (btnModalRestoreOriginal) {
+        if (rawItem && !item._isCustom && isItemModified) {
+          btnModalRestoreOriginal.style.display = 'block';
+          btnModalRestoreOriginal.onclick = () => {
+            document.getElementById('formTitle').value = rawItem.title || '';
+            if (rawItem.startTime) {
+              const d = new Date(rawItem.startTime);
+              document.getElementById('formDate').value = formatDateYMD(d);
+              if (!rawItem.isAllday) {
+                const h = String(d.getHours()).padStart(2, '0');
+                const m = String(d.getMinutes()).padStart(2, '0');
+                document.getElementById('formTime').value = `${h}:${m}`;
+              } else {
+                document.getElementById('formTime').value = '';
+              }
+            } else {
+              document.getElementById('formDate').value = '';
+              document.getElementById('formTime').value = '';
+            }
+            const rawResolvedType = rawItem.typeText || resolveScheduleType(rawItem) || '기타';
+            document.getElementById('formType').value = rawResolvedType;
+            document.getElementById('formChannel').value = rawItem.channel || '';
+            document.getElementById('formUrl').value = rawItem.url || rawItem.link || '';
+            document.getElementById('formLocation').value = rawItem.location || '';
+            document.getElementById('formMessage').value = rawItem.message || '';
+            clearUrlMetaPreview();
+            updateUrlMetaBtnState();
+            updateFormLivePreview();
+            showToast('공식 원본 내용이 폼에 채워졌습니다.');
+          };
+        } else {
+          btnModalRestoreOriginal.style.display = 'none';
+          btnModalRestoreOriginal.onclick = null;
+        }
+      }
+
       document.getElementById('btnModalDelete').style.display = 'block';
       updateFormLivePreview();
       document.getElementById('editModalOverlay').classList.add('active');
@@ -3170,6 +3625,12 @@
         linkContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); padding: 4px 0;">일정 등록 후 세부 수정에서 다른 일정과 연결할 수 있습니다.</div>';
       }
 
+      const btnModalRestoreOriginal = document.getElementById('btnModalRestoreOriginal');
+      if (btnModalRestoreOriginal) {
+        btnModalRestoreOriginal.style.display = 'none';
+        btnModalRestoreOriginal.onclick = null;
+      }
+
       document.getElementById('btnModalDelete').style.display = 'none';
       updateFormLivePreview();
       document.getElementById('editModalOverlay').classList.add('active');
@@ -3177,6 +3638,10 @@
 
     function closeModal() {
       clearUrlMetaPreview();
+      const form = document.getElementById('scheduleEditForm');
+      if (form) form.reset();
+      const previewCard = document.getElementById('formLivePreviewCard');
+      if (previewCard) previewCard.innerHTML = '';
       document.getElementById('editModalOverlay').classList.remove('active');
     }
 
@@ -3195,22 +3660,46 @@
         keysToToggle.add(item.title);
       }
 
+      // 조작 중인 카드가 위치한 월을 currentViewDate 및 loadedMonths에 보존하여 화면 점프 방지
+      if (item && item.startTime) {
+        const itemD = new Date(item.startTime);
+        if (!isNaN(itemD.getTime())) {
+          currentViewDate = new Date(itemD.getFullYear(), itemD.getMonth(), 1);
+          window.currentViewDate = currentViewDate;
+          const targetYm = `${itemD.getFullYear()}-${String(itemD.getMonth() + 1).padStart(2, '0')}`;
+          if (!loadedMonths.includes(targetYm)) {
+            loadedMonths.push(targetYm);
+            loadedMonths.sort();
+            window.loadedMonths = loadedMonths;
+          }
+        }
+      }
+
       if (item && item._isDeleted) {
         keysToToggle.forEach(k => {
           appliedOverrides.deleted.delete(k);
           pendingOverrides.deleted.delete(k);
         });
         item._isDeleted = false;
+        item.isDeleted = false;
       } else {
         const isCurrentlyPendingDel = Array.from(keysToToggle).some(k => pendingOverrides.deleted.has(k));
         if (isCurrentlyPendingDel) {
           keysToToggle.forEach(k => pendingOverrides.deleted.delete(k));
+          if (item) {
+            item._isDeleted = false;
+            item.isDeleted = false;
+          }
         } else {
           keysToToggle.forEach(k => {
             pendingOverrides.deleted.add(k);
             delete pendingOverrides.modified[k];
             delete appliedOverrides.modified[k];
           });
+          if (item) {
+            item._isDeleted = true;
+            item.isDeleted = true;
+          }
         }
       }
       updateStagingBar();
@@ -3232,6 +3721,7 @@
 
       if (item) {
         item._isDeleted = false;
+        item.isDeleted = false;
       }
       keysToRestore.forEach(k => {
         appliedOverrides.deleted.delete(k);
@@ -3242,6 +3732,66 @@
       updateStagingBar();
       renderSchedules();
     }
+
+    // 수정한 일정을 공식 원본(rawBaseSchedules) 데이터로 복구
+    function restoreModifiedItem(key) {
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const stableKey = item ? (item.id || item._originKey || key) : key;
+      const rawKey = item ? getRawScheduleKey(item) : key;
+      const keysToRestore = new Set([stableKey, rawKey, key]);
+      if (item && item.id) keysToRestore.add(item.id);
+
+      if (item && item.title) {
+        const datePart = rawKey.split('_')[0];
+        keysToRestore.add(`${datePart}_${item.title}`);
+        keysToRestore.add(item.title);
+      }
+
+      // rawBaseSchedules에서 원본 찾기
+      const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+      const rawItem = rawList.find(b =>
+        (b.id && (b.id === key || b.id === stableKey || (item && b.id === item.id))) ||
+        getScheduleKey(b) === key || getScheduleKey(b) === stableKey ||
+        getRawScheduleKey(b) === key || getRawScheduleKey(b) === stableKey
+      );
+
+      if (!rawItem) {
+        showToast('공식 원본 데이터를 찾을 수 없습니다.', 'warning');
+        return;
+      }
+
+      keysToRestore.forEach(k => {
+        if (pendingOverrides.modified) delete pendingOverrides.modified[k];
+        if (appliedOverrides.modified) delete appliedOverrides.modified[k];
+      });
+
+      if (!pendingOverrides.restoredModified) {
+        pendingOverrides.restoredModified = new Set();
+      }
+      keysToRestore.forEach(k => pendingOverrides.restoredModified.add(k));
+
+      if (item) {
+        item.title = rawItem.title;
+        item.startTime = rawItem.startTime;
+        item.endTime = rawItem.endTime || rawItem.startTime;
+        item.isAllday = Boolean(rawItem.isAllday);
+        item.typeText = rawItem.typeText || resolveScheduleType(rawItem) || '기타';
+        item.channel = rawItem.channel || '';
+        item.url = rawItem.url || rawItem.link || '';
+        item.location = rawItem.location || '';
+        item.message = rawItem.message || '';
+        item.thumbnail = rawItem.thumbnail;
+        item.isOfficialYoutube = rawItem.isOfficialYoutube;
+        item.linkedScheduleIds = Array.isArray(rawItem.linkedScheduleIds) ? [...rawItem.linkedScheduleIds] : [];
+        item._isModified = false;
+        item._isCustom = false;
+      }
+
+      updateStagingBar();
+      renderSchedules();
+      showToast('공식 원본 내용으로 복구되었습니다.');
+    }
+    window.restoreModifiedItem = restoreModifiedItem;
 
     // 연관 일정 연결 해제 (상호 양방향 분리)
     function unlinkSchedulePair(keyA, keyB) {
@@ -4284,6 +4834,44 @@
               pendingOverrides.created.push(customObj);
             }
           } else {
+            // 공식 원본과 완전히 동일한지 체크 (모달에서 원본 복원 후 저장한 경우)
+            const rawListForSubmit = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+            const rawItem = Array.isArray(rawListForSubmit) ? rawListForSubmit.find(b =>
+              (b.id && (b.id === key || b.id === stableKey || b.id === item.id)) ||
+              getScheduleKey(b) === key || getScheduleKey(b) === stableKey ||
+              getRawScheduleKey(b) === key || getRawScheduleKey(b) === stableKey
+            ) : null;
+
+            let isIdenticalToRaw = false;
+            if (rawItem) {
+              const rawDateStr = rawItem.startTime ? formatDateYMD(new Date(rawItem.startTime)) : '';
+              let rawTimeRaw = '';
+              if (!rawItem.isAllday && rawItem.startTime) {
+                const rd = new Date(rawItem.startTime);
+                rawTimeRaw = `${String(rd.getHours()).padStart(2, '0')}:${String(rd.getMinutes()).padStart(2, '0')}`;
+              }
+              const rawType = rawItem.typeText || resolveScheduleType(rawItem) || '기타';
+              const isLinksSame = JSON.stringify(item.linkedScheduleIds || []) === JSON.stringify(rawItem.linkedScheduleIds || []);
+
+              if (title === (rawItem.title || '') &&
+                  dateStr === rawDateStr &&
+                  timeRaw === rawTimeRaw &&
+                  typeText === rawType &&
+                  channel === (rawItem.channel || '') &&
+                  url === (rawItem.url || rawItem.link || '') &&
+                  location === (rawItem.location || '') &&
+                  message === (rawItem.message || '') &&
+                  isLinksSame) {
+                isIdenticalToRaw = true;
+              }
+            }
+
+            if (isIdenticalToRaw) {
+              restoreModifiedItem(stableKey);
+              closeModal();
+              return;
+            }
+
             const modObj = {
               title,
               startTime,
@@ -4331,7 +4919,45 @@
     // 변경사항 스테이징 바 업데이트
     function updateStagingBar() {
       const filterRulesChanged = Boolean(pendingFilterRules);
-      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length + (filterRulesChanged ? 1 : 0);
+      const restoredCount = (pendingOverrides.restoredModified ? pendingOverrides.restoredModified.size : 0);
+      
+      const uniqueDeleted = new Set();
+      const handledDelKeys = new Set();
+      (pendingOverrides.deleted || new Set()).forEach(dKey => {
+        if (handledDelKeys.has(dKey)) return;
+        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey || s.title === dKey);
+        const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : dKey;
+        uniqueDeleted.add(itemDedupKey);
+        if (item) {
+          if (item.id) handledDelKeys.add(item.id);
+          if (item._originKey) handledDelKeys.add(item._originKey);
+          handledDelKeys.add(getScheduleKey(item));
+          handledDelKeys.add(getRawScheduleKey(item));
+          if (item.title) handledDelKeys.add(item.title);
+        }
+        handledDelKeys.add(dKey);
+      });
+      const delCount = uniqueDeleted.size;
+
+      const uniqueModified = new Set();
+      const handledModKeys = new Set();
+      Object.keys(pendingOverrides.modified || {}).forEach(mKey => {
+        if (handledModKeys.has(mKey)) return;
+        const item = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey || s.title === mKey);
+        const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : mKey;
+        uniqueModified.add(itemDedupKey);
+        if (item) {
+          if (item.id) handledModKeys.add(item.id);
+          if (item._originKey) handledModKeys.add(item._originKey);
+          handledModKeys.add(getScheduleKey(item));
+          handledModKeys.add(getRawScheduleKey(item));
+          if (item.title) handledModKeys.add(item.title);
+        }
+        handledModKeys.add(mKey);
+      });
+      const modCount = uniqueModified.size;
+
+      const count = modCount + delCount + pendingOverrides.created.length + restoredCount + (filterRulesChanged ? 1 : 0);
       const bar = document.getElementById('stagingBar');
       const badge = document.getElementById('stagingCountBadge');
 
@@ -4441,6 +5067,237 @@
       }
     });
 
+    // 변경 대기 내역 세부 항목 리스트 추출
+    function buildDetailedChangesList() {
+      const items = [];
+      const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+
+      // 1. 수정 항목 (modified)
+      const handledModifiedKeys = new Set();
+      Object.entries(pendingOverrides.modified || {}).forEach(([mKey, mod]) => {
+        if (!mod) return;
+        const rawItem = rawList.find(b => (b.id && b.id === mKey) || (b._originKey && b._originKey === mKey) || getScheduleKey(b) === mKey || getRawScheduleKey(b) === mKey);
+        const itemObj = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey) || mod;
+
+        const itemDedupKey = itemObj ? (itemObj.id || itemObj._originKey || getScheduleKey(itemObj)) : mKey;
+        if (handledModifiedKeys.has(itemDedupKey)) return;
+        handledModifiedKeys.add(itemDedupKey);
+
+        let dateStr = '';
+        if (mod.startTime) {
+          const d = new Date(mod.startTime);
+          if (!isNaN(d.getTime())) dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        } else if (rawItem && rawItem.startTime) {
+          const d = new Date(rawItem.startTime);
+          if (!isNaN(d.getTime())) dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        const titleStr = mod.title || (rawItem ? rawItem.title : (itemObj ? itemObj.title : mKey));
+        const diffs = [];
+        if (rawItem) {
+          if (mod.title && mod.title !== rawItem.title) {
+            diffs.push(`제목: "${escapeHtml(rawItem.title)}" ➔ <span class="confirm-diff-highlight">"${escapeHtml(mod.title)}"</span>`);
+          }
+          if (mod.startTime && mod.startTime !== rawItem.startTime) {
+            const oldT = rawItem.startTime.slice(11, 16);
+            const newT = mod.startTime.slice(11, 16);
+            if (oldT && newT && oldT !== newT) diffs.push(`시간: ${oldT} ➔ <span class="confirm-diff-highlight">${newT}</span>`);
+          }
+          if (mod.location && mod.location !== rawItem.location) {
+            diffs.push(`장소: "${escapeHtml(rawItem.location || '없음')}" ➔ <span class="confirm-diff-highlight">"${escapeHtml(mod.location)}"</span>`);
+          }
+          if (mod.typeText && mod.typeText !== rawItem.typeText) {
+            diffs.push(`종류: ${rawItem.typeText || '기타'} ➔ <span class="confirm-diff-highlight">${mod.typeText}</span>`);
+          }
+        }
+        if (Array.isArray(mod.linkedScheduleIds) && mod.linkedScheduleIds.length > 0) {
+          diffs.push(`연관 일정 ${mod.linkedScheduleIds.length}건 연결 합성`);
+        }
+        if (diffs.length === 0) {
+          diffs.push('세부 정보(채널/메모/링크 등) 보정');
+        }
+
+        items.push({
+          badgeText: '✏️ 수정',
+          badgeClass: 'badge-pending',
+          date: dateStr || '지정일',
+          title: titleStr,
+          detailHtml: diffs.join(' · ')
+        });
+      });
+
+      // 2. 숨김 항목 (deleted)
+      const handledDeletedKeys = new Set();
+      (pendingOverrides.deleted || new Set()).forEach(dKey => {
+        if (handledDeletedKeys.has(dKey)) return;
+        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey || s.title === dKey);
+        const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : dKey;
+        if (handledDeletedKeys.has(itemDedupKey)) return;
+        handledDeletedKeys.add(itemDedupKey);
+        if (item) {
+          if (item.id) handledDeletedKeys.add(item.id);
+          if (item._originKey) handledDeletedKeys.add(item._originKey);
+          handledDeletedKeys.add(getScheduleKey(item));
+          handledDeletedKeys.add(getRawScheduleKey(item));
+          if (item.title) handledDeletedKeys.add(item.title);
+        }
+        handledDeletedKeys.add(dKey);
+
+        let dateStr = '';
+        if (item && item.startTime) {
+          const d = new Date(item.startTime);
+          if (!isNaN(d.getTime())) dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        } else if (dKey.includes('_')) {
+          const part = dKey.split('_')[0];
+          if (part.length >= 10) dateStr = part.slice(5).replace('-', '.');
+        }
+
+        const titleStr = item ? item.title : (dKey.includes('_') ? dKey.split('_').slice(1).join('_') : dKey);
+        items.push({
+          badgeText: '🗑️ 숨김',
+          badgeClass: 'badge-del',
+          date: dateStr || '지정일',
+          title: titleStr,
+          detailHtml: '<span style="color: #f87171;">일정 비활성화 및 사용자 캘린더 제외</span>'
+        });
+      });
+
+      // 3. 신규 등록 항목 (created)
+      (pendingOverrides.created || []).forEach(c => {
+        let dateStr = '';
+        if (c.startTime) {
+          const d = new Date(c.startTime);
+          if (!isNaN(d.getTime())) dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        }
+        items.push({
+          badgeText: '✨ 등록',
+          badgeClass: 'badge-new',
+          date: dateStr || '지정일',
+          title: c.title,
+          detailHtml: `<span style="color: #6ee7b7;">신규 일정 추가 (${escapeHtml(c.typeText || '기타')}${c.location ? ' · 📍 ' + escapeHtml(c.location) : ''})</span>`
+        });
+      });
+
+      // 4. 공식 원본 복구 항목 (restoredModified)
+      const handledRestoredKeys = new Set();
+      (pendingOverrides.restoredModified || new Set()).forEach(rKey => {
+        const item = allSchedules.find(s => (s.id && s.id === rKey) || (s._originKey && s._originKey === rKey) || getScheduleKey(s) === rKey || getRawScheduleKey(s) === rKey);
+        const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : rKey;
+        if (handledRestoredKeys.has(itemDedupKey)) return;
+        handledRestoredKeys.add(itemDedupKey);
+
+        let dateStr = '';
+        if (item && item.startTime) {
+          const d = new Date(item.startTime);
+          if (!isNaN(d.getTime())) dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        }
+        const titleStr = item ? item.title : rKey;
+        items.push({
+          badgeText: '↩️ 복구',
+          badgeClass: 'badge-confirmed',
+          date: dateStr || '지정일',
+          title: titleStr,
+          detailHtml: '<span style="color: #c4b5fd;">수정 내역 취소 및 공식 원본 데이터 복원</span>'
+        });
+      });
+
+      // 5. 필터 규칙
+      if (pendingFilterRules) {
+        items.push({
+          badgeText: '⚙️ 필터',
+          badgeClass: 'badge-special',
+          date: '규칙',
+          title: '자동 제외 필터 규칙 변경',
+          detailHtml: '제외 키워드 및 쇼츠 필터 설정 업데이트'
+        });
+      }
+
+      return items;
+    }
+
+    // 커스텀 저장 확인 팝업 (브라우저 기본 confirm 대체)
+    function showConfirmDialog(options = {}) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('confirmModalOverlay');
+        if (!overlay) {
+          resolve(window.confirm(options.message || '저장하시겠습니까?'));
+          return;
+        }
+
+        const titleEl = document.getElementById('confirmModalTitle');
+        const msgEl = document.getElementById('confirmModalMessage');
+        const statsEl = document.getElementById('confirmModalStats');
+        const changesListEl = document.getElementById('confirmChangesList');
+        const changesCountEl = document.getElementById('confirmChangesCount');
+        const btnApprove = document.getElementById('btnApproveConfirmModal');
+        const btnCancel = document.getElementById('btnCancelConfirmModal');
+        const btnCloseX = document.getElementById('btnCancelConfirmModalX');
+
+        if (titleEl) titleEl.textContent = options.title || '💾 변경사항 저장 확인';
+        if (msgEl) msgEl.textContent = options.message || '변경사항을 원격 Gist에 영구 저장하시겠습니까?';
+
+        if (statsEl) {
+          statsEl.innerHTML = '';
+          if (options.stats && typeof options.stats === 'object') {
+            const { modified = 0, deleted = 0, created = 0, restored = 0, filter = 0 } = options.stats;
+            if (modified > 0) statsEl.innerHTML += `<span class="state-badge badge-pending">✏️ 수정 ${modified}건</span>`;
+            if (deleted > 0) statsEl.innerHTML += `<span class="state-badge badge-del">🗑️ 숨김 ${deleted}건</span>`;
+            if (created > 0) statsEl.innerHTML += `<span class="state-badge badge-new">✨ 등록 ${created}건</span>`;
+            if (restored > 0) statsEl.innerHTML += `<span class="state-badge badge-confirmed">↩️ 원본 복구 ${restored}건</span>`;
+            if (filter > 0) statsEl.innerHTML += `<span class="state-badge badge-special">⚙️ 필터 규칙 변경</span>`;
+          }
+        }
+
+        // 세부 변경 목록 렌더링
+        const detailedList = buildDetailedChangesList();
+        if (changesCountEl) {
+          changesCountEl.textContent = `총 ${detailedList.length}건`;
+        }
+        if (changesListEl) {
+          changesListEl.innerHTML = '';
+          if (detailedList.length === 0) {
+            changesListEl.innerHTML = '<div style="text-align:center; padding: 18px 0; color: var(--text-muted); font-size: 12px;">변경사항이 없습니다.</div>';
+          } else {
+            detailedList.forEach(c => {
+              changesListEl.innerHTML += `
+                <div class="confirm-change-item">
+                  <div class="confirm-change-item-header">
+                    <span class="confirm-change-date">${escapeHtml(c.date)}</span>
+                    <span class="state-badge ${c.badgeClass}" style="font-size: 9.5px; padding: 1px 6px;">${c.badgeText}</span>
+                    <span class="confirm-change-title" title="${escapeHtml(c.title)}">${escapeHtml(c.title)}</span>
+                  </div>
+                  <div class="confirm-change-detail">${c.detailHtml}</div>
+                </div>
+              `;
+            });
+          }
+        }
+
+        overlay.style.display = 'flex';
+        overlay.classList.add('active');
+
+        function cleanup(result) {
+          overlay.style.display = 'none';
+          overlay.classList.remove('active');
+          if (btnApprove) btnApprove.removeEventListener('click', onApprove);
+          if (btnCancel) btnCancel.removeEventListener('click', onCancel);
+          if (btnCloseX) btnCloseX.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onBackdrop);
+          resolve(result);
+        }
+
+        function onApprove() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+        function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
+
+        if (btnApprove) btnApprove.addEventListener('click', onApprove);
+        if (btnCancel) btnCancel.addEventListener('click', onCancel);
+        if (btnCloseX) btnCloseX.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onBackdrop);
+      });
+    }
+    window.showConfirmDialog = showConfirmDialog;
+
     // Gist에 최종 저장 및 반영 검증
     async function onSaveToGistClick() {
       const token = getStoredToken();
@@ -4450,14 +5307,31 @@
         return;
       }
 
-      const filterRulesChanged = Boolean(pendingFilterRules);
-      const count = Object.keys(pendingOverrides.modified).length + pendingOverrides.deleted.size + pendingOverrides.created.length + (filterRulesChanged ? 1 : 0);
+      const detailedItems = buildDetailedChangesList();
+      const count = detailedItems.length;
       if (count === 0) {
-        alert('저장할 변경사항이 없습니다.');
+        showToast('저장할 변경사항이 없습니다.');
         return;
       }
 
-      if (!confirm(`총 ${count}건의 보정 규칙을 원격 Gist에 영구 저장하시겠습니까?`)) {
+      const modCount = detailedItems.filter(i => i.badgeText.includes('수정')).length;
+      const delCount = detailedItems.filter(i => i.badgeText.includes('숨김')).length;
+      const createdCount = detailedItems.filter(i => i.badgeText.includes('등록')).length;
+      const restoredCount = detailedItems.filter(i => i.badgeText.includes('복구')).length;
+      const filterCount = detailedItems.filter(i => i.badgeText.includes('필터')).length;
+
+      const confirmed = await showConfirmDialog({
+        title: '💾 변경사항 원격 저장 확인',
+        message: `총 ${count}건의 일정 보정 사항을 원격 Gist에 영구 저장하시겠습니까?`,
+        stats: {
+          modified: modCount,
+          deleted: delCount,
+          created: createdCount,
+          restored: restoredCount,
+          filter: filterCount
+        }
+      });
+      if (!confirmed) {
         return;
       }
 
@@ -4517,11 +5391,35 @@
           }
         });
 
-        // 삭제 대상에 포함된 created 항목 필터링
-        const finalCreated = Array.from(mergedCreatedMap.values()).filter(c => {
+        // 원본으로 복구된 항목들은 mergedModified에서 완전 제거
+        if (pendingOverrides.restoredModified && pendingOverrides.restoredModified.size > 0) {
+          pendingOverrides.restoredModified.forEach(rKey => {
+            delete mergedModified[rKey];
+            const datePart = rKey.split('_')[0];
+            for (const mKey of Object.keys(mergedModified)) {
+              if (mKey === rKey || mKey.startsWith(datePart + '_')) {
+                const val = mergedModified[mKey];
+                if (val && (val.title === rKey.slice(datePart.length + 1) || mKey === rKey)) {
+                  delete mergedModified[mKey];
+                }
+              }
+            }
+          });
+        }
+
+        // created 항목 처리 (삭제 대상인 항목도 isDeleted: true로 보존하여 복구 가능하게 유지)
+        const finalCreated = Array.from(mergedCreatedMap.values()).map(c => {
           const cKey = getScheduleKey(c);
           const rKey = getRawScheduleKey(c);
-          return !mergedDeleted.has(cKey) && !mergedDeleted.has(rKey) && !mergedDeleted.has(c.title);
+          const isDel = mergedDeleted.has(cKey) || mergedDeleted.has(rKey) || mergedDeleted.has(c.title) || Boolean(c.isDeleted) || Boolean(c._isDeleted);
+          if (isDel) {
+            mergedDeleted.add(cKey);
+            if (c.id) mergedDeleted.add(c.id);
+          }
+          return {
+            ...c,
+            isDeleted: isDel
+          };
         });
 
         // v2.0 형식 빌드 (Single Source of Truth)
@@ -4529,7 +5427,7 @@
         const legacyAliases = {};
         finalCreated.forEach(c => {
           const id = c.id || `custom_${(c.startTime || '').slice(2, 10).replace(/-/g, '')}_${Math.random().toString(36).slice(2, 8)}`;
-          customSchedules[id] = { ...c, id, _isCustom: true };
+          customSchedules[id] = { ...c, id, _isCustom: true, isDeleted: Boolean(c.isDeleted) };
           legacyAliases[`${(c.startTime || '').slice(0, 10)}_${c.title}`] = id;
           if (c._originKey) legacyAliases[c._originKey] = id;
         });
@@ -4591,7 +5489,7 @@
         appliedOverrides.created = Array.isArray(confirmedOverrides.created) ? confirmedOverrides.created.map(c => ({ ...c, _isCustom: true })) : [];
 
         // 3. 대기열(pendingOverrides) 비우기 & 필터 규칙 확정
-        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };
         if (pendingFilterRules) {
           currentFilterRules = { ...pendingFilterRules };
           pendingFilterRules = null;
@@ -4647,7 +5545,7 @@
 
     function onResetStagingClick() {
       if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
-        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };
         pendingFilterRules = null;
         updateStagingBar();
         loadSchedules();
@@ -4766,7 +5664,7 @@
 
     document.getElementById('btnResetStaging').addEventListener('click', () => {
       if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
-        pendingOverrides = { modified: {}, deleted: new Set(), created: [] };
+        pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };
         updateStagingBar();
         loadSchedules();
       }
