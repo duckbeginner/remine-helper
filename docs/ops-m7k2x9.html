@@ -774,6 +774,192 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* 토스트 알림 (UI 피드백) */
+    #opsToastContainer {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .ops-toast {
+      background: rgba(15, 23, 42, 0.96);
+      color: #f8fafc;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(12px) scale(0.95);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+
+    .ops-toast.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* 사용자 뷰 미리보기 창 & 카드 스타일 (사이드패널 100% 동기화) */
+    .user-preview-window {
+      width: 100%;
+      max-width: 420px;
+      height: 82vh;
+      max-height: 740px;
+      background: #141824;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
+      transform: scale(0.95);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .user-preview-window {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .user-sp-card-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* 다크 모드 (사용자 사이드패널) */
+    .user-sp-card-container.dark {
+      background: radial-gradient(circle at 30% 20%, #2b1d3a 0%, #1a1625 55%, #14121c 100%);
+      color: #f1f5f9;
+    }
+
+    /* 라이트 모드 (사용자 사이드패널) */
+    .user-sp-card-container.light {
+      background: linear-gradient(135deg, #fff0f5 0%, #f3e5f5 100%);
+      color: #333333;
+    }
+
+    /* 개별 일정 아이템 */
+    .user-sp-item {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 38px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: left;
+    }
+
+    .user-sp-card-container.dark .user-sp-item {
+      background: rgba(30, 24, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+    }
+
+    .user-sp-card-container.dark .user-sp-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 105, 180, 0.35);
+      color: #ff9ebb;
+      transform: translateY(-1px);
+    }
+
+    .user-sp-card-container.dark .user-sp-item.active {
+      background: linear-gradient(135deg, rgba(255, 105, 180, 0.25) 0%, rgba(255, 20, 147, 0.12) 100%);
+      border: 1px solid rgba(255, 105, 180, 0.45);
+      color: #ff80ab;
+      font-weight: 700;
+    }
+
+    .user-sp-card-container.light .user-sp-item {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      color: #334155;
+    }
+
+    .user-sp-card-container.light .user-sp-item:hover {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(255, 105, 180, 0.4);
+      color: #ff007a;
+      transform: translateY(-1px);
+    }
+
+    .user-sp-card-container.light .user-sp-item.active {
+      background: linear-gradient(135deg, rgba(255, 105, 180, 0.18) 0%, rgba(255, 20, 147, 0.08) 100%);
+      border: 1px solid rgba(255, 105, 180, 0.35);
+      color: #ff007a;
+      font-weight: 700;
+    }
+
+    .user-sp-line {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      gap: 4px;
+    }
+
+    .user-sp-datetime {
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      flex-shrink: 0;
+      font-size: 11px;
+      opacity: 0.88;
+    }
+
+    .user-sp-type-badge {
+      display: inline-block;
+      padding: 1.5px 5.5px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin: 0 3px;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+
+    .user-sp-title-area {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      font-size: 11.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .user-sp-extra-info {
+      font-size: 10px;
+      opacity: 0.7;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -826,6 +1012,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn-action" id="btnOpenUserPreview" style="display: flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 12px; font-weight: 600; background: rgba(124, 92, 252, 0.16); color: #c4b5fd; border: 1px solid rgba(124, 92, 252, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;" title="사용자에게 표시되는 일정 미리보기 (사이드패널 뷰)">
+          <span>📱</span> 사용자 뷰
+        </button>
         <button class="btn-icon" id="btnOpenFilterModal" title="제외 필터 설정 (투표/직캠 등)">⚙️</button>
         <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>
         <button class="btn-icon" id="btnRefresh" title="새로고침">🔄</button>
@@ -978,6 +1167,17 @@
           </div>
         </div>
 
+        <!-- 📱 사용자 표시 카드 미리보기 영역 -->
+        <div class="form-group" style="margin-top: 14px; padding: 12px; background: rgba(124, 92, 252, 0.08); border: 1px solid rgba(124, 92, 252, 0.28); border-radius: 8px;">
+          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between; color: #c4b5fd; margin-bottom: 8px;">
+            <span style="font-weight: 700;">📱 사용자에게 표시되는 카드 미리보기</span>
+            <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">익스텐션 사이드패널 뷰 실시간 동기화</span>
+          </label>
+          <div id="formLivePreviewCard" style="background: rgba(30, 24, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; min-height: 38px; color: #f1f5f9; font-size: 12.5px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
+            <!-- 실시간 미리보기 동적 렌더링 -->
+          </div>
+        </div>
+
         <div class="sheet-buttons">
           <button type="button" class="btn-sheet-del" id="btnModalDelete">🗑️ 숨기기/삭제</button>
           <button type="submit" class="btn-sheet-save" id="btnModalSave">저장하기</button>
@@ -1110,7 +1310,84 @@
     </div>
   </div>
 
+  <!-- 사용자 화면 미리보기 모달 (사이드패널 시뮬레이터) -->
+  <div class="modal-overlay" id="userPreviewModalOverlay" style="align-items: center; justify-content: center; padding: 16px;">
+    <div class="user-preview-window">
+      <!-- 윈도우 상단 타이틀바 -->
+      <div style="padding: 12px 16px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 15px;">📱</span>
+          <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">사용자 화면 미리보기</span>
+          <span style="font-size: 10.5px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd; padding: 2px 6px; border-radius: 4px; font-weight: 600;">사이드패널</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" id="btnToggleUserPreviewTheme" class="btn-action" style="padding: 3px 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid rgba(255,255,255,0.15);" title="다크/라이트 테마 전환">🌙 다크</button>
+          <button type="button" id="btnCloseUserPreviewModal" class="btn-action" style="padding: 3px 8px; font-size: 11.5px;">✕</button>
+        </div>
+      </div>
+
+      <!-- 시뮬레이터 컨트롤 바 (월 선택 & 오늘 이동) -->
+      <div style="padding: 8px 14px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn-action" id="btnUserPrevMonth" style="padding: 2px 6px; font-size: 10.5px;">◀</button>
+          <span id="userPreviewMonthText" style="font-weight: 700; color: #38bdf8; min-width: 65px; text-align: center;">2026. 09</span>
+          <button type="button" class="btn-action" id="btnUserNextMonth" style="padding: 2px 6px; font-size: 10.5px;">▶</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn-action" id="btnUserToday" style="padding: 2px 8px; font-size: 11px; font-weight: 600;">오늘로</button>
+          <span id="userPreviewCountText" style="color: var(--text-muted); font-size: 11px;">0건</span>
+        </div>
+      </div>
+
+      <!-- 사이드패널 본문 컨테이너 -->
+      <div id="userPreviewCardContainer" class="user-sp-card-container dark">
+        <div id="userPreviewScheduleList" style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
+          <!-- 스케줄 아이템들이 동적으로 들어감 -->
+        </div>
+      </div>
+
+      <!-- 일정 상세 보기 팝업 레이어 (카드 클릭 시 노출) -->
+      <div id="userPreviewDetailLayer" style="display: none; position: absolute; inset: 0; background: rgba(10, 12, 18, 0.88); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10; padding: 20px; flex-direction: column; justify-content: center; align-items: center;">
+        <div style="background: #1e1b29; border: 1px solid rgba(255, 105, 180, 0.3); border-radius: 16px; padding: 18px; width: 100%; max-width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px; color: #f1f5f9;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div id="updBadgeRow" style="display: flex; gap: 4px; align-items: center;"></div>
+            <button type="button" id="btnCloseUpdDetail" class="btn-action" style="padding: 2px 7px; font-size: 11px;">✕</button>
+          </div>
+          <h4 id="updTitle" style="font-size: 15px; font-weight: 700; color: #ff80ab; margin: 0; line-height: 1.4;"></h4>
+          <div style="font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+            <div id="updDateTime"></div>
+            <div id="updChannel"></div>
+            <div id="updLocation"></div>
+          </div>
+          <div id="updMessage" style="font-size: 12px; color: #cbd5e1; max-height: 120px; overflow-y: auto; white-space: pre-wrap; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; line-height: 1.5;"></div>
+          <div id="updLinkContainer" style="margin-top: 4px; display: flex; justify-content: flex-end;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // 토스트 알림 헬퍼
+    function showToast(msg, duration = 2400) {
+      let container = document.getElementById('opsToastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'opsToastContainer';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = 'ops-toast';
+      toast.textContent = msg;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          if (toast.parentNode) toast.remove();
+        }, 250);
+      }, duration);
+    }
+
     // 상태 관리
     let allSchedules = [];
     let rawBaseSchedules = [];
@@ -1485,7 +1762,7 @@
       if (/라디오|파워fm|fm4u|sbs 파워|정오의 희망곡|가요광장|영스트리트|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|러브게임/i.test(text)) return '라디오';
       if (/팬사인|팬싸|영통|대면\s*사인|fansign/i.test(text)) return '팬사인회';
       if (/콘서트|concert|쇼케이스|showcase|단독\s*공연/i.test(text)) return '공연';
-      if (/페스티벌|festival|축제|대동제|시구|시타|행사/i.test(text)) return '행사';
+      if (/페스티벌|festival|축제|대동제|청랑제|시구|시타|행사/i.test(text)) return '행사';
       if (/화보|nylon/i.test(text)) return '화보';
       if (/생일|birthday|기념일|day!|데뷔/i.test(text)) return '기념일';
       if (/공지|notice|응모|이벤트 안내|안내/i.test(text)) return '공지';
@@ -1967,6 +2244,7 @@
       }
 
       document.getElementById('btnModalDelete').style.display = 'block';
+      updateFormLivePreview();
       document.getElementById('editModalOverlay').classList.add('active');
     }
 
@@ -1991,6 +2269,7 @@
       }
 
       document.getElementById('btnModalDelete').style.display = 'none';
+      updateFormLivePreview();
       document.getElementById('editModalOverlay').classList.add('active');
     }
 
@@ -2499,37 +2778,91 @@
           const m = rawUrl.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i);
           const shortcode = m ? m[1] : '';
           let igCaption = '';
-          let igAuthor = 'rescene_official';
+          let igAuthor = '';
           let igThumb = '';
+          let igLocation = '';
 
-          const foundInCache = allSchedules.find(s => (s.url && s.url.includes(shortcode)) || (s.link && s.link.includes(shortcode)) || (s.id && s.id.includes(shortcode)));
-          if (foundInCache) {
-            igCaption = foundInCache.message || foundInCache.title || '';
-            igAuthor = foundInCache.channel || igAuthor;
-            igThumb = foundInCache.thumbnail || '';
-          } else {
+          // 1순위: Microlink API (인스타그램 릴스/포스트 정밀 메타데이터 수집기)
+          try {
+            const microRes = await fetchWithTimeout(`https://api.microlink.io/?url=${encodeURIComponent(rawUrl)}`, {}, 4000);
+            if (microRes.ok) {
+              const microData = await microRes.json();
+              if (microData?.status === 'success' && microData?.data) {
+                const d = microData.data;
+                let desc = d.description || '';
+                // 인스타그램 메타 접두사 ("hufsdorm on September 9, 2026: \"..." 또는 "xxx: ”") 제거
+                desc = desc.replace(/^[^:]+on[^:]+:\s*["”]?/i, '').replace(/["”]?\s*\.?\s*$/, '').trim();
+                igCaption = desc;
+                igAuthor = d.author || '';
+                igThumb = d.image?.url || '';
+
+                // 본문 속 장소 패턴 자동 감지 (예: 📍장소: 기숙사 잔디광장, 장소: ...)
+                const locMatch = desc.match(/(?:📍\s*장소|장소)\s*[:：]\s*([^\n\r]+)/i);
+                if (locMatch) {
+                  igLocation = locMatch[1].trim();
+                }
+              }
+            }
+          } catch (eMicro) {}
+
+          // 2순위: 캐시 확인
+          if (!igCaption) {
+            const foundInCache = allSchedules.find(s => (s.url && s.url.includes(shortcode)) || (s.link && s.link.includes(shortcode)) || (s.id && s.id.includes(shortcode)));
+            if (foundInCache) {
+              igCaption = foundInCache.message || foundInCache.title || '';
+              igAuthor = foundInCache.channel || igAuthor;
+              igThumb = foundInCache.thumbnail || '';
+              igLocation = foundInCache.location || '';
+            }
+          }
+
+          // 3순위: embed 프록시 폴백
+          if (!igCaption && shortcode) {
             try {
               const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
               const proxyRes = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(embedUrl)}`, {}, 3000);
-              const proxyData = await proxyRes.json();
-              if (proxyData && proxyData.contents) {
-                const matchCap = proxyData.contents.match(/"text":"([^"]+)"/);
-                if (matchCap) {
-                  igCaption = JSON.parse(`"${matchCap[1]}"`);
+              if (proxyRes.ok) {
+                const proxyData = await proxyRes.json();
+                if (proxyData?.contents) {
+                  const matchCap = proxyData.contents.match(/"text":"([^"]+)"/);
+                  if (matchCap) {
+                    try {
+                      igCaption = JSON.parse(`"${matchCap[1]}"`);
+                    } catch (e) {
+                      igCaption = matchCap[1];
+                    }
+                  }
+                  const matchOwner = proxyData.contents.match(/"username":"([^"]+)"/);
+                  if (matchOwner) igAuthor = matchOwner[1];
                 }
-                const matchOwner = proxyData.contents.match(/"username":"([^"]+)"/);
-                if (matchOwner) igAuthor = matchOwner[1];
               }
             } catch (err) {}
+          }
+
+          // 제목 도출: 캡션의 첫 번째 대괄호 태그 우선, 없으면 첫 줄/첫 문장
+          let title = '';
+          if (igCaption) {
+            const bracketMatch = igCaption.match(/^(\[[^\]]+\])/);
+            if (bracketMatch) {
+              title = bracketMatch[1].trim();
+            } else {
+              const firstLine = igCaption.split('\n')[0].trim();
+              const sentMatch = firstLine.match(/^[^.!?~]+/);
+              title = (sentMatch ? sentMatch[0].trim() : firstLine).slice(0, 60);
+            }
+          }
+          if (!title) {
+            title = rawUrl.includes('/reel/') ? 'RESCENE Instagram Reel' : 'RESCENE Instagram';
           }
 
           meta = {
             platform: 'instagram',
             platformName: 'Instagram',
-            title: igCaption ? igCaption.split('\n')[0].slice(0, 60) : 'RESCENE Instagram',
-            author: igAuthor,
+            title: title,
+            author: igAuthor || 'rescene_official',
             thumbnail: igThumb,
             description: igCaption,
+            location: igLocation,
             isSns: true
           };
         }
@@ -2616,13 +2949,28 @@
           document.getElementById('formChannel').value = meta.author;
         }
 
-        if (meta.platform === 'youtube' || meta.platform === 'tiktok') {
+        if (meta.location) {
+          document.getElementById('formLocation').value = meta.location;
+        }
+
+        if (meta.description) {
+          document.getElementById('formMessage').value = meta.description;
+        }
+
+        // 스케줄 타입 지능형 자동 분류 (행사, 방송, 영상 등)
+        const autoType = resolveScheduleType({ title: meta.title, message: meta.description, channel: meta.author, source: meta.platform });
+        if (autoType && autoType !== '기타') {
+          document.getElementById('formType').value = autoType;
+        } else if (meta.platform === 'youtube' || meta.platform === 'tiktok') {
           document.getElementById('formType').value = '영상';
         }
 
-        // 날짜 패턴 감지
+        // 날짜 패턴 감지: '일시:' 또는 '날짜:'가 명시된 패턴 최우선, 그 후 일반 날짜 패턴 (두 자릿수 우선)
         const textToSearch = `${meta.title} ${meta.description}`;
-        const dateMatch = textToSearch.match(/(?:20)?(2[4-9])[-./년\s]*(0?[1-9]|1[0-2])[-./월\s]*(0?[1-9]|[12][0-9]|3[01])일?/);
+        let dateMatch = textToSearch.match(/(?:📍\s*일시|일시|날짜)\s*[:：]?\s*(?:20)?(2[4-9])[-./년\s]+(1[0-2]|0?[1-9])[-./월\s]+([12][0-9]|3[01]|0?[1-9])일?/i);
+        if (!dateMatch) {
+          dateMatch = textToSearch.match(/(?:20)?(2[4-9])[-./년\s]+(1[0-2]|0?[1-9])[-./월\s]+([12][0-9]|3[01]|0?[1-9])일?/);
+        }
         if (dateMatch) {
           const y = '20' + dateMatch[1];
           const m = dateMatch[2].padStart(2, '0');
@@ -2701,6 +3049,7 @@
         }
 
         panel.appendChild(container);
+        updateFormLivePreview();
         showToast('SNS 정보를 폼에 자동 입력했습니다.');
       }
       // 2) 일반 웹페이지인 경우: 폼 변경 없이 참고 정보만 표시!
@@ -3395,6 +3744,367 @@
         updateStagingBar();
         loadSchedules();
       }
+    });
+
+    // -------------------------------------------------------------
+    // 실시간 폼 카드 미리보기 (사용자 사이드패널 뷰)
+    // -------------------------------------------------------------
+    const TYPE_BADGE_STYLES = {
+      '영상': { bg: 'rgba(6, 182, 212, 0.2)', color: '#22d3ee' },
+      '방송': { bg: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa' },
+      '라디오': { bg: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' },
+      '공연': { bg: 'rgba(236, 72, 153, 0.2)', color: '#f472b6' },
+      '팬사인회': { bg: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' },
+      '행사': { bg: 'rgba(16, 185, 129, 0.2)', color: '#34d399' },
+      '기념일': { bg: 'rgba(244, 63, 94, 0.2)', color: '#fb7185' },
+      '화보': { bg: 'rgba(217, 70, 239, 0.2)', color: '#e879f9' },
+      '릴리즈': { bg: 'rgba(99, 102, 241, 0.2)', color: '#818cf8' },
+      '공지': { bg: 'rgba(234, 179, 8, 0.2)', color: '#facc15' },
+      '기타': { bg: 'rgba(148, 163, 184, 0.2)', color: '#cbd5e1' }
+    };
+
+    function updateFormLivePreview() {
+      const container = document.getElementById('formLivePreviewCard');
+      if (!container) return;
+
+      const title = document.getElementById('formTitle')?.value?.trim() || '';
+      const dateVal = document.getElementById('formDate')?.value || '';
+      const timeVal = document.getElementById('formTime')?.value || '';
+      const typeVal = document.getElementById('formType')?.value || '기타';
+      const channelVal = document.getElementById('formChannel')?.value?.trim() || '';
+      const locationVal = document.getElementById('formLocation')?.value?.trim() || '';
+
+      let dateLabel = '일정';
+      let timeStr = ' 종일';
+
+      if (dateVal) {
+        const [y, m, d] = dateVal.split('-').map(Number);
+        const nowY = new Date().getFullYear();
+        const mm = String(m).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        dateLabel = (y !== nowY) ? `'${String(y).slice(2)}.${mm}/${dd}` : `${mm}/${dd}`;
+
+        if (timeVal) {
+          const [h, min] = timeVal.split(':').map(Number);
+          const ap = h >= 12 ? '오후' : '오전';
+          const displayH = h % 12 || 12;
+          timeStr = ` ${ap} ${displayH}:${String(min).padStart(2, '0')}`;
+        }
+      }
+
+      const badgeStyle = TYPE_BADGE_STYLES[typeVal] || TYPE_BADGE_STYLES['기타'];
+
+      let extraText = '';
+      if (channelVal) {
+        extraText = ` <span style="font-size: 10.5px; color: #94a3b8; margin-left: 4px;">(${escapeHtml(channelVal)})</span>`;
+      } else if (locationVal) {
+        extraText = ` <span style="font-size: 10.5px; color: #94a3b8; margin-left: 4px;">📍 ${escapeHtml(locationVal)}</span>`;
+      }
+
+      const displayTitle = title ? escapeHtml(title) : '<span style="color: #64748b; font-style: italic;">(일정 제목을 입력하면 실시간 미리보기가 표시됩니다)</span>';
+
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; width: 100%; overflow: hidden; white-space: nowrap; gap: 4px;">
+          <span style="font-weight: 700; font-size: 11px; opacity: 0.88; flex-shrink: 0; color: #e2e8f0;">[${dateLabel}${timeStr}]</span>
+          <span style="display: inline-block; padding: 1.5px 5.5px; border-radius: 4px; font-size: 10px; font-weight: 600; margin: 0 3px; flex-shrink: 0; background: ${badgeStyle.bg}; color: ${badgeStyle.color}; line-height: 1.3;">${escapeHtml(typeVal)}</span>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 11.5px; color: #f1f5f9;">${displayTitle}${extraText}</span>
+        </div>
+      `;
+    }
+
+    ['formTitle', 'formDate', 'formTime', 'formType', 'formChannel', 'formLocation'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', updateFormLivePreview);
+        el.addEventListener('change', updateFormLivePreview);
+      }
+    });
+
+    // -------------------------------------------------------------
+    // 전체 사용자 뷰 미리보기 (사이드패널 시뮬레이터 모달)
+    // -------------------------------------------------------------
+    let userPreviewDate = new Date();
+    let isUserPreviewDark = true;
+
+    function openUserPreviewModal() {
+      userPreviewDate = new Date(currentViewDate.getTime());
+      document.getElementById('userPreviewModalOverlay').classList.add('active');
+      closeUpdDetail();
+      renderUserPreviewSchedules();
+    }
+
+    function closeUserPreviewModal() {
+      document.getElementById('userPreviewModalOverlay').classList.remove('active');
+      closeUpdDetail();
+    }
+
+    function toggleUserPreviewTheme() {
+      isUserPreviewDark = !isUserPreviewDark;
+      const container = document.getElementById('userPreviewCardContainer');
+      const btn = document.getElementById('btnToggleUserPreviewTheme');
+      if (isUserPreviewDark) {
+        container.className = 'user-sp-card-container dark';
+        btn.textContent = '🌙 다크';
+      } else {
+        container.className = 'user-sp-card-container light';
+        btn.textContent = '☀️ 라이트';
+      }
+    }
+
+    function renderUserPreviewSchedules() {
+      const listEl = document.getElementById('userPreviewScheduleList');
+      const countEl = document.getElementById('userPreviewCountText');
+      const monthEl = document.getElementById('userPreviewMonthText');
+      if (!listEl) return;
+
+      const year = userPreviewDate.getFullYear();
+      const month = userPreviewDate.getMonth();
+      monthEl.textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+
+      const monthStart = new Date(year, month, 1, 0, 0, 0).getTime();
+      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
+
+      // 필터 규칙
+      const activeRules = pendingFilterRules || currentFilterRules;
+      const filterEnabled = activeRules.enabled !== false;
+      const excludeShorts = activeRules.excludeShorts !== false;
+      const excludeTypes = Array.isArray(activeRules.excludeTypes) ? activeRules.excludeTypes : [];
+      const excludeChannels = Array.isArray(activeRules.excludeChannels) ? activeRules.excludeChannels : [];
+      const excludeKeywords = Array.isArray(activeRules.excludeKeywords) ? activeRules.excludeKeywords : DEFAULT_EXCLUDE_KEYWORDS;
+
+      // 1. 유효 일정 추출 (삭제된 일정 완전 제외)
+      const validItems = allSchedules.filter(item => {
+        if (!item || !item.startTime) return false;
+        const key = getScheduleKey(item);
+        if (pendingOverrides.deleted.has(key) || item._isDeleted) return false;
+
+        const d = new Date(item.startTime);
+        const startT = d.getTime();
+        const endT = item.endTime ? new Date(item.endTime).getTime() : startT;
+        if (!(startT <= monthEnd && endT >= monthStart)) return false;
+
+        const isProtected = item._isCustom || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
+        if (!isProtected && filterEnabled) {
+          if (excludeShorts) {
+            const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
+            if (item._isShorts || /youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) {
+              return false;
+            }
+          }
+          if (excludeTypes.length > 0) {
+            const resolvedType = resolveScheduleType(item);
+            if (excludeTypes.includes(resolvedType) || (item.typeText && excludeTypes.includes(item.typeText))) return false;
+          }
+          if (excludeChannels.length > 0) {
+            const chs = [item.channel, (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)].filter(Boolean).map(s => s.trim().toLowerCase());
+            if (excludeChannels.some(ex => chs.includes(ex.trim().toLowerCase()))) return false;
+          }
+          if (excludeKeywords.length > 0) {
+            const searchText = [item.title, item.message, item.location, item.channel].filter(Boolean).join(' ').toLowerCase();
+            if (excludeKeywords.some(kw => kw.trim() && searchText.includes(kw.trim().toLowerCase()))) return false;
+          }
+        }
+        return true;
+      });
+
+      // 2. 연관 일정 클러스터링
+      const processed = new Set();
+      const clusters = [];
+      validItems.forEach(item => {
+        if (processed.has(item)) return;
+        const cluster = [item];
+        processed.add(item);
+        const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
+        if (linkedIds.length > 0) {
+          validItems.forEach(other => {
+            if (!processed.has(other)) {
+              const otherId = other.id || other._originKey || getScheduleKey(other);
+              if (linkedIds.includes(otherId) || (Array.isArray(other.linkedScheduleIds) && other.linkedScheduleIds.includes(item.id))) {
+                cluster.push(other);
+                processed.add(other);
+              }
+            }
+          });
+        }
+        clusters.push(cluster);
+      });
+
+      // 3. 대표 일정 선출
+      const userDisplayItems = clusters.map(cluster => {
+        return cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0];
+      });
+
+      // 4. 시작 시간순 정렬
+      userDisplayItems.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+      countEl.textContent = `${userDisplayItems.length}건`;
+
+      if (userDisplayItems.length === 0) {
+        listEl.innerHTML = '<div style="padding: 30px 10px; text-align: center; color: var(--text-muted); font-size: 12.5px;">예정된 스케줄이 없습니다.</div>';
+        return;
+      }
+
+      // 오늘 또는 가장 가까운 일정 index
+      const now = new Date();
+      const nowTime = now.getTime();
+      const todayStr = formatDateYMD(now);
+
+      let nextIndex = userDisplayItems.findIndex(item => {
+        const itemDateStr = formatDateYMD(new Date(item.startTime));
+        return itemDateStr === todayStr;
+      });
+      if (nextIndex === -1) {
+        nextIndex = userDisplayItems.findIndex(item => new Date(item.startTime).getTime() >= nowTime);
+      }
+      if (nextIndex === -1) {
+        nextIndex = Math.max(0, userDisplayItems.length - 1);
+      }
+
+      let html = '';
+      userDisplayItems.forEach((item, idx) => {
+        const d = new Date(item.startTime);
+        const itemYear = d.getFullYear();
+        const currentYear = new Date().getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dateLabel = (itemYear !== currentYear) ? `'${String(itemYear).slice(2)}.${mm}/${dd}` : `${mm}/${dd}`;
+
+        let timeStr = ' 종일';
+        if (!item.isAllday && item.startTime) {
+          const h = d.getHours();
+          const min = String(d.getMinutes()).padStart(2, '0');
+          const ap = h >= 12 ? '오후' : '오전';
+          const displayH = h % 12 || 12;
+          timeStr = ` ${ap} ${displayH}:${min}`;
+        }
+
+        const type = resolveScheduleType(item);
+        const badgeStyle = TYPE_BADGE_STYLES[type] || TYPE_BADGE_STYLES['기타'];
+        const isActive = (idx === nextIndex);
+        const activeClass = isActive ? ' active' : '';
+
+        let extraInfo = '';
+        if (item.channel) {
+          extraInfo = `<span class="user-sp-extra-info">(${escapeHtml(item.channel)})</span>`;
+        } else if (item.location) {
+          extraInfo = `<span class="user-sp-extra-info">📍${escapeHtml(item.location)}</span>`;
+        }
+
+        const safeTitle = escapeHtml(item.title || item.message || '스케줄');
+
+        html += `
+          <div class="user-sp-item${activeClass}" data-index="${idx}">
+            <div class="user-sp-line">
+              <span class="user-sp-datetime">[${dateLabel}${timeStr}]</span>
+              <span class="user-sp-type-badge" style="background: ${badgeStyle.bg}; color: ${badgeStyle.color};">${escapeHtml(type)}</span>
+              <span class="user-sp-title-area">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeTitle}</span>
+                ${extraInfo}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+
+      // 클릭 시 상세 팝업 열기
+      listEl.querySelectorAll('.user-sp-item').forEach((el, idx) => {
+        el.addEventListener('click', () => {
+          showUserPreviewDetail(userDisplayItems[idx]);
+        });
+      });
+
+      // 활성 일정으로 스크롤 이동
+      setTimeout(() => {
+        const activeEl = listEl.querySelector('.user-sp-item.active');
+        if (activeEl) {
+          activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 50);
+    }
+
+    function showUserPreviewDetail(item) {
+      if (!item) return;
+      const layer = document.getElementById('userPreviewDetailLayer');
+      const badgeRow = document.getElementById('updBadgeRow');
+      const titleEl = document.getElementById('updTitle');
+      const dateTimeEl = document.getElementById('updDateTime');
+      const channelEl = document.getElementById('updChannel');
+      const locationEl = document.getElementById('updLocation');
+      const messageEl = document.getElementById('updMessage');
+      const linkContainer = document.getElementById('updLinkContainer');
+
+      const type = resolveScheduleType(item);
+      const badgeStyle = TYPE_BADGE_STYLES[type] || TYPE_BADGE_STYLES['기타'];
+
+      badgeRow.innerHTML = `<span class="user-sp-type-badge" style="background: ${badgeStyle.bg}; color: ${badgeStyle.color}; font-size: 11px; padding: 2px 7px;">${escapeHtml(type)}</span>`;
+      titleEl.textContent = item.title || item.message || '제목 없음';
+
+      let timeText = '종일';
+      if (!item.isAllday && item.startTime) {
+        const d = new Date(item.startTime);
+        const h = d.getHours();
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const ap = h >= 12 ? '오후' : '오전';
+        timeText = `${ap} ${h % 12 || 12}:${min}`;
+      }
+      dateTimeEl.textContent = `🗓️ ${item.startTime ? item.startTime.slice(0, 10) : ''} ${timeText}`;
+
+      channelEl.textContent = item.channel ? `📺 채널/방송사: ${item.channel}` : '';
+      channelEl.style.display = item.channel ? 'block' : 'none';
+
+      locationEl.textContent = item.location ? `📍 장소: ${item.location}` : '';
+      locationEl.style.display = item.location ? 'block' : 'none';
+
+      if (item.message && item.message.trim() && item.message.trim() !== item.title) {
+        messageEl.textContent = item.message.trim();
+        messageEl.style.display = 'block';
+      } else {
+        messageEl.style.display = 'none';
+      }
+
+      const linkUrl = item.url || item.link;
+      if (linkUrl) {
+        linkContainer.innerHTML = `
+          <a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer" class="btn-action" style="padding: 6px 12px; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px;">
+            🔗 바로가기
+          </a>
+        `;
+      } else {
+        linkContainer.innerHTML = '';
+      }
+
+      layer.style.display = 'flex';
+    }
+
+    function closeUpdDetail() {
+      const layer = document.getElementById('userPreviewDetailLayer');
+      if (layer) layer.style.display = 'none';
+    }
+
+    // 모달 이벤트 바인딩
+    document.getElementById('btnOpenUserPreview').addEventListener('click', openUserPreviewModal);
+    document.getElementById('btnCloseUserPreviewModal').addEventListener('click', closeUserPreviewModal);
+    document.getElementById('btnToggleUserPreviewTheme').addEventListener('click', toggleUserPreviewTheme);
+    document.getElementById('btnCloseUpdDetail').addEventListener('click', closeUpdDetail);
+
+    document.getElementById('btnUserPrevMonth').addEventListener('click', () => {
+      userPreviewDate.setMonth(userPreviewDate.getMonth() - 1);
+      closeUpdDetail();
+      renderUserPreviewSchedules();
+    });
+
+    document.getElementById('btnUserNextMonth').addEventListener('click', () => {
+      userPreviewDate.setMonth(userPreviewDate.getMonth() + 1);
+      closeUpdDetail();
+      renderUserPreviewSchedules();
+    });
+
+    document.getElementById('btnUserToday').addEventListener('click', () => {
+      userPreviewDate = new Date();
+      closeUpdDetail();
+      renderUserPreviewSchedules();
     });
 
     // 앱 초기화 진입점
