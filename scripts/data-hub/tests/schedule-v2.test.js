@@ -88,6 +88,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   const filterEnabled = filterRules.enabled !== false;
   const excludeShorts = filterRules.excludeShorts !== false;
   const excludeTypes = Array.isArray(filterRules.excludeTypes) ? filterRules.excludeTypes : [];
+  const excludeChannels = Array.isArray(filterRules.excludeChannels) ? filterRules.excludeChannels : [];
   const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
     ? filterRules.excludeKeywords
     : DEFAULT_EXCLUDE_KEYWORDS;
@@ -144,6 +145,23 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     // 관리자 작성 또는 명시적 수정본은 필터링에서 보호
     const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
     if (!isProtected && excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) return;
+
+    // 채널(channel / extField)별 제외
+    if (!isProtected && excludeChannels.length > 0) {
+      const channelValues = [
+        item.channel,
+        (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)
+      ].filter(Boolean).map(s => s.trim().toLowerCase());
+
+      const isChannelExcluded = excludeChannels.some(ex => {
+        const cleanEx = ex.trim().toLowerCase();
+        if (!cleanEx) return false;
+        return channelValues.some(c => c === cleanEx || c.includes(cleanEx));
+      });
+
+      if (isChannelExcluded) return;
+    }
+
     if (!isProtected && matchFilter(item)) return;
 
     // 수정 필드 적용 (수정된 것만 덮어쓰고 원본은 보존)
@@ -579,6 +597,25 @@ runTest("Test 8: filterRules 동적 필터링 및 관리자 작성/수정 일정
   assert.ok(!typeTitles.includes("음악중심 방송"), "방송 종류는 제외되어야 함");
   assert.ok(typeTitles.includes("단독 콘서트"), "제외되지 않은 공연은 유지되어야 함");
   assert.ok(typeTitles.includes("수동 등록 팬싸"), "커스텀 등록된 팬싸는 보호되어야 함");
+
+  // 6) 채널별 제외 (excludeChannels) 검증
+  const itemsWithChannels = [
+    { id: "blip_twitter", title: "공식 트윗 일정", channel: "Twitter", source: "blip", startTime: "2026-08-28" },
+    { id: "blip_blipch", title: "블립 단독 콘텐츠", extField: { key: "채널", value: "블립 - blip" }, source: "blip", startTime: "2026-08-29" },
+    { id: "blip_mbc", title: "쇼 음악중심", channel: "MBC", source: "blip", startTime: "2026-08-30" },
+    { id: "custom_twitter", title: "수동 등록 트윗", channel: "Twitter", source: "custom", _isCustom: true, startTime: "2026-08-31" }
+  ];
+  const channelsExcluded = mergeSchedulesV2(itemsWithChannels, {
+    filterRules: {
+      excludeKeywords: [],
+      excludeChannels: ["Twitter", "블립"]
+    }
+  });
+  const chTitles = channelsExcluded.map(x => x.title);
+  assert.ok(!chTitles.includes("공식 트윗 일정"), "Twitter 채널 일정은 제외되어야 함");
+  assert.ok(!chTitles.includes("블립 단독 콘텐츠"), "블립 채널 일정은 제외되어야 함");
+  assert.ok(chTitles.includes("쇼 음악중심"), "제외되지 않은 MBC 일정은 유지되어야 함");
+  assert.ok(chTitles.includes("수동 등록 트윗"), "커스텀 등록된 트윗 일정은 보호되어야 함");
 });
 
 console.log("==================================================");

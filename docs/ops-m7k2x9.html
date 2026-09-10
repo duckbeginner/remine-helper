@@ -847,12 +847,17 @@
       </div>
       <div class="filter-chips">
         <button class="chip active" data-type="all">전체</button>
+        <button class="chip" data-type="방송">방송</button>
+        <button class="chip" data-type="라디오">라디오</button>
         <button class="chip" data-type="영상">영상</button>
-        <button class="chip" data-type="방송">방송/라디오</button>
         <button class="chip" data-type="행사">행사</button>
         <button class="chip" data-type="공연">공연</button>
         <button class="chip" data-type="팬사인회">팬사인회</button>
         <button class="chip" data-type="기념일">기념일</button>
+        <button class="chip" data-type="화보">화보</button>
+        <button class="chip" data-type="릴리즈">릴리즈</button>
+        <button class="chip" data-type="공지">공지</button>
+        <button class="chip" data-type="기타">기타</button>
       </div>
     </section>
   </header>
@@ -992,23 +997,60 @@
           <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">종류별 제외 <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(체크한 종류 전체 숨김)</span></div>
           <div id="excludeTypesContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
-              <input type="checkbox" value="팬사인회" style="accent-color: var(--accent-purple);"> 팬사인회
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
-              <input type="checkbox" value="방송" style="accent-color: var(--accent-purple);"> 방송/음악방송
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
-              <input type="checkbox" value="화보" style="accent-color: var(--accent-purple);"> 화보
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
-              <input type="checkbox" value="공지" style="accent-color: var(--accent-purple);"> 공지
+              <input type="checkbox" value="방송" style="accent-color: var(--accent-purple);"> 방송
             </label>
             <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="라디오" style="accent-color: var(--accent-purple);"> 라디오
             </label>
             <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="영상" style="accent-color: var(--accent-purple);"> 영상
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="행사" style="accent-color: var(--accent-purple);"> 행사
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="공연" style="accent-color: var(--accent-purple);"> 공연
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="팬사인회" style="accent-color: var(--accent-purple);"> 팬사인회
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="기념일" style="accent-color: var(--accent-purple);"> 기념일
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="화보" style="accent-color: var(--accent-purple);"> 화보
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="릴리즈" style="accent-color: var(--accent-purple);"> 릴리즈
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="공지" style="accent-color: var(--accent-purple);"> 공지
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="기타" style="accent-color: var(--accent-purple);"> 기타
             </label>
+          </div>
+        </div>
+
+        <!-- 채널별 제외 -->
+        <div style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="font-size: 14px; font-weight: 600;">📺 채널 제외 <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(특정 채널/방송사 일정 숨김)</span></div>
+            <div style="font-size: 11px; color: var(--text-muted);"><span id="channelCount">0</span>개 제외 중</div>
+          </div>
+          <!-- 빠른 추가 칩 -->
+          <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn-quick-channel" data-channel="Twitter" style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+ Twitter</button>
+            <button type="button" class="btn-quick-channel" data-channel="블립 - blip" style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+ 블립 - blip</button>
+          </div>
+          <!-- 새 채널 추가 -->
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input type="text" class="form-input" id="inputNewChannel" placeholder="제외할 채널명 입력 (예: Twitter, Mnet)" style="flex: 1;">
+            <button type="button" class="btn-action" id="btnAddChannel" style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
+          </div>
+          <!-- 등록된 제외 채널 태그들 -->
+          <div id="filterChannelsContainer" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <!-- 채널 칩들이 동적으로 들어감 -->
           </div>
         </div>
 
@@ -1059,6 +1101,7 @@
       enabled: true,
       excludeShorts: true,
       excludeTypes: [],
+      excludeChannels: [],
       excludeKeywords: [...DEFAULT_EXCLUDE_KEYWORDS]
     };
     let pendingFilterRules = null;
@@ -1272,6 +1315,7 @@
               enabled: overridesJson.filterRules.enabled !== false,
               excludeShorts: overridesJson.filterRules.excludeShorts !== false,
               excludeTypes: Array.isArray(overridesJson.filterRules.excludeTypes) ? [...overridesJson.filterRules.excludeTypes] : [],
+              excludeChannels: Array.isArray(overridesJson.filterRules.excludeChannels) ? [...overridesJson.filterRules.excludeChannels] : [],
               excludeKeywords: [...overridesJson.filterRules.excludeKeywords]
             };
           }
@@ -1405,6 +1449,30 @@
       }
     }
 
+    // 일정 분류 결정 헬퍼 (Mnet, Blip, YouTube 1:1 표준 매핑)
+    function resolveScheduleType(item) {
+      if (item.typeText && item.typeText.trim()) return item.typeText.trim();
+      const text = ((item.title || '') + ' ' + (item.message || '') + ' ' + (item.channel || '')).toLowerCase();
+      if (/라디오|파워fm|fm4u|sbs 파워|정오의 희망곡|가요광장|영스트리트|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|러브게임/i.test(text)) return '라디오';
+      if (/팬사인|팬싸|영통|대면\s*사인|fansign/i.test(text)) return '팬사인회';
+      if (/콘서트|concert|쇼케이스|showcase|단독\s*공연/i.test(text)) return '공연';
+      if (/페스티벌|festival|축제|대동제|시구|시타|행사/i.test(text)) return '행사';
+      if (/화보|nylon/i.test(text)) return '화보';
+      if (/생일|birthday|기념일|day!|데뷔/i.test(text)) return '기념일';
+      if (/공지|notice|응모|이벤트 안내|안내/i.test(text)) return '공지';
+      if (/릴리즈|concept photo|track list|teaser|발매|album/i.test(text)) return '릴리즈';
+      if (item.source === 'youtube' || /자컨|비하인드|vlog|브이로그/i.test(text)) return '영상';
+
+      if (item.typeId === 1) return '방송';
+      if (item.typeId === 2) return '릴리즈';
+      if (item.typeId === 3) return '공지';
+      if (item.typeId === 4) return '기념일';
+      if (item.typeId === 5) return '행사';
+      if (item.typeId === 6) return '화보';
+      if (item.typeId === 8) return '공지';
+      return '기타';
+    }
+
     // 렌더링
     function renderSchedules() {
       const container = document.getElementById('scheduleListContainer');
@@ -1431,15 +1499,10 @@
           if (!overlapsMonth) return false;
         }
 
-        // 2. 카테고리 필터
+        // 2. 카테고리 필터 (임의 묶음 없이 1:1 매칭)
         if (activeCategory !== 'all') {
-          const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
-          if (activeCategory === '영상' && !type.includes('영상')) return false;
-          if (activeCategory === '방송' && !type.includes('방송') && !type.includes('라디오')) return false;
-          if (activeCategory === '행사' && !type.includes('행사')) return false;
-          if (activeCategory === '공연' && !type.includes('공연')) return false;
-          if (activeCategory === '팬사인회' && !type.includes('팬사인회')) return false;
-          if (activeCategory === '기념일' && !type.includes('기념일')) return false;
+          const itemCat = resolveScheduleType(item);
+          if (itemCat !== activeCategory) return false;
         }
 
         // 3. 검색 필터
@@ -1724,12 +1787,14 @@
     let tempFilterEnabled = true;
     let tempExcludeShorts = true;
     let tempExcludeTypes = [];
+    let tempExcludeChannels = [];
 
     function openFilterModal() {
       const activeRules = pendingFilterRules || currentFilterRules;
       tempFilterEnabled = activeRules.enabled !== false;
       tempExcludeShorts = activeRules.excludeShorts !== false;
       tempExcludeTypes = Array.isArray(activeRules.excludeTypes) ? [...activeRules.excludeTypes] : [];
+      tempExcludeChannels = Array.isArray(activeRules.excludeChannels) ? [...activeRules.excludeChannels] : [];
       tempFilterKeywords = [...(activeRules.excludeKeywords || DEFAULT_EXCLUDE_KEYWORDS)];
 
       document.getElementById('filterEngineToggle').checked = tempFilterEnabled;
@@ -1739,7 +1804,10 @@
         cb.checked = tempExcludeTypes.includes(cb.value);
       });
       document.getElementById('inputNewKeyword').value = '';
+      const inputCh = document.getElementById('inputNewChannel');
+      if (inputCh) inputCh.value = '';
       renderFilterChips();
+      renderChannelChips();
       document.getElementById('filterModalOverlay').classList.add('active');
     }
 
@@ -1785,6 +1853,48 @@
       input.focus();
     }
 
+    function renderChannelChips() {
+      const container = document.getElementById('filterChannelsContainer');
+      const badge = document.getElementById('channelCount');
+      if (badge) badge.textContent = tempExcludeChannels.length;
+      if (!container) return;
+      if (tempExcludeChannels.length === 0) {
+        container.innerHTML = '<span style="font-size:12px; color:var(--text-muted); padding:4px;">등록된 제외 채널이 없습니다.</span>';
+        return;
+      }
+      let html = '';
+      tempExcludeChannels.forEach((ch, idx) => {
+        html += `
+          <span class="filter-chip-tag" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
+            <span>${escapeHtml(ch)}</span>
+            <span class="filter-chip-del" onclick="window.removeFilterChannel(${idx})" title="삭제">✕</span>
+          </span>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    window.removeFilterChannel = function(idx) {
+      if (idx >= 0 && idx < tempExcludeChannels.length) {
+        tempExcludeChannels.splice(idx, 1);
+        renderChannelChips();
+      }
+    };
+
+    function addFilterChannel(val) {
+      const input = document.getElementById('inputNewChannel');
+      const channelName = (val !== undefined ? val : (input ? input.value : '')).trim();
+      if (!channelName) return;
+      if (!tempExcludeChannels.includes(channelName)) {
+        tempExcludeChannels.push(channelName);
+        renderChannelChips();
+      }
+      if (val === undefined && input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
     document.getElementById('btnOpenFilterModal').addEventListener('click', openFilterModal);
     document.getElementById('btnCloseFilterModal').addEventListener('click', closeFilterModal);
     document.getElementById('btnCancelFilterModal').addEventListener('click', closeFilterModal);
@@ -1797,16 +1907,37 @@
       }
     });
 
+    const btnAddCh = document.getElementById('btnAddChannel');
+    if (btnAddCh) btnAddCh.addEventListener('click', () => addFilterChannel());
+    const inputNewCh = document.getElementById('inputNewChannel');
+    if (inputNewCh) {
+      inputNewCh.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addFilterChannel();
+        }
+      });
+    }
+
+    document.querySelectorAll('.btn-quick-channel').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ch = btn.getAttribute('data-channel');
+        if (ch) addFilterChannel(ch);
+      });
+    });
+
     document.getElementById('btnResetDefaultKeywords').addEventListener('click', () => {
       if (confirm('기본 필터 세트(투표/직캠/이벤트 36개 키워드)로 복원하시겠습니까?')) {
         tempFilterKeywords = [...DEFAULT_EXCLUDE_KEYWORDS];
         tempFilterEnabled = true;
         tempExcludeShorts = true;
         tempExcludeTypes = [];
+        tempExcludeChannels = [];
         document.getElementById('filterEngineToggle').checked = true;
         document.getElementById('filterExcludeShorts').checked = true;
         document.querySelectorAll('#excludeTypesContainer input[type=checkbox]').forEach(cb => { cb.checked = false; });
         renderFilterChips();
+        renderChannelChips();
       }
     });
 
@@ -1821,6 +1952,7 @@
         enabled,
         excludeShorts,
         excludeTypes,
+        excludeChannels: [...tempExcludeChannels],
         excludeKeywords: [...tempFilterKeywords]
       };
       closeFilterModal();

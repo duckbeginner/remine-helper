@@ -705,6 +705,29 @@ async function fetchMonthRawSchedules(year, month) {
             avatarImgPath: m.profileImg || m.avatarImgPath || ''
           })) : [];
 
+          // 블립 원본 분류(typeId 및 내용) 기반 typeText 보강
+          let resolvedTypeText = item.typeText || null;
+          if (!resolvedTypeText && item.typeId) {
+            const combinedText = `${item.title || ''} ${item.message || ''} ${ch || ''}`;
+            if (item.typeId === 1) {
+              resolvedTypeText = /라디오|파워fm|fm4u|sbs 파워|정오의 희망곡|가요광장|영스트리트|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|러브게임/i.test(combinedText) ? '라디오' : '방송';
+            } else if (item.typeId === 2) {
+              resolvedTypeText = '릴리즈';
+            } else if (item.typeId === 3) {
+              resolvedTypeText = '공지';
+            } else if (item.typeId === 4) {
+              resolvedTypeText = '기념일';
+            } else if (item.typeId === 5) {
+              resolvedTypeText = /팬사인회|팬사인|팬싸|영통|대면\s*사인|fansign/i.test(combinedText) ? '팬사인회' : (/콘서트|concert|쇼케이스|showcase|공연/i.test(combinedText) ? '공연' : '행사');
+            } else if (item.typeId === 6) {
+              resolvedTypeText = /화보|nylon/i.test(combinedText) ? '화보' : '행사';
+            } else if (item.typeId === 8) {
+              resolvedTypeText = '공지';
+            } else {
+              resolvedTypeText = '기타';
+            }
+          }
+
           return {
             id: generateScheduleId('blip', item),
             title: item.title ? item.title.trim() : "",
@@ -713,6 +736,7 @@ async function fetchMonthRawSchedules(year, month) {
             isAllday: Boolean(item.isAllday),
             message: item.message || "",
             typeId: item.typeId || null,
+            typeText: resolvedTypeText,
             location: loc,
             channel: ch,
             source: 'blip',
@@ -870,6 +894,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   const filterEnabled = filterRules.enabled !== false;
   const excludeShorts = filterRules.excludeShorts !== false; // 기본값 true
   const excludeTypes = Array.isArray(filterRules.excludeTypes) ? filterRules.excludeTypes : [];
+  const excludeChannels = Array.isArray(filterRules.excludeChannels) ? filterRules.excludeChannels : [];
   const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
     ? filterRules.excludeKeywords
     : DEFAULT_EXCLUDE_KEYWORDS;
@@ -940,6 +965,25 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     if (!isProtected && excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) {
       filterCount++;
       return;
+    }
+
+    // 채널(channel / extField)별 제외
+    if (!isProtected && excludeChannels.length > 0) {
+      const channelValues = [
+        item.channel,
+        (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)
+      ].filter(Boolean).map(s => s.trim().toLowerCase());
+
+      const isChannelExcluded = excludeChannels.some(ex => {
+        const cleanEx = ex.trim().toLowerCase();
+        if (!cleanEx) return false;
+        return channelValues.some(c => c === cleanEx || c.includes(cleanEx));
+      });
+
+      if (isChannelExcluded) {
+        filterCount++;
+        return;
+      }
     }
 
     if (!isProtected && matchFilter(item)) {
