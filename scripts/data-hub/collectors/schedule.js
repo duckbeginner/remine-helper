@@ -796,15 +796,16 @@ export async function collectScheduleData(allYtVideos = []) {
   // YouTube oEmbed 사전 일괄 보강 수행!
   await enrichSchedulesWithYouTubeOEmbed(mergedList, allYtVideos);
 
-  // [쇼츠 일정 원천 제외] 쇼츠(_isShorts)로 판별된 항목은 스케줄 아카이브에 등록하지 않고 완전 제외
-  const nonShortsList = mergedList.filter(item => !item._isShorts);
-  const removedShortsCount = mergedList.length - nonShortsList.length;
-  if (removedShortsCount > 0) {
-    console.log(`  ✂️ [Schedule Filter] 스케줄 목록에서 쇼츠(Shorts) ${removedShortsCount}건 원천 제외 완료`);
-  }
+  // [oEmbed 이후 2차 쇼츠 URL 체크] oEmbed 보강 후 확정된 URL 기반으로 누락 Shorts 추가 감지
+  mergedList.forEach(item => {
+    if (!item._isShorts && item.url && /youtube\.com\/shorts\//i.test(item.url)) {
+      item._isShorts = true;
+    }
+  });
 
   // [수동 보정 규칙 적용] Gist의 schedule-overrides.json (수정/삭제/추가) 최우선 반영!
-  const overriddenList = await applyScheduleOverrides(nonShortsList);
+  // ※ 쇼츠 제외(excludeShorts) 및 종류별 제외(excludeTypes)는 mergeSchedulesV2 내 filterRules로 제어
+  const overriddenList = await applyScheduleOverrides(mergedList);
 
   // 날짜 순 정렬
   overriddenList.sort((a, b) => parseSafeDate(a.startTime).getTime() - parseSafeDate(b.startTime).getTime());
@@ -867,6 +868,8 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
 
   // 필터 규칙 설정
   const filterEnabled = filterRules.enabled !== false;
+  const excludeShorts = filterRules.excludeShorts !== false; // 기본값 true
+  const excludeTypes = Array.isArray(filterRules.excludeTypes) ? filterRules.excludeTypes : [];
   const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
     ? filterRules.excludeKeywords
     : DEFAULT_EXCLUDE_KEYWORDS;
@@ -924,8 +927,21 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
       return;
     }
 
+    // 쇼츠 제외 (커스텀 일정은 보호 대상 제외)
+    if (excludeShorts && item._isShorts && !item._isCustom) {
+      filterCount++;
+      return;
+    }
+
     // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드가 있는 항목은 필터링에서 보호
     const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+
+    // 종류(typeText)별 제외
+    if (!isProtected && excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) {
+      filterCount++;
+      return;
+    }
+
     if (!isProtected && matchFilter(item)) {
       filterCount++;
       return;

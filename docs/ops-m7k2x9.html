@@ -849,7 +849,9 @@
         <button class="chip active" data-type="all">전체</button>
         <button class="chip" data-type="영상">영상</button>
         <button class="chip" data-type="방송">방송/라디오</button>
-        <button class="chip" data-type="공연">행사/공연</button>
+        <button class="chip" data-type="행사">행사</button>
+        <button class="chip" data-type="공연">공연</button>
+        <button class="chip" data-type="팬사인회">팬사인회</button>
         <button class="chip" data-type="기념일">기념일</button>
       </div>
     </section>
@@ -964,14 +966,54 @@
           아래 키워드가 포함된 일정(투표, 직캠, 럭키드로우 등)은 수집 시 캘린더에서 자동으로 제외됩니다.
         </p>
 
-        <!-- 필터 활성화 토글 -->
-        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+        <!-- 제외 필터 엔진 작동 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
           <span style="font-size: 14px; font-weight: 600;">제외 필터 엔진 작동</span>
           <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
             <input type="checkbox" id="filterEngineToggle" checked style="opacity: 0; width: 0; height: 0;">
             <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
           </label>
         </div>
+
+        <!-- 쇼츠 제외 토글 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
+          <div>
+            <div style="font-size: 14px; font-weight: 600;">쇼츠(Shorts) 영상 제외</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">youtube.com/shorts 형식 영상을 지정에서 제외</div>
+          </div>
+          <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
+            <input type="checkbox" id="filterExcludeShorts" checked style="opacity: 0; width: 0; height: 0;">
+            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
+          </label>
+        </div>
+
+        <!-- 종류별 제외 -->
+        <div style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">종류별 제외 <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(체크한 종류 전체 숨김)</span></div>
+          <div id="excludeTypesContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="팬사인회" style="accent-color: var(--accent-purple);"> 팬사인회
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="방송" style="accent-color: var(--accent-purple);"> 방송/음악방송
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="화보" style="accent-color: var(--accent-purple);"> 화보
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="공지" style="accent-color: var(--accent-purple);"> 공지
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="라디오" style="accent-color: var(--accent-purple);"> 라디오
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+              <input type="checkbox" value="기타" style="accent-color: var(--accent-purple);"> 기타
+            </label>
+          </div>
+        </div>
+
+        <!-- 키워드 필터 -->
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);">🔑 키워드 제외</div>
 
         <!-- 새 키워드 추가 -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -1015,6 +1057,8 @@
 
     let currentFilterRules = {
       enabled: true,
+      excludeShorts: true,
+      excludeTypes: [],
       excludeKeywords: [...DEFAULT_EXCLUDE_KEYWORDS]
     };
     let pendingFilterRules = null;
@@ -1226,6 +1270,8 @@
           if (overridesJson.filterRules && Array.isArray(overridesJson.filterRules.excludeKeywords)) {
             currentFilterRules = {
               enabled: overridesJson.filterRules.enabled !== false,
+              excludeShorts: overridesJson.filterRules.excludeShorts !== false,
+              excludeTypes: Array.isArray(overridesJson.filterRules.excludeTypes) ? [...overridesJson.filterRules.excludeTypes] : [],
               excludeKeywords: [...overridesJson.filterRules.excludeKeywords]
             };
           }
@@ -1389,8 +1435,10 @@
         if (activeCategory !== 'all') {
           const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
           if (activeCategory === '영상' && !type.includes('영상')) return false;
-          if (activeCategory === '방송' && !type.includes('방송')) return false;
-          if (activeCategory === '공연' && !type.includes('공연') && !type.includes('행사')) return false;
+          if (activeCategory === '방송' && !type.includes('방송') && !type.includes('라디오')) return false;
+          if (activeCategory === '행사' && !type.includes('행사')) return false;
+          if (activeCategory === '공연' && !type.includes('공연')) return false;
+          if (activeCategory === '팬사인회' && !type.includes('팬사인회')) return false;
           if (activeCategory === '기념일' && !type.includes('기념일')) return false;
         }
 
@@ -1674,13 +1722,22 @@
     // === 제외 필터 설정 모달 제어 ===
     let tempFilterKeywords = [];
     let tempFilterEnabled = true;
+    let tempExcludeShorts = true;
+    let tempExcludeTypes = [];
 
     function openFilterModal() {
       const activeRules = pendingFilterRules || currentFilterRules;
       tempFilterEnabled = activeRules.enabled !== false;
+      tempExcludeShorts = activeRules.excludeShorts !== false;
+      tempExcludeTypes = Array.isArray(activeRules.excludeTypes) ? [...activeRules.excludeTypes] : [];
       tempFilterKeywords = [...(activeRules.excludeKeywords || DEFAULT_EXCLUDE_KEYWORDS)];
 
       document.getElementById('filterEngineToggle').checked = tempFilterEnabled;
+      document.getElementById('filterExcludeShorts').checked = tempExcludeShorts;
+      // excludeTypes 체크박스 상태 동기화
+      document.querySelectorAll('#excludeTypesContainer input[type=checkbox]').forEach(cb => {
+        cb.checked = tempExcludeTypes.includes(cb.value);
+      });
       document.getElementById('inputNewKeyword').value = '';
       renderFilterChips();
       document.getElementById('filterModalOverlay').classList.add('active');
@@ -1744,15 +1801,26 @@
       if (confirm('기본 필터 세트(투표/직캠/이벤트 36개 키워드)로 복원하시겠습니까?')) {
         tempFilterKeywords = [...DEFAULT_EXCLUDE_KEYWORDS];
         tempFilterEnabled = true;
+        tempExcludeShorts = true;
+        tempExcludeTypes = [];
         document.getElementById('filterEngineToggle').checked = true;
+        document.getElementById('filterExcludeShorts').checked = true;
+        document.querySelectorAll('#excludeTypesContainer input[type=checkbox]').forEach(cb => { cb.checked = false; });
         renderFilterChips();
       }
     });
 
     document.getElementById('btnApplyFilterModal').addEventListener('click', () => {
       const enabled = document.getElementById('filterEngineToggle').checked;
+      const excludeShorts = document.getElementById('filterExcludeShorts').checked;
+      const excludeTypes = [];
+      document.querySelectorAll('#excludeTypesContainer input[type=checkbox]').forEach(cb => {
+        if (cb.checked) excludeTypes.push(cb.value);
+      });
       pendingFilterRules = {
         enabled,
+        excludeShorts,
+        excludeTypes,
         excludeKeywords: [...tempFilterKeywords]
       };
       closeFilterModal();

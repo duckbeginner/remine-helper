@@ -86,6 +86,8 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   } = (overridesV2 || {});
 
   const filterEnabled = filterRules.enabled !== false;
+  const excludeShorts = filterRules.excludeShorts !== false;
+  const excludeTypes = Array.isArray(filterRules.excludeTypes) ? filterRules.excludeTypes : [];
   const excludeKeywords = Array.isArray(filterRules.excludeKeywords)
     ? filterRules.excludeKeywords
     : DEFAULT_EXCLUDE_KEYWORDS;
@@ -136,8 +138,12 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     if (ov && ov.isDeleted) return;
     if (item.isDeleted) return;
 
+    // 쇼츠 제외 (커스텀 일정은 보호 대상 제외)
+    if (excludeShorts && item._isShorts && !item._isCustom) return;
+
     // 관리자 작성 또는 명시적 수정본은 필터링에서 보호
     const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+    if (!isProtected && excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) return;
     if (!isProtected && matchFilter(item)) return;
 
     // 수정 필드 적용 (수정된 것만 덮어쓰고 원본은 보존)
@@ -539,6 +545,40 @@ runTest("Test 8: filterRules 동적 필터링 및 관리자 작성/수정 일정
   };
   const disabledMerged = mergeSchedulesV2(items, disabledFilterOverrides);
   assert.strictEqual(disabledMerged.length, 5, "필터 비활성화 시 모든 5개 일정이 그대로 통과되어야 함");
+
+  // 4) 쇼츠 제외 (excludeShorts: true/false) 검증
+  const itemsWithShorts = [
+    { id: "yt_normal", title: "정규 영상", source: "youtube", _isShorts: false, startTime: "2026-08-25" },
+    { id: "yt_shorts", title: "쇼츠 영상", source: "youtube", _isShorts: true, startTime: "2026-08-26" },
+    { id: "custom_shorts", title: "커스텀 등록 쇼츠", source: "custom", _isShorts: true, _isCustom: true, startTime: "2026-08-27" }
+  ];
+  const shortsExcluded = mergeSchedulesV2(itemsWithShorts, { filterRules: { excludeShorts: true } });
+  const shortsTitles1 = shortsExcluded.map(x => x.title);
+  assert.ok(shortsTitles1.includes("정규 영상"), "정규 영상은 유지되어야 함");
+  assert.ok(!shortsTitles1.includes("쇼츠 영상"), "쇼츠 영상은 제외되어야 함");
+  assert.ok(shortsTitles1.includes("커스텀 등록 쇼츠"), "커스텀 일정은 쇼츠여도 보호되어야 함");
+
+  const shortsAllowed = mergeSchedulesV2(itemsWithShorts, { filterRules: { excludeShorts: false } });
+  assert.strictEqual(shortsAllowed.length, 3, "excludeShorts: false 설정 시 쇼츠 포함 3개 유지되어야 함");
+
+  // 5) 종류별 제외 (excludeTypes) 검증
+  const itemsWithTypes = [
+    { id: "ev_fansign", title: "영통 팬사인회", typeText: "팬사인회", source: "blip", startTime: "2026-08-28" },
+    { id: "ev_broadcast", title: "음악중심 방송", typeText: "방송", source: "blip", startTime: "2026-08-29" },
+    { id: "ev_concert", title: "단독 콘서트", typeText: "공연", source: "blip", startTime: "2026-08-30" },
+    { id: "custom_fansign", title: "수동 등록 팬싸", typeText: "팬사인회", source: "custom", _isCustom: true, startTime: "2026-08-31" }
+  ];
+  const typesExcluded = mergeSchedulesV2(itemsWithTypes, {
+    filterRules: {
+      excludeKeywords: [],
+      excludeTypes: ["팬사인회", "방송"]
+    }
+  });
+  const typeTitles = typesExcluded.map(x => x.title);
+  assert.ok(!typeTitles.includes("영통 팬사인회"), "팬사인회 종류는 제외되어야 함");
+  assert.ok(!typeTitles.includes("음악중심 방송"), "방송 종류는 제외되어야 함");
+  assert.ok(typeTitles.includes("단독 콘서트"), "제외되지 않은 공연은 유지되어야 함");
+  assert.ok(typeTitles.includes("수동 등록 팬싸"), "커스텀 등록된 팬싸는 보호되어야 함");
 });
 
 console.log("==================================================");
