@@ -659,7 +659,19 @@ async function fetchMonthRawSchedules(year, month) {
           return json.events.map(ev => {
             const loc = ev.location || ev.place || ev.venue || ev.locationName || ev.address || null;
             const isAllDay = ev.allDay || Boolean(ev.startAtAllDay);
-            const labelName = ev.label ? ev.label.name : null;
+            let labelName = ev.label ? ev.label.name : null;
+            if (labelName === '방송') {
+              const combinedText = `${ev.title || ''} ${ev.description || ''}`;
+              if (/라디오|파워fm|fm4u|sbs 파워|정오의 희망곡|가요광장|영스트리트|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|러브게임/i.test(combinedText)) {
+                labelName = '라디오';
+              }
+            } else if (labelName === '공연') {
+              const combinedText = `${ev.title || ''} ${ev.description || ''}`;
+              if (/팬사인회|팬사인|팬싸|영통|대면\s*사인|fansign/i.test(combinedText)) {
+                labelName = '팬사인회';
+              }
+            }
+
             const attendees = Array.isArray(ev.starAttendees) ? ev.starAttendees.map(a => ({
               id: a.id,
               nickname: a.nickname,

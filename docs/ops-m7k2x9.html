@@ -527,8 +527,14 @@
 
     .badge-video { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
     .badge-broadcast { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-    .badge-event { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-radio { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .badge-concert { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-fansign { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+    .badge-event { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; }
     .badge-special { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge-pictorial { background: rgba(129, 140, 248, 0.15); color: #a5b4fc; }
+    .badge-release { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+    .badge-notice { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
     .badge-default { background: rgba(142, 153, 172, 0.15); color: #94a3b8; }
 
     .state-badge {
@@ -921,11 +927,17 @@
           <div class="form-group">
             <label class="form-label">분류</label>
             <select class="form-select" id="formType">
-              <option value="영상">영상 (유튜브/클립)</option>
-              <option value="방송">방송 (음방/라디오/예능)</option>
-              <option value="공연">행사/공연 (팬싸/페스티벌)</option>
+              <option value="방송">방송</option>
+              <option value="라디오">라디오</option>
+              <option value="영상">영상</option>
+              <option value="행사">행사</option>
+              <option value="공연">공연</option>
+              <option value="팬사인회">팬사인회</option>
               <option value="기념일">기념일</option>
-              <option value="기타">기타 일정</option>
+              <option value="화보">화보</option>
+              <option value="릴리즈">릴리즈</option>
+              <option value="공지">공지</option>
+              <option value="기타">기타</option>
             </select>
           </div>
           <div class="form-group">
@@ -1644,13 +1656,41 @@
             stateBadge = '<span class="state-badge badge-new">수동 등록</span>';
           }
 
-          // 타입 뱃지
-          const type = item.typeText || (item.typeId === 1 ? '방송' : (item.typeId === 5 ? '공연' : '기타'));
+          // 타입 뱃지 및 아이콘 (11개 독립 분류 1:1 매핑)
+          const type = resolveScheduleType(item);
           let typeBadgeClass = 'badge-default';
-          if (type.includes('영상')) typeBadgeClass = 'badge-video';
-          else if (type.includes('방송')) typeBadgeClass = 'badge-broadcast';
-          else if (type.includes('공연') || type.includes('행사')) typeBadgeClass = 'badge-event';
-          else if (type.includes('기념일')) typeBadgeClass = 'badge-special';
+          let placeholderIcon = '📅';
+          if (type === '영상') {
+            typeBadgeClass = 'badge-video';
+            placeholderIcon = '🎬';
+          } else if (type === '방송') {
+            typeBadgeClass = 'badge-broadcast';
+            placeholderIcon = '📺';
+          } else if (type === '라디오') {
+            typeBadgeClass = 'badge-radio';
+            placeholderIcon = '📻';
+          } else if (type === '공연') {
+            typeBadgeClass = 'badge-concert';
+            placeholderIcon = '🎤';
+          } else if (type === '팬사인회') {
+            typeBadgeClass = 'badge-fansign';
+            placeholderIcon = '✍️';
+          } else if (type === '행사') {
+            typeBadgeClass = 'badge-event';
+            placeholderIcon = '🎪';
+          } else if (type === '기념일') {
+            typeBadgeClass = 'badge-special';
+            placeholderIcon = '🎂';
+          } else if (type === '화보') {
+            typeBadgeClass = 'badge-pictorial';
+            placeholderIcon = '📸';
+          } else if (type === '릴리즈') {
+            typeBadgeClass = 'badge-release';
+            placeholderIcon = '💿';
+          } else if (type === '공지') {
+            typeBadgeClass = 'badge-notice';
+            placeholderIcon = '📢';
+          }
 
           // 시간 표기
           let timeStr = '종일';
@@ -1670,7 +1710,7 @@
             <div class="schedule-card ${statusClass}" data-key="${safeKey}">
               <div class="card-top">
                 <div class="thumb-box">
-                  ${item.thumbnail ? `<img src="${escapeHtml(item.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${type.includes('영상') ? '🎬' : (type.includes('방송') ? '📺' : '📅')}</div>`}
+                  ${item.thumbnail ? `<img src="${escapeHtml(item.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${placeholderIcon}</div>`}
                 </div>
                 <div class="card-meta">
                   <div class="meta-badges">
@@ -1743,7 +1783,8 @@
         }
       }
 
-      document.getElementById('formType').value = item.typeText || '기타';
+      const resolvedType = resolveScheduleType(item);
+      document.getElementById('formType').value = item.typeText || resolvedType || '기타';
       document.getElementById('formChannel').value = item.channel || '';
       document.getElementById('formUrl').value = item.url || item.link || '';
       document.getElementById('formLocation').value = item.location || '';
@@ -1759,6 +1800,7 @@
       document.getElementById('editIsNew').value = '1';
 
       document.getElementById('scheduleEditForm').reset();
+      document.getElementById('formType').value = '방송';
       document.getElementById('formTitle').placeholder = '일정 제목';
       document.getElementById('formLocation').placeholder = '장소 (선택)';
       document.getElementById('formUrl').placeholder = 'https://...';
