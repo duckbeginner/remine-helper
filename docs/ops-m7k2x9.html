@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0d0f14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10,12 +12,14 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>RESCENE Ops Portal</title>
-  
+
   <!-- Pretendard & Inter Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
   <style>
     :root {
       --bg-main: #0c0e14;
@@ -56,8 +60,9 @@
       color: var(--text-main);
       min-height: 100vh;
       padding-bottom: 90px;
-      overflow-x: clip; /* overflow-x: hidden 대신 clip을 사용하여 position: sticky 무력화 원천 차단 */
-      background-image: 
+      overflow-x: clip;
+      /* overflow-x: hidden 대신 clip을 사용하여 position: sticky 무력화 원천 차단 */
+      background-image:
         radial-gradient(circle at 15% 10%, rgba(124, 92, 252, 0.12) 0%, transparent 40%),
         radial-gradient(circle at 85% 60%, rgba(244, 63, 94, 0.08) 0%, transparent 40%);
       background-attachment: fixed;
@@ -321,9 +326,10 @@
     }
 
     /* 필터 설정 모달 스타일 */
-    .switch input:checked + .slider {
+    .switch input:checked+.slider {
       background-color: var(--accent-purple) !important;
     }
+
     .slider:before {
       position: absolute;
       content: "";
@@ -335,9 +341,11 @@
       transition: .3s;
       border-radius: 50%;
     }
-    .switch input:checked + .slider:before {
+
+    .switch input:checked+.slider:before {
       transform: translateX(20px);
     }
+
     .filter-chip-tag {
       display: inline-flex;
       align-items: center;
@@ -349,6 +357,7 @@
       border-radius: 14px;
       font-size: 12px;
     }
+
     .filter-chip-del {
       cursor: pointer;
       font-weight: bold;
@@ -525,17 +534,60 @@
       letter-spacing: -0.2px;
     }
 
-    .badge-video { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
-    .badge-broadcast { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-    .badge-radio { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-    .badge-concert { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-    .badge-fansign { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
-    .badge-event { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; }
-    .badge-special { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-    .badge-pictorial { background: rgba(129, 140, 248, 0.15); color: #a5b4fc; }
-    .badge-release { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
-    .badge-notice { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
-    .badge-default { background: rgba(142, 153, 172, 0.15); color: #94a3b8; }
+    .badge-video {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+    }
+
+    .badge-broadcast {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+
+    .badge-radio {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+    }
+
+    .badge-concert {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .badge-fansign {
+      background: rgba(236, 72, 153, 0.15);
+      color: #f472b6;
+    }
+
+    .badge-event {
+      background: rgba(20, 184, 166, 0.15);
+      color: #2dd4bf;
+    }
+
+    .badge-special {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    .badge-pictorial {
+      background: rgba(129, 140, 248, 0.15);
+      color: #a5b4fc;
+    }
+
+    .badge-release {
+      background: rgba(249, 115, 22, 0.15);
+      color: #fb923c;
+    }
+
+    .badge-notice {
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+    }
+
+    .badge-default {
+      background: rgba(142, 153, 172, 0.15);
+      color: #94a3b8;
+    }
 
     .state-badge {
       font-size: 9px;
@@ -544,11 +596,32 @@
       font-weight: 600;
     }
 
-    .badge-mod { background: rgba(124, 92, 252, 0.25); color: #c4b5fd; }
-    .badge-pending { background: rgba(245, 158, 11, 0.25); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
-    .badge-confirmed { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
-    .badge-new { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
-    .badge-del { background: rgba(239, 68, 68, 0.25); color: #fca5a5; }
+    .badge-mod {
+      background: rgba(124, 92, 252, 0.25);
+      color: #c4b5fd;
+    }
+
+    .badge-pending {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .badge-confirmed {
+      background: rgba(16, 185, 129, 0.25);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-new {
+      background: rgba(16, 185, 129, 0.25);
+      color: #6ee7b7;
+    }
+
+    .badge-del {
+      background: rgba(239, 68, 68, 0.25);
+      color: #fca5a5;
+    }
 
     .card-title {
       font-size: 14px;
@@ -597,7 +670,52 @@
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      line-height: 1.2;
+      transition: all 0.15s ease;
+    }
+
+    /* Suggestion chip */
+    .suggest-chip {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      font-size: 11.5px;
+      cursor: pointer;
+      margin-right: 6px;
+      display: inline-flex;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    .suggest-chip:hover { background: rgba(56, 189, 248, 0.25); }
+
+    .apply-all-btn {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: var(--radius-sm);
+      padding: 0 8px;
+      height: 24px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      box-sizing: border-box;
+      line-height: 1.2;
+      margin: 0;
+      transition: all 0.15s ease;
+    }
+    .apply-all-btn:hover {
+      background: rgba(56, 189, 248, 0.3);
+      border-color: rgba(56, 189, 248, 0.7);
     }
 
     .btn-action:hover {
@@ -636,12 +754,14 @@
 
     .bottom-sheet {
       width: 100%;
-      max-height: 90vh;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
       background: #141824;
       border-top: 1px solid var(--border-subtle);
       border-radius: 24px 24px 0 0;
-      padding: 20px 20px 36px;
-      overflow-y: auto;
+      padding: 18px 20px 20px;
+      overflow: hidden;
       transform: translateY(100%);
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -655,14 +775,16 @@
       height: 4px;
       background: rgba(255, 255, 255, 0.2);
       border-radius: 2px;
-      margin: 0 auto 16px;
+      margin: 0 auto 14px;
+      flex-shrink: 0;
     }
 
     .sheet-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
     }
 
     .sheet-title {
@@ -691,7 +813,9 @@
       margin-bottom: 6px;
     }
 
-    .form-input, .form-select, .form-textarea {
+    .form-input,
+    .form-select,
+    .form-textarea {
       width: 100%;
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
@@ -703,8 +827,97 @@
       font-family: inherit;
     }
 
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
       border-color: var(--border-focus);
+    }
+
+    /* 분류(Select) 커스텀 모던 드롭다운 UI */
+    .form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 14px 14px;
+      padding-right: 38px;
+      cursor: pointer;
+    }
+
+    .form-select:hover,
+    .form-select:focus {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    /* 날짜 & 시간 선택기(Picker) 다크모드 및 모던 SVG 스타일링 */
+    .form-input[type="date"],
+    .form-input[type="time"] {
+      color-scheme: dark;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .form-input[type="date"]::-webkit-calendar-picker-indicator {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 16px 16px;
+      cursor: pointer;
+      width: 20px;
+      height: 20px;
+      opacity: 0.95;
+      filter: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input[type="time"]::-webkit-calendar-picker-indicator {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpolyline points='12 6 12 12 16 14'%3E%3C/polyline%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 16px 16px;
+      cursor: pointer;
+      width: 20px;
+      height: 20px;
+      opacity: 0.95;
+      filter: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+    .form-input[type="time"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+      transform: scale(1.15);
+      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
+    }
+
+    /* 하단 고정 카드 미리보기 영역 */
+    .form-live-preview-section {
+      flex-shrink: 0;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .form-live-preview-card {
+      background: rgba(30, 24, 42, 0.95);
+      border: 1px solid rgba(124, 92, 252, 0.35);
+      border-radius: 8px;
+      padding: 9px 12px;
+      min-height: 38px;
+      color: #f1f5f9;
+      font-size: 12.5px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .form-live-preview-card:hover {
+      border-color: #a78bfa;
+      background: rgba(40, 30, 56, 0.98);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(124, 92, 252, 0.3);
     }
 
     .form-textarea {
@@ -721,10 +934,28 @@
       flex: 1;
     }
 
+    #scheduleEditForm {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sheet-form-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
     .sheet-buttons {
       display: flex;
       gap: 10px;
-      margin-top: 24px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
     }
 
     .btn-sheet-del {
@@ -772,7 +1003,9 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* 토스트 알림 (UI 피드백) */
@@ -960,32 +1193,90 @@
       gap: 2px;
       flex-shrink: 0;
     }
+
+    /* 필드별 추천 정보 칩 스타일 */
+    .field-suggestion {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .suggest-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(124, 92, 252, 0.15);
+      border: 1px solid rgba(124, 92, 252, 0.35);
+      color: #c4b5fd;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      font-size: 11px;
+      max-width: 100%;
+      box-sizing: border-box;
+      line-height: 1.4;
+    }
+
+    .suggest-chip:hover {
+      background: rgba(124, 92, 252, 0.28);
+      border-color: rgba(124, 92, 252, 0.6);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .suggest-chip .chip-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(124, 92, 252, 0.35);
+      color: #ede9fe;
+      flex-shrink: 0;
+    }
+
+    .suggest-chip .chip-val {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
+
 <body>
 
   <!-- 404 Not Found 위장 도어락 화면 -->
-  <div id="gatekeeperScreen" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; user-select: none;">
+  <div id="gatekeeperScreen"
+    style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; user-select: none;">
     <div style="max-width: 380px; width: 100%;">
       <!-- 비밀 트리거: 404 글자를 3번 탭하면 시크릿 패널 노출 -->
-      <h1 id="stealthTrigger" style="font-size: 88px; font-weight: 900; letter-spacing: -3px; line-height: 1; margin-bottom: 12px; color: rgba(255, 255, 255, 0.22); cursor: default; transition: color 0.2s;">404</h1>
+      <h1 id="stealthTrigger"
+        style="font-size: 88px; font-weight: 900; letter-spacing: -3px; line-height: 1; margin-bottom: 12px; color: rgba(255, 255, 255, 0.22); cursor: default; transition: color 0.2s;">
+        404</h1>
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Page Not Found</h2>
       <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
         요청하신 페이지를 찾을 수 없거나 이동되었습니다.<br>주소를 다시 확인해 주세요.
       </p>
 
       <!-- 일반 방문자를 위한 가짜 홈 버튼 -->
-      <a id="btnFakeHome" href="./" style="display: inline-block; padding: 10px 22px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 13px; text-decoration: none; font-weight: 500; transition: background 0.2s;">
+      <a id="btnFakeHome" href="./"
+        style="display: inline-block; padding: 10px 22px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 13px; text-decoration: none; font-weight: 500; transition: background 0.2s;">
         홈으로 이동
       </a>
 
       <!-- 스텔스 시크릿 폼 (기본 숨김) -->
-      <form id="gatekeeperForm" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: left; animation: fadeIn 0.3s ease;">
+      <form id="gatekeeperForm"
+        style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: left; animation: fadeIn 0.3s ease;">
         <div style="margin-bottom: 12px;">
-          <input type="password" id="gateTokenInput" class="form-input" placeholder="••••••••••••" required style="padding: 12px 14px; font-size: 15px; letter-spacing: 2px; text-align: center;">
+          <input type="password" id="gateTokenInput" class="form-input" placeholder="••••••••••••" required
+            style="padding: 12px 14px; font-size: 15px; letter-spacing: 2px; text-align: center;">
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
             <input type="checkbox" id="chkRememberDevice" checked style="accent-color: var(--accent-purple);">
             <span>기기 기억하기</span>
@@ -993,7 +1284,8 @@
           <span id="gateErrorMsg" style="display: none; color: #fb7185; font-size: 11px;">Access Denied</span>
         </div>
 
-        <button type="submit" id="btnGateUnlock" class="btn-sheet-save" style="width: 100%; padding: 12px; font-size: 14px; border-radius: var(--radius-sm);">
+        <button type="submit" id="btnGateUnlock" class="btn-sheet-save"
+          style="width: 100%; padding: 12px; font-size: 14px; border-radius: var(--radius-sm);">
           Confirm
         </button>
       </form>
@@ -1008,11 +1300,14 @@
         <div class="brand-logo">R</div>
         <div class="brand-title">
           Schedule Ops
-          <span class="brand-badge" id="envBadge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3);">Authorized</span>
+          <span class="brand-badge" id="envBadge"
+            style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3);">Authorized</span>
         </div>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn-action" id="btnOpenUserPreview" style="display: flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 12px; font-weight: 600; background: rgba(124, 92, 252, 0.16); color: #c4b5fd; border: 1px solid rgba(124, 92, 252, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;" title="사용자에게 표시되는 일정 미리보기 (사이드패널 뷰)">
+        <button type="button" class="btn-action" id="btnOpenUserPreview"
+          style="display: flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 12px; font-weight: 600; background: rgba(124, 92, 252, 0.16); color: #c4b5fd; border: 1px solid rgba(124, 92, 252, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;"
+          title="사용자에게 표시되는 일정 미리보기 (사이드패널 뷰)">
           <span>📱</span> 사용자 뷰
         </button>
         <button class="btn-icon" id="btnOpenFilterModal" title="제외 필터 설정 (투표/직캠 등)">⚙️</button>
@@ -1096,84 +1391,102 @@
         <input type="hidden" id="editItemIndex">
         <input type="hidden" id="editIsNew">
 
-        <div class="form-group">
-          <label class="form-label">일정 제목 *</label>
-          <input type="text" class="form-input" id="formTitle" placeholder="예: [LIVE] MAY 생일 라이브" required>
-        </div>
-
-        <div class="form-row">
+        <div class="sheet-form-body">
           <div class="form-group">
-            <label class="form-label">날짜 *</label>
-            <input type="date" class="form-input" id="formDate" required>
+            <label class="form-label">일정 제목 *</label>
+            <input type="text" class="form-input" id="formTitle" placeholder="예: [LIVE] MAY 생일 라이브" required>
+            <div id="suggestTitle" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
           </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">날짜 *</label>
+              <input type="date" class="form-input" id="formDate" required>
+              <div id="suggestDate" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">시작 시간</label>
+              <input type="time" class="form-input" id="formTime">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">분류</label>
+              <select class="form-select" id="formType">
+                <option value="방송">방송</option>
+                <option value="라디오">라디오</option>
+                <option value="영상">영상</option>
+                <option value="행사">행사</option>
+                <option value="공연">공연</option>
+                <option value="팬사인회">팬사인회</option>
+                <option value="기념일">기념일</option>
+                <option value="화보">화보</option>
+                <option value="릴리즈">릴리즈</option>
+                <option value="공지">공지</option>
+                <option value="기타">기타</option>
+              </select>
+              <div id="suggestType" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">채널 / 방송사</label>
+              <input type="text" class="form-input" id="formChannel" placeholder="예: RESCENE, KBS2">
+              <div id="suggestChannel" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">시작 시간</label>
-            <input type="time" class="form-input" id="formTime">
+            <label class="form-label">관련 링크 (유튜브/SNS/공지/티켓 URL)</label>
+            <div style="display: flex; gap: 6px; align-items: stretch;">
+              <input type="url" class="form-input" id="formUrl" placeholder="https://..."
+                style="flex: 1; height: 40px; box-sizing: border-box;">
+              <button type="button" id="btnFetchUrlMeta" class="btn-action"
+                style="display: none; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; height: 40px; padding: 0 14px; font-size: 12.5px; font-weight: 600; line-height: 1; box-sizing: border-box; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;">
+                ⚡ 정보 가져오기
+              </button>
+            </div>
+            <!-- 메타데이터 참고 & 복사 패널 -->
+            <div id="urlMetaPreviewPanel"
+              style="display: none; margin-top: 8px; padding: 10px 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; font-size: 11.5px;">
+            </div>
           </div>
-        </div>
 
-        <div class="form-row">
           <div class="form-group">
-            <label class="form-label">분류</label>
-            <select class="form-select" id="formType">
-              <option value="방송">방송</option>
-              <option value="라디오">라디오</option>
-              <option value="영상">영상</option>
-              <option value="행사">행사</option>
-              <option value="공연">공연</option>
-              <option value="팬사인회">팬사인회</option>
-              <option value="기념일">기념일</option>
-              <option value="화보">화보</option>
-              <option value="릴리즈">릴리즈</option>
-              <option value="공지">공지</option>
-              <option value="기타">기타</option>
-            </select>
+            <label class="form-label">장소 (오프라인 일정)</label>
+            <input type="text" class="form-input" id="formLocation" placeholder="예: KBS 신관 공개홀, 영등포 타임스퀘어">
+            <div id="suggestLocation" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
           </div>
+
           <div class="form-group">
-            <label class="form-label">채널 / 방송사</label>
-            <input type="text" class="form-input" id="formChannel" placeholder="예: RESCENE, KBS2">
+            <label class="form-label">메모 / 안내 문구</label>
+            <textarea class="form-textarea" id="formMessage" placeholder="일정 세부 안내 내용"></textarea>
+            <div id="suggestMessage" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
+          </div>
+
+          <div class="form-group"
+            style="margin-top: 14px; padding: 12px; background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 8px;">
+            <label class="form-label"
+              style="display: flex; align-items: center; justify-content: space-between; color: #38bdf8; margin-bottom: 6px;">
+              <span>🔗 연관 일정 연결 (동일/중복 일정 합성)</span>
+              <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">체크 시 1개의 대표 일정으로 통합 노출</span>
+            </label>
+            <div id="linkedSchedulesContainer"
+              style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
+              <!-- 같은 날짜의 다른 일정 체크박스 목록 렌더링 -->
+            </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">관련 링크 (유튜브/SNS/공지/티켓 URL)</label>
-          <div style="display: flex; gap: 6px; align-items: stretch;">
-            <input type="url" class="form-input" id="formUrl" placeholder="https://..." style="flex: 1; height: 40px; box-sizing: border-box;">
-            <button type="button" id="btnFetchUrlMeta" class="btn-action" style="display: none; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; height: 40px; padding: 0 14px; font-size: 12.5px; font-weight: 600; line-height: 1; box-sizing: border-box; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;">
-              ⚡ 정보 가져오기
-            </button>
+        <!-- 📱 사용자 표시 카드 미리보기 고정 영역 -->
+        <div class="form-live-preview-section">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: #c4b5fd; display: flex; align-items: center; gap: 4px;">
+              <span>📱 실시간 카드 미리보기</span>
+              <span style="font-size: 10px; font-weight: normal; color: var(--text-muted);">(클릭 시 세부 팝업 미리보기)</span>
+            </span>
+            <span style="font-size: 10.5px; color: #38bdf8; cursor: pointer;" onclick="showCurrentFormDetailPreview()">🔍 세부 팝업 열기</span>
           </div>
-          <!-- 메타데이터 참고 & 복사 패널 -->
-          <div id="urlMetaPreviewPanel" style="display: none; margin-top: 8px; padding: 10px 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; font-size: 11.5px;"></div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">장소 (오프라인 일정)</label>
-          <input type="text" class="form-input" id="formLocation" placeholder="예: KBS 신관 공개홀, 영등포 타임스퀘어">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">메모 / 안내 문구</label>
-          <textarea class="form-textarea" id="formMessage" placeholder="일정 세부 안내 내용"></textarea>
-        </div>
-
-        <div class="form-group" style="margin-top: 14px; padding: 12px; background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 8px;">
-          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between; color: #38bdf8; margin-bottom: 6px;">
-            <span>🔗 연관 일정 연결 (동일/중복 일정 합성)</span>
-            <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">체크 시 1개의 대표 일정으로 통합 노출</span>
-          </label>
-          <div id="linkedSchedulesContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
-            <!-- 같은 날짜의 다른 일정 체크박스 목록 렌더링 -->
-          </div>
-        </div>
-
-        <!-- 📱 사용자 표시 카드 미리보기 영역 -->
-        <div class="form-group" style="margin-top: 14px; padding: 12px; background: rgba(124, 92, 252, 0.08); border: 1px solid rgba(124, 92, 252, 0.28); border-radius: 8px;">
-          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between; color: #c4b5fd; margin-bottom: 8px;">
-            <span style="font-weight: 700;">📱 사용자에게 표시되는 카드 미리보기</span>
-            <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">익스텐션 사이드패널 뷰 실시간 동기화</span>
-          </label>
-          <div id="formLivePreviewCard" style="background: rgba(30, 24, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; min-height: 38px; color: #f1f5f9; font-size: 12.5px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
+          <div id="formLivePreviewCard" class="form-live-preview-card" onclick="showCurrentFormDetailPreview()">
             <!-- 실시간 미리보기 동적 렌더링 -->
           </div>
         </div>
@@ -1201,140 +1514,187 @@
         </p>
 
         <!-- 제외 필터 엔진 작동 -->
-        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
           <span style="font-size: 14px; font-weight: 600;">제외 필터 엔진 작동</span>
           <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
             <input type="checkbox" id="filterEngineToggle" checked style="opacity: 0; width: 0; height: 0;">
-            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
+            <span class="slider round"
+              style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
           </label>
         </div>
 
         <!-- 쇼츠 제외 토글 -->
-        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; border: 1px solid var(--border-subtle);">
           <div>
             <div style="font-size: 14px; font-weight: 600;">쇼츠(Shorts) 영상 제외</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">youtube.com/shorts 형식 영상을 지정에서 제외</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">youtube.com/shorts 형식 영상을 지정에서 제외
+            </div>
           </div>
-          <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
+          <label class="switch"
+            style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
             <input type="checkbox" id="filterExcludeShorts" checked style="opacity: 0; width: 0; height: 0;">
-            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
+            <span class="slider round"
+              style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .3s; border-radius: 24px;"></span>
           </label>
         </div>
 
         <!-- 종류별 제외 -->
-        <div style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
-          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">종류별 제외 <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(체크한 종류 전체 숨김)</span></div>
+        <div
+          style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">종류별 제외 <span
+              style="font-size:11px; color:var(--text-muted); font-weight:400;">(체크한 종류 전체 숨김)</span></div>
           <div id="excludeTypesContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="방송" style="accent-color: var(--accent-purple);"> 방송
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="라디오" style="accent-color: var(--accent-purple);"> 라디오
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="영상" style="accent-color: var(--accent-purple);"> 영상
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="행사" style="accent-color: var(--accent-purple);"> 행사
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="공연" style="accent-color: var(--accent-purple);"> 공연
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="팬사인회" style="accent-color: var(--accent-purple);"> 팬사인회
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="기념일" style="accent-color: var(--accent-purple);"> 기념일
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="화보" style="accent-color: var(--accent-purple);"> 화보
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="릴리즈" style="accent-color: var(--accent-purple);"> 릴리즈
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="공지" style="accent-color: var(--accent-purple);"> 공지
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
+            <label
+              style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.04);">
               <input type="checkbox" value="기타" style="accent-color: var(--accent-purple);"> 기타
             </label>
           </div>
         </div>
 
         <!-- 채널별 제외 -->
-        <div style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
+        <div
+          style="background: var(--bg-card); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px; border: 1px solid var(--border-subtle);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <div style="font-size: 14px; font-weight: 600;">📺 채널 제외 <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(특정 채널/방송사 일정 숨김)</span></div>
+            <div style="font-size: 14px; font-weight: 600;">📺 채널 제외 <span
+                style="font-size:11px; color:var(--text-muted); font-weight:400;">(특정 채널/방송사 일정 숨김)</span></div>
             <div style="font-size: 11px; color: var(--text-muted);"><span id="channelCount">0</span>개 제외 중</div>
           </div>
           <!-- 빠른 추가 칩 -->
           <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
-            <button type="button" class="btn-quick-channel" data-channel="Twitter" style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+ Twitter</button>
-            <button type="button" class="btn-quick-channel" data-channel="블립 - blip" style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+ 블립 - blip</button>
+            <button type="button" class="btn-quick-channel" data-channel="Twitter"
+              style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+
+              Twitter</button>
+            <button type="button" class="btn-quick-channel" data-channel="블립 - blip"
+              style="font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer;">+
+              블립 - blip</button>
           </div>
           <!-- 새 채널 추가 -->
           <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <input type="text" class="form-input" id="inputNewChannel" placeholder="제외할 채널명 입력 (예: Twitter, Mnet)" style="flex: 1;">
-            <button type="button" class="btn-action" id="btnAddChannel" style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
+            <input type="text" class="form-input" id="inputNewChannel" placeholder="제외할 채널명 입력 (예: Twitter, Mnet)"
+              style="flex: 1;">
+            <button type="button" class="btn-action" id="btnAddChannel"
+              style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
           </div>
           <!-- 등록된 제외 채널 태그들 -->
-          <div id="filterChannelsContainer" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div id="filterChannelsContainer"
+            style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
             <!-- 채널 칩들이 동적으로 들어감 -->
           </div>
         </div>
 
         <!-- 키워드 필터 -->
-        <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);">🔑 키워드 제외</div>
+        <div
+          style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);">
+          🔑 키워드 제외</div>
 
         <!-- 새 키워드 추가 -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-          <input type="text" class="form-input" id="inputNewKeyword" placeholder="제외할 키워드 입력 (예: 영통팬싸)" style="flex: 1;">
-          <button type="button" class="btn-action" id="btnAddKeyword" style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
+          <input type="text" class="form-input" id="inputNewKeyword" placeholder="제외할 키워드 입력 (예: 영통팬싸)"
+            style="flex: 1;">
+          <button type="button" class="btn-action" id="btnAddKeyword"
+            style="background: var(--accent-purple); color: #fff; padding: 0 16px; font-weight: 600;">추가</button>
         </div>
 
         <!-- 현재 등록된 키워드 태그들 -->
-        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">등록된 제외 키워드 (<span id="keywordCount">0</span>개):</div>
-        <div id="filterKeywordsContainer" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">등록된 제외 키워드 (<span
+            id="keywordCount">0</span>개):</div>
+        <div id="filterKeywordsContainer"
+          style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px; background: rgba(15,17,23,0.5); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <!-- 칩들이 동적으로 들어감 -->
         </div>
 
         <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
-          <button type="button" class="btn-action" id="btnResetDefaultKeywords" style="font-size: 12px; color: var(--text-muted);">🔄 기본 필터 세트 불러오기</button>
+          <button type="button" class="btn-action" id="btnResetDefaultKeywords"
+            style="font-size: 12px; color: var(--text-muted);">🔄 기본 필터 세트 불러오기</button>
         </div>
       </div>
 
       <div class="sheet-buttons" style="margin-top: 10px;">
-        <button type="button" class="btn-sheet-del" id="btnCancelFilterModal" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle);">취소</button>
+        <button type="button" class="btn-sheet-del" id="btnCancelFilterModal"
+          style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle);">취소</button>
         <button type="button" class="btn-sheet-save" id="btnApplyFilterModal">적용 (저장 대기)</button>
       </div>
     </div>
   </div>
 
   <!-- 사용자 화면 미리보기 모달 (사이드패널 시뮬레이터) -->
-  <div class="modal-overlay" id="userPreviewModalOverlay" style="align-items: center; justify-content: center; padding: 16px;">
+  <div class="modal-overlay" id="userPreviewModalOverlay"
+    style="align-items: center; justify-content: center; padding: 16px;">
     <div class="user-preview-window">
       <!-- 윈도우 상단 타이틀바 -->
-      <div style="padding: 12px 16px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+      <div
+        style="padding: 12px 16px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 15px;">📱</span>
           <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">사용자 화면 미리보기</span>
-          <span style="font-size: 10.5px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd; padding: 2px 6px; border-radius: 4px; font-weight: 600;">사이드패널</span>
+          <span
+            style="font-size: 10.5px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd; padding: 2px 6px; border-radius: 4px; font-weight: 600;">사이드패널</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" id="btnToggleUserPreviewTheme" class="btn-action" style="padding: 3px 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid rgba(255,255,255,0.15);" title="다크/라이트 테마 전환">🌙 다크</button>
-          <button type="button" id="btnCloseUserPreviewModal" class="btn-action" style="padding: 3px 8px; font-size: 11.5px;">✕</button>
+          <button type="button" id="btnToggleUserPreviewTheme" class="btn-action"
+            style="padding: 3px 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid rgba(255,255,255,0.15);"
+            title="다크/라이트 테마 전환">🌙 다크</button>
+          <button type="button" id="btnCloseUserPreviewModal" class="btn-action"
+            style="padding: 3px 8px; font-size: 11.5px;">✕</button>
         </div>
       </div>
 
       <!-- 시뮬레이터 컨트롤 바 (월 선택 & 오늘 이동) -->
-      <div style="padding: 8px 14px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 12px;">
+      <div
+        style="padding: 8px 14px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 12px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" class="btn-action" id="btnUserPrevMonth" style="padding: 2px 6px; font-size: 10.5px;">◀</button>
-          <span id="userPreviewMonthText" style="font-weight: 700; color: #38bdf8; min-width: 65px; text-align: center;">2026. 09</span>
-          <button type="button" class="btn-action" id="btnUserNextMonth" style="padding: 2px 6px; font-size: 10.5px;">▶</button>
+          <button type="button" class="btn-action" id="btnUserPrevMonth"
+            style="padding: 2px 6px; font-size: 10.5px;">◀</button>
+          <span id="userPreviewMonthText"
+            style="font-weight: 700; color: #38bdf8; min-width: 65px; text-align: center;">2026. 09</span>
+          <button type="button" class="btn-action" id="btnUserNextMonth"
+            style="padding: 2px 6px; font-size: 10.5px;">▶</button>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" class="btn-action" id="btnUserToday" style="padding: 2px 8px; font-size: 11px; font-weight: 600;">오늘로</button>
+          <button type="button" class="btn-action" id="btnUserToday"
+            style="padding: 2px 8px; font-size: 11px; font-weight: 600;">오늘로</button>
           <span id="userPreviewCountText" style="color: var(--text-muted); font-size: 11px;">0건</span>
         </div>
       </div>
@@ -1345,24 +1705,31 @@
           <!-- 스케줄 아이템들이 동적으로 들어감 -->
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- 일정 상세 보기 팝업 레이어 (카드 클릭 시 노출) -->
-      <div id="userPreviewDetailLayer" style="display: none; position: absolute; inset: 0; background: rgba(10, 12, 18, 0.88); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10; padding: 20px; flex-direction: column; justify-content: center; align-items: center;">
-        <div style="background: #1e1b29; border: 1px solid rgba(255, 105, 180, 0.3); border-radius: 16px; padding: 18px; width: 100%; max-width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px; color: #f1f5f9;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-            <div id="updBadgeRow" style="display: flex; gap: 4px; align-items: center;"></div>
-            <button type="button" id="btnCloseUpdDetail" class="btn-action" style="padding: 2px 7px; font-size: 11px;">✕</button>
-          </div>
-          <h4 id="updTitle" style="font-size: 15px; font-weight: 700; color: #ff80ab; margin: 0; line-height: 1.4;"></h4>
-          <div style="font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
-            <div id="updDateTime"></div>
-            <div id="updChannel"></div>
-            <div id="updLocation"></div>
-          </div>
-          <div id="updMessage" style="font-size: 12px; color: #cbd5e1; max-height: 120px; overflow-y: auto; white-space: pre-wrap; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; line-height: 1.5;"></div>
-          <div id="updLinkContainer" style="margin-top: 4px; display: flex; justify-content: flex-end;"></div>
-        </div>
+  <!-- 일정 상세 보기 팝업 레이어 (카드 클릭 시 전역 노출) -->
+  <div id="userPreviewDetailLayer"
+    style="display: none; position: fixed; inset: 0; background: rgba(10, 12, 18, 0.88); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 99999; padding: 20px; flex-direction: column; justify-content: center; align-items: center;"
+    onclick="if(event.target === this) closeUpdDetail();">
+    <div
+      style="background: #1e1b29; border: 1px solid rgba(255, 105, 180, 0.3); border-radius: 16px; padding: 18px; width: 100%; max-width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px; color: #f1f5f9;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div id="updBadgeRow" style="display: flex; gap: 4px; align-items: center;"></div>
+        <button type="button" id="btnCloseUpdDetail" class="btn-action"
+          style="padding: 2px 7px; font-size: 11px;">✕</button>
       </div>
+      <h4 id="updTitle" style="font-size: 15px; font-weight: 700; color: #ff80ab; margin: 0; line-height: 1.4;">
+      </h4>
+      <div style="font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+        <div id="updDateTime"></div>
+        <div id="updChannel"></div>
+        <div id="updLocation"></div>
+      </div>
+      <div id="updMessage"
+        style="font-size: 12px; color: #cbd5e1; max-height: 120px; overflow-y: auto; white-space: pre-wrap; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; line-height: 1.5;">
+      </div>
+      <div id="updLinkContainer" style="margin-top: 4px; display: flex; justify-content: flex-end;"></div>
     </div>
   </div>
 
@@ -1589,7 +1956,7 @@
         if (token) {
           try {
             const apiRes = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
-              headers: { 
+              headers: {
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/vnd.github+json'
               },
@@ -2114,11 +2481,11 @@
                 <div class="card-time">⏰ ${timeStr}</div>
                 <div class="card-actions">
                   ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
-                  ${isDeleted ? 
-                    `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` : 
-                    `<button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
+                  ${isDeleted ?
+              `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` :
+              `<button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
                      <button class="btn-action btn-del" onclick="toggleDeleteItem('${safeKeyJs}')">🗑️ 숨김</button>`
-                  }
+            }
                 </div>
               </div>
               ${subStackHtml}
@@ -2444,7 +2811,7 @@
       container.innerHTML = html;
     }
 
-    window.removeFilterKeyword = function(idx) {
+    window.removeFilterKeyword = function (idx) {
       if (idx >= 0 && idx < tempFilterKeywords.length) {
         tempFilterKeywords.splice(idx, 1);
         renderFilterChips();
@@ -2484,7 +2851,7 @@
       container.innerHTML = html;
     }
 
-    window.removeFilterChannel = function(idx) {
+    window.removeFilterChannel = function (idx) {
       if (idx >= 0 && idx < tempExcludeChannels.length) {
         tempExcludeChannels.splice(idx, 1);
         renderChannelChips();
@@ -2647,6 +3014,7 @@
         panel.style.display = 'none';
         panel.innerHTML = '';
       }
+      clearFieldSuggestions();
     }
 
     function copyToClipboard(text, btnElement) {
@@ -2803,7 +3171,7 @@
                 }
               }
             }
-          } catch (eMicro) {}
+          } catch (eMicro) { }
 
           // 2순위: 캐시 확인
           if (!igCaption) {
@@ -2822,21 +3190,13 @@
               const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
               const proxyRes = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(embedUrl)}`, {}, 3000);
               if (proxyRes.ok) {
-                const proxyData = await proxyRes.json();
-                if (proxyData?.contents) {
-                  const matchCap = proxyData.contents.match(/"text":"([^"]+)"/);
-                  if (matchCap) {
-                    try {
-                      igCaption = JSON.parse(`"${matchCap[1]}"`);
-                    } catch (e) {
-                      igCaption = matchCap[1];
-                    }
-                  }
-                  const matchOwner = proxyData.contents.match(/"username":"([^"]+)"/);
-                  if (matchOwner) igAuthor = matchOwner[1];
+                const pRes1 = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`, {}, 3200);
+                if (pRes1.ok) {
+                  const pd1 = await pRes1.json();
+                  htmlStr = pd1?.contents || '';
                 }
               }
-            } catch (err) {}
+            } catch (e1) { }
           }
 
           // 제목 도출: 캡션의 첫 번째 대괄호 태그 우선, 없으면 첫 줄/첫 문장
@@ -2882,7 +3242,7 @@
             else if (ogSite.includes('melon.com')) ogSite = '멜론 티켓';
             else if (ogSite.includes('weverse.io')) ogSite = '위버스';
             else if (ogSite.includes('daum.net')) ogSite = '다음 팬카페';
-          } catch(e) {}
+          } catch (e) { }
 
           try {
             let htmlStr = '';
@@ -2896,7 +3256,7 @@
               try {
                 const pRes2 = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`, {}, 3200);
                 if (pRes2.ok) htmlStr = await pRes2.text();
-              } catch (e2) {}
+              } catch (e2) { }
             }
 
             if (htmlStr) {
@@ -2906,7 +3266,7 @@
               ogSite = doc.querySelector('meta[property="og:site_name"]')?.content || ogSite;
               ogImage = doc.querySelector('meta[property="og:image"]')?.content || '';
             }
-          } catch (e) {}
+          } catch (e) { }
 
           meta = {
             platform: 'web',
@@ -2934,39 +3294,70 @@
       }
     }
 
+    // ---------- 필드 제안 UI ----------
+    function renderFieldSuggestions(meta) {
+      clearFieldSuggestions();
+      const map = {
+        title:    {field: 'formTitle',    container: 'suggestTitle'},
+        date:     {field: 'formDate',    container: 'suggestDate'},
+        type:     {field: 'formType',    container: 'suggestType'},
+        channel:  {field: 'formChannel', container: 'suggestChannel'},
+        location: {field: 'formLocation',container: 'suggestLocation'},
+        message:  {field: 'formMessage', container: 'suggestMessage'}
+      };
+      Object.entries(map).forEach(([key, {field, container}]) => {
+        const val = meta[key];
+        if (!val) return;
+        const cnt = document.getElementById(container);
+        if (!cnt) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'suggest-chip';
+        chip.textContent = val;
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          applyFieldSuggestion(field, val);
+        });
+        cnt.appendChild(chip);
+        cnt.style.display = '';  // display:none 해제하여 칩이 보이도록
+      });
+    }
+    function clearFieldSuggestions() {
+      ['suggestTitle','suggestDate','suggestType','suggestChannel','suggestLocation','suggestMessage']
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+        });
+    }
+    function applyFieldSuggestion(fieldId, value) {
+      const input = document.getElementById(fieldId);
+      if (input) input.value = value;
+      updateFormLivePreview();
+      showToast(`${fieldId.replace('form','')}에 적용되었습니다.`);
+    }
+    function applyAllFieldSuggestions() {
+      const fields = ['formTitle','formDate','formType','formChannel','formLocation','formMessage'];
+      fields.forEach(f => {
+        const input = document.getElementById(f);
+        if (input && !input.value) {
+          const container = document.getElementById('suggest' + f.replace('form',''));
+          const chip = container?.querySelector('.suggest-chip');
+          if (chip) applyFieldSuggestion(f, chip.textContent);
+        }
+      });
+    }
     function renderMetaPreviewPanel(meta) {
       const panel = document.getElementById('urlMetaPreviewPanel');
       if (!panel || !meta) return;
       panel.innerHTML = '';
+      panel.style.display = '';  // display:none 해제
 
-      // 1) SNS인 경우: 폼에 자동 입력 반영
-      if (meta.isSns) {
-        if (meta.title) {
-          document.getElementById('formTitle').value = meta.title;
-        }
+      // 메타데이터 정규화 (모든 추천 칩이 정상 노출되도록 보정)
+      meta.channel = meta.channel || meta.author || '';
+      meta.message = meta.message || meta.description || '';
 
-        if (meta.author) {
-          document.getElementById('formChannel').value = meta.author;
-        }
-
-        if (meta.location) {
-          document.getElementById('formLocation').value = meta.location;
-        }
-
-        if (meta.description) {
-          document.getElementById('formMessage').value = meta.description;
-        }
-
-        // 스케줄 타입 지능형 자동 분류 (행사, 방송, 영상 등)
-        const autoType = resolveScheduleType({ title: meta.title, message: meta.description, channel: meta.author, source: meta.platform });
-        if (autoType && autoType !== '기타') {
-          document.getElementById('formType').value = autoType;
-        } else if (meta.platform === 'youtube' || meta.platform === 'tiktok') {
-          document.getElementById('formType').value = '영상';
-        }
-
-        // 날짜 패턴 감지: '일시:' 또는 '날짜:'가 명시된 패턴 최우선, 그 후 일반 날짜 패턴 (두 자릿수 우선)
-        const textToSearch = `${meta.title} ${meta.description}`;
+      if (!meta.date) {
+        const textToSearch = `${meta.title || ''} ${meta.message || ''}`;
         let dateMatch = textToSearch.match(/(?:📍\s*일시|일시|날짜)\s*[:：]?\s*(?:20)?(2[4-9])[-./년\s]+(1[0-2]|0?[1-9])[-./월\s]+([12][0-9]|3[01]|0?[1-9])일?/i);
         if (!dateMatch) {
           dateMatch = textToSearch.match(/(?:20)?(2[4-9])[-./년\s]+(1[0-2]|0?[1-9])[-./월\s]+([12][0-9]|3[01]|0?[1-9])일?/);
@@ -2975,9 +3366,50 @@
           const y = '20' + dateMatch[1];
           const m = dateMatch[2].padStart(2, '0');
           const d = dateMatch[3].padStart(2, '0');
-          document.getElementById('formDate').value = `${y}-${m}-${d}`;
+          meta.date = `${y}-${m}-${d}`;
         }
+      }
 
+      if (!meta.type) {
+        const autoType = resolveScheduleType({ title: meta.title, message: meta.message, channel: meta.channel, source: meta.platform });
+        if (autoType && autoType !== '기타') {
+          meta.type = autoType;
+        } else if (meta.platform === 'youtube' || meta.platform === 'tiktok') {
+          meta.type = '영상';
+        }
+      }
+
+      // 항상 추천 칩 UI 표시 (SNS 여부와 무관)
+      renderFieldSuggestions(meta);
+
+      const createHeaderActions = () => {
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.cssText = 'display: flex; align-items: center; gap: 6px; margin: 0; padding: 0;';
+
+        const applyAllBtn = document.createElement('button');
+        applyAllBtn.type = 'button';
+        applyAllBtn.className = 'apply-all-btn';
+        applyAllBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; box-sizing: border-box; margin: 0; border: 1px solid rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.2); color: #38bdf8; line-height: 1;';
+        applyAllBtn.innerHTML = '✨ 전체 적용';
+        applyAllBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          applyAllFieldSuggestions();
+        });
+        actionsDiv.appendChild(applyAllBtn);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-action';
+        closeBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0; color: var(--text-muted); background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); line-height: 1;';
+        closeBtn.textContent = '✕ 닫기';
+        closeBtn.addEventListener('click', clearUrlMetaPreview);
+        actionsDiv.appendChild(closeBtn);
+
+        return actionsDiv;
+      };
+
+      if (meta.isSns) {
+        // SNS인 경우: 헤더 및 본문 미리보기 표시 (폼 자동채우기는 제거됨)
         const container = document.createElement('div');
         container.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
 
@@ -2985,17 +3417,11 @@
         header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;';
         header.innerHTML = `
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8;">${escapeHtml(meta.platformName)}</span>
-            <span style="font-weight: 600; color: var(--text-main);">✅ 폼 자동 입력 완료</span>
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; box-sizing: border-box;">${escapeHtml(meta.platformName || '')}</span>
+            <span style="font-weight: 600; color: var(--text-main); font-size: 12px; line-height: 22px;">SNS 참고 정보</span>
           </div>
         `;
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'btn-action';
-        closeBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
-        closeBtn.textContent = '✕ 닫기';
-        closeBtn.addEventListener('click', clearUrlMetaPreview);
-        header.appendChild(closeBtn);
+        header.appendChild(createHeaderActions());
         container.appendChild(header);
 
         if (meta.description) {
@@ -3005,12 +3431,12 @@
           container.appendChild(descBox);
 
           const btnRow = document.createElement('div');
-          btnRow.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-wrap: wrap;';
+          btnRow.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px;';
 
           const copyDescBtn = document.createElement('button');
           copyDescBtn.type = 'button';
           copyDescBtn.className = 'btn-action';
-          copyDescBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+          copyDescBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 4px;';
           copyDescBtn.textContent = '📋 본문 전체 복사';
           copyDescBtn.addEventListener('click', () => copyToClipboard(meta.description, copyDescBtn));
           btnRow.appendChild(copyDescBtn);
@@ -3018,7 +3444,7 @@
           const applyMemoBtn = document.createElement('button');
           applyMemoBtn.type = 'button';
           applyMemoBtn.className = 'btn-action';
-          applyMemoBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+          applyMemoBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 4px;';
           applyMemoBtn.textContent = '📝 메모란에 넣기';
           applyMemoBtn.addEventListener('click', () => applyValueToFormField('formMessage', meta.description, applyMemoBtn));
           btnRow.appendChild(applyMemoBtn);
@@ -3027,7 +3453,7 @@
             const applyTitleBtn = document.createElement('button');
             applyTitleBtn.type = 'button';
             applyTitleBtn.className = 'btn-action';
-            applyTitleBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+            applyTitleBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 4px;';
             applyTitleBtn.textContent = '✏️ 제목란에 넣기';
             applyTitleBtn.addEventListener('click', () => applyValueToFormField('formTitle', meta.title, applyTitleBtn));
             btnRow.appendChild(applyTitleBtn);
@@ -3041,7 +3467,7 @@
           const copyTitleBtn = document.createElement('button');
           copyTitleBtn.type = 'button';
           copyTitleBtn.className = 'btn-action';
-          copyTitleBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          copyTitleBtn.style.cssText = 'height: 24px; padding: 0 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 4px;';
           copyTitleBtn.textContent = '📋 제목 복사';
           copyTitleBtn.addEventListener('click', () => copyToClipboard(meta.title, copyTitleBtn));
           titleRow.appendChild(copyTitleBtn);
@@ -3049,8 +3475,7 @@
         }
 
         panel.appendChild(container);
-        updateFormLivePreview();
-        showToast('SNS 정보를 폼에 자동 입력했습니다.');
+        showToast('SNS 참고 정보를 표시했습니다.');
       }
       // 2) 일반 웹페이지인 경우: 폼 변경 없이 참고 정보만 표시!
       else {
@@ -3061,17 +3486,11 @@
         header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;';
         header.innerHTML = `
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd;">💡 웹페이지 참고 정보</span>
-            <span style="font-size: 10.5px; color: var(--text-muted);">(자동 입력 안 함 • 클릭하여 개별 적용)</span>
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd; box-sizing: border-box;">💡 웹페이지 참고 정보</span>
+            <span style="font-size: 10.5px; color: var(--text-muted); line-height: 22px;">(자동 입력 안 함 • 클릭하여 개별 적용)</span>
           </div>
         `;
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'btn-action';
-        closeBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
-        closeBtn.textContent = '✕ 닫기';
-        closeBtn.addEventListener('click', clearUrlMetaPreview);
-        header.appendChild(closeBtn);
+        header.appendChild(createHeaderActions());
         container.appendChild(header);
 
         // 출처/사이트명
@@ -3084,11 +3503,11 @@
             </div>
           `;
           const act = document.createElement('div');
-          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0;';
+          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0; align-items: center;';
           const cpBtn = document.createElement('button');
           cpBtn.type = 'button';
           cpBtn.className = 'btn-action';
-          cpBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          cpBtn.style.cssText = 'height: 22px; padding: 0 6px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           cpBtn.textContent = '📋 복사';
           cpBtn.addEventListener('click', () => copyToClipboard(meta.author, cpBtn));
           act.appendChild(cpBtn);
@@ -3096,7 +3515,7 @@
           const apBtn = document.createElement('button');
           apBtn.type = 'button';
           apBtn.className = 'btn-action';
-          apBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          apBtn.style.cssText = 'height: 22px; padding: 0 6px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           apBtn.textContent = '⬇️ 채널에 적용';
           apBtn.addEventListener('click', () => applyValueToFormField('formChannel', meta.author, apBtn));
           act.appendChild(apBtn);
@@ -3114,11 +3533,11 @@
             </div>
           `;
           const act = document.createElement('div');
-          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0;';
+          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0; align-items: center;';
           const cpBtn = document.createElement('button');
           cpBtn.type = 'button';
           cpBtn.className = 'btn-action';
-          cpBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          cpBtn.style.cssText = 'height: 22px; padding: 0 6px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           cpBtn.textContent = '📋 복사';
           cpBtn.addEventListener('click', () => copyToClipboard(meta.title, cpBtn));
           act.appendChild(cpBtn);
@@ -3126,7 +3545,7 @@
           const apBtn = document.createElement('button');
           apBtn.type = 'button';
           apBtn.className = 'btn-action';
-          apBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          apBtn.style.cssText = 'height: 22px; padding: 0 6px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           apBtn.textContent = '⬇️ 제목에 적용';
           apBtn.addEventListener('click', () => applyValueToFormField('formTitle', meta.title, apBtn));
           act.appendChild(apBtn);
@@ -3143,11 +3562,11 @@
             <div style="color: var(--text-main); font-size: 11px; max-height: 80px; overflow-y: auto; line-height: 1.4; word-break: break-word; margin-bottom: 6px; white-space: pre-wrap;">${escapeHtml(meta.description)}</div>
           `;
           const act = document.createElement('div');
-          act.style.cssText = 'display: flex; gap: 6px;';
+          act.style.cssText = 'display: flex; gap: 6px; align-items: center;';
           const cpBtn = document.createElement('button');
           cpBtn.type = 'button';
           cpBtn.className = 'btn-action';
-          cpBtn.style.cssText = 'padding: 2px 8px; font-size: 10.5px;';
+          cpBtn.style.cssText = 'height: 22px; padding: 0 8px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           cpBtn.textContent = '📋 요약 복사';
           cpBtn.addEventListener('click', () => copyToClipboard(meta.description, cpBtn));
           act.appendChild(cpBtn);
@@ -3155,7 +3574,7 @@
           const apBtn = document.createElement('button');
           apBtn.type = 'button';
           apBtn.className = 'btn-action';
-          apBtn.style.cssText = 'padding: 2px 8px; font-size: 10.5px;';
+          apBtn.style.cssText = 'height: 22px; padding: 0 8px; font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 4px; gap: 3px;';
           apBtn.textContent = '⬇️ 메모에 적용';
           apBtn.addEventListener('click', () => applyValueToFormField('formMessage', meta.description, apBtn));
           act.appendChild(apBtn);
@@ -3519,7 +3938,7 @@
         const resolvedApplied = resolveModifiedChain(appliedOverrides.modified);
         const resolvedPending = resolveModifiedChain(pendingOverrides.modified);
         const mergedModified = { ...resolvedApplied, ...resolvedPending };
-        
+
         // 연쇄 수정본 속성을 상호 모든 연관 키에 일괄 동기화 (원본 키 & 파생 키 양방향 갱신)
         Object.keys(mergedModified).forEach(k => {
           const datePart = k.split('_')[0];
@@ -3812,7 +4231,49 @@
       `;
     }
 
-    ['formTitle', 'formDate', 'formTime', 'formType', 'formChannel', 'formLocation'].forEach(id => {
+    function showCurrentFormDetailPreview() {
+      const title = document.getElementById('formTitle')?.value?.trim() || '';
+      const dateVal = document.getElementById('formDate')?.value || '';
+      const timeVal = document.getElementById('formTime')?.value || '';
+      const typeVal = document.getElementById('formType')?.value || '기타';
+      const channelVal = document.getElementById('formChannel')?.value?.trim() || '';
+      const locationVal = document.getElementById('formLocation')?.value?.trim() || '';
+      const messageVal = document.getElementById('formMessage')?.value?.trim() || '';
+      const urlVal = document.getElementById('formUrl')?.value?.trim() || '';
+
+      let startTime = '';
+      let isAllday = true;
+      if (dateVal) {
+        if (timeVal) {
+          startTime = `${dateVal}T${timeVal}:00`;
+          isAllday = false;
+        } else {
+          startTime = `${dateVal}T00:00:00`;
+          isAllday = true;
+        }
+      }
+
+      const item = {
+        title: title || '제목 없음',
+        startTime: startTime,
+        isAllday: isAllday,
+        typeText: typeVal,
+        channel: channelVal,
+        location: locationVal,
+        message: messageVal,
+        url: urlVal
+      };
+
+      showUserPreviewDetail(item);
+    }
+    window.showCurrentFormDetailPreview = showCurrentFormDetailPreview;
+
+    const livePreviewCard = document.getElementById('formLivePreviewCard');
+    if (livePreviewCard) {
+      livePreviewCard.addEventListener('click', showCurrentFormDetailPreview);
+    }
+
+    ['formTitle', 'formDate', 'formTime', 'formType', 'formChannel', 'formLocation', 'formMessage', 'formUrl'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('input', updateFormLivePreview);
@@ -4117,4 +4578,5 @@
     }
   </script>
 </body>
+
 </html>

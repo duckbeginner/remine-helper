@@ -9,9 +9,13 @@
     "test:v2": "node scripts/data-hub/tests/schedule-v2.test.js",
     "test:hub": "node scripts/data-hub/tests/schedule-v2.test.js && node scripts/data-hub/validate.js",
     "test": "node tests/run-all.js",
+    "test:e2e": "playwright test",
     "build:firefox": "bash scripts/build-firefox.sh",
     "package": "bash scripts/package.sh",
     "lint": "npx oxlint",
     "check": "node --check remine-helper/background.js remine-helper/sidepanel.js remine-helper/options.js remine-helper/constants.js remine-helper/common/storage.js remine-helper/common/templates.js remine-helper/common/modules/*.js scripts/data-hub/*.js scripts/data-hub/collectors/*.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
   }
 }

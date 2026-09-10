@@ -27,6 +27,16 @@ export async function run() {
     assert(content.includes('formLivePreviewCard'), '폼 내 실시간 카드 미리보기 formLivePreviewCard가 존재해야 합니다.');
     assert(content.includes('updateFormLivePreview'), '실시간 미리보기 갱신 함수 updateFormLivePreview가 정의되어야 합니다.');
     assert(content.includes('renderUserPreviewSchedules'), '사용자 뷰 렌더러 renderUserPreviewSchedules가 정의되어야 합니다.');
+    assert(content.includes('renderFieldSuggestions'), '추천 정보 렌더링 함수 renderFieldSuggestions가 정의되어야 합니다.');
+    assert(content.includes('clearFieldSuggestions'), '추천 정보 초기화 함수 clearFieldSuggestions가 정의되어야 합니다.');
+    assert(content.includes('applyFieldSuggestion'), '개별 추천값 적용 함수 applyFieldSuggestion이 정의되어야 합니다.');
+    assert(content.includes('applyAllFieldSuggestions'), '전체 추천값 일괄 적용 함수 applyAllFieldSuggestions가 정의되어야 합니다.');
+    assert(content.includes('suggestTitle'), '제목 추천 컨테이너 suggestTitle이 존재해야 합니다.');
+    assert(content.includes('suggestDate'), '날짜 추천 컨테이너 suggestDate가 존재해야 합니다.');
+    assert(content.includes('suggestType'), '분류 추천 컨테이너 suggestType이 존재해야 합니다.');
+    assert(content.includes('suggestChannel'), '채널 추천 컨테이너 suggestChannel이 존재해야 합니다.');
+    assert(content.includes('suggestLocation'), '장소 추천 컨테이너 suggestLocation이 존재해야 합니다.');
+    assert(content.includes('suggestMessage'), '메모 추천 컨테이너 suggestMessage가 존재해야 합니다.');
   });
 
   return runner.summary();

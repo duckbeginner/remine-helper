@@ -56,3 +56,5 @@ scripts/capture_screenshots.mjs
 scratch/
 CHROMEWEBSTORE.md
 shortcut_visual_guide.html
+test-results/
+playwright-report/
