@@ -1893,39 +1893,62 @@
       document.getElementById('formLocation').value = item.location || '';
       document.getElementById('formMessage').value = item.message || '';
 
-      // 연관 일정 연결 후보 렌더링 (동일 날짜 내의 다른 일정들)
+      // 연관 일정 연결 후보 렌더링 (KST 기준 동일 날짜 및 인접 날짜 ±1일)
       const linkContainer = document.getElementById('linkedSchedulesContainer');
       if (linkContainer) {
         linkContainer.innerHTML = '';
-        const itemDateStr = item.startTime ? item.startTime.slice(0, 10) : '';
+        const itemKstDate = getKstDate(item.startTime);
+        const itemDateStr = formatDateYMD(itemKstDate);
         const currentLinked = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
         const currentId = item.id || stableKey;
 
-        // 동일 날짜의 다른 일정 탐색 (자신 및 삭제된 일정 제외)
+        // 다른 일정 탐색 (자신 및 삭제된 일정 제외)
         const candidates = allSchedules.filter(other => {
           if (!other || other === item) return false;
           const otherId = other.id || other._originKey || getScheduleKey(other);
           if (otherId === currentId) return false;
           if (other._isDeleted) return false;
 
-          const otherDateStr = other.startTime ? other.startTime.slice(0, 10) : '';
-          return otherDateStr === itemDateStr;
+          const otherKstDate = getKstDate(other.startTime);
+          const otherDateStr = formatDateYMD(otherKstDate);
+
+          // 동일 날짜이거나 이미 연결되어 있는 경우
+          if (otherDateStr === itemDateStr || currentLinked.includes(otherId)) return true;
+
+          // 인접 ±1일 (시차 또는 겹치는 일정 지원)
+          const diffDays = Math.abs((itemKstDate.getTime() - otherKstDate.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays <= 1.5;
         });
 
         if (candidates.length === 0) {
-          linkContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); padding: 4px 0;">동일한 날짜에 등록된 다른 일정이 없습니다.</div>';
+          linkContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); padding: 4px 0;">동일/인접 날짜에 등록된 다른 일정이 없습니다.</div>';
         } else {
+          // 동일 날짜 우선, 시작 시간 순 정렬
+          candidates.sort((a, b) => {
+            const dateA = formatDateYMD(getKstDate(a.startTime));
+            const dateB = formatDateYMD(getKstDate(b.startTime));
+            const isSameA = dateA === itemDateStr ? 0 : 1;
+            const isSameB = dateB === itemDateStr ? 0 : 1;
+            if (isSameA !== isSameB) return isSameA - isSameB;
+            return (new Date(a.startTime || 0).getTime()) - (new Date(b.startTime || 0).getTime());
+          });
+
           candidates.forEach(cand => {
             const candId = cand.id || cand._originKey || getScheduleKey(cand);
             const isChecked = currentLinked.includes(candId) || (Array.isArray(cand.linkedScheduleIds) && cand.linkedScheduleIds.includes(currentId));
             const candType = cand.typeText || resolveScheduleType(cand) || '기타';
-            const candTime = cand.startTime ? (cand.isAllday ? '종일' : cand.startTime.slice(11, 16)) : '';
+            const candKst = getKstDate(cand.startTime);
+            const candDateStr = formatDateYMD(candKst);
+            const isSameDay = candDateStr === itemDateStr;
+            const candTime = cand.startTime ? (cand.isAllday ? '종일' : `${String(candKst.getHours()).padStart(2, '0')}:${String(candKst.getMinutes()).padStart(2, '0')}`) : '';
+            const dayTag = isSameDay ? '' : `<span style="font-size: 9.5px; padding: 1px 4px; border-radius: 3px; background: rgba(234,179,8,0.15); color: #eab308; margin-right: 4px;">${candDateStr.slice(5)}</span>`;
 
             const row = document.createElement('label');
             row.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; padding: 6px 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; transition: background 0.2s;';
             row.innerHTML = `
               <input type="checkbox" class="linked-cand-cb" value="${escapeHtml(candId)}" ${isChecked ? 'checked' : ''} style="cursor: pointer; accent-color: #38bdf8;">
               <span style="display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 600; border-radius: 4px; background: rgba(255,255,255,0.1); color: var(--text-muted);">${escapeHtml(candType)}</span>
+              ${dayTag}
               <span style="font-weight: 500; color: var(--text-main); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(cand.title)}</span>
               <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(candTime)}</span>
             `;
@@ -2287,7 +2310,11 @@
       const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/))([\w-]{11})/);
       if (ytMatch) {
         thumbnail = `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-        isOfficialYoutube = true;
+        // RESCENE 공식 유튜브 채널 또는 공식 계정일 때만 isOfficialYoutube = true
+        const isOfficialChannel = channel === 'RESCENE' || channel === '공식 유튜브' || /rescene\s*공식/i.test(channel);
+        isOfficialYoutube = isOfficialChannel;
+      } else if (url) {
+        isOfficialYoutube = false;
       }
 
       if (isNew) {
@@ -2330,7 +2357,7 @@
           item.location = location;
           item.message = message;
           if (thumbnail) item.thumbnail = thumbnail;
-          if (isOfficialYoutube) item.isOfficialYoutube = isOfficialYoutube;
+          if (isOfficialYoutube !== undefined) item.isOfficialYoutube = isOfficialYoutube;
           item._isModified = true;
 
           // 연관 일정 연결 처리 (상호 양방향 동기화)

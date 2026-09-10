@@ -436,10 +436,18 @@ export function getChannelIconHTML(item, { isSmall = false } = {}) {
     return `<img src="icons/hellowoni_profile.jpg" class="sched-channel-icon woni" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="원이채널" title="안녕하세요원이입니다잘부탁드립니다">`;
   }
 
-  // 2. RESCENE 공식 채널
-  const isOfficial = Boolean(item.isOfficialYoutube) ||
-    (item.source === 'youtube' && (channelName === '공식 유튜브' || channelName === 'RESCENE')) ||
-    channelName === '공식 유튜브';
+  // 2. RESCENE 공식 채널 (공식 유튜브 계정이 직접 올린 영상에만 표시)
+  const isExplicitNonOfficialChannel = Boolean(channelName && 
+    channelName !== '공식 유튜브' && 
+    channelName !== 'RESCENE' && 
+    !/^RESCENE\s*공식/i.test(channelName));
+
+  const isOfficial = !isExplicitNonOfficialChannel && (
+    channelName === '공식 유튜브' ||
+    channelName === 'RESCENE' ||
+    (item.source === 'youtube' && !isExplicitNonOfficialChannel) ||
+    (Boolean(item.isOfficialYoutube) && (channelName === 'RESCENE' || channelName === '공식 유튜브'))
+  );
 
   if (isOfficial) {
     return `<img src="icons/rescene_official_profile.jpg" class="sched-channel-icon official" style="width:${size}px; height:${size}px; border-radius:50%; ${margin} object-fit:cover; display:inline-block; border:1px solid rgba(255,105,180,0.4); flex-shrink:0;" alt="공식채널" title="RESCENE 공식 유튜브 채널">`;
