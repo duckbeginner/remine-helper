@@ -947,8 +947,20 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">관련 링크 (유튜브/공지/티켓 URL)</label>
-          <input type="url" class="form-input" id="formUrl" placeholder="https://www.youtube.com/watch?v=...">
+          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
+            <span>관련 링크 (유튜브/SNS/공지/티켓 URL)</span>
+            <button type="button" id="btnFetchUrlMeta" style="display: none; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+              ⚡ 정보 가져오기
+            </button>
+          </label>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="url" class="form-input" id="formUrl" placeholder="https://..." style="flex: 1;">
+            <button type="button" id="btnFetchUrlMetaInline" class="btn-action" style="display: none; white-space: nowrap; height: 38px; padding: 0 10px; font-size: 12px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: var(--radius-sm); cursor: pointer;">
+              ⚡ 정보 가져오기
+            </button>
+          </div>
+          <!-- 메타데이터 참고 & 복사 패널 -->
+          <div id="urlMetaPreviewPanel" style="display: none; margin-top: 8px; padding: 10px 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; font-size: 11.5px;"></div>
         </div>
 
         <div class="form-group">
@@ -1890,6 +1902,8 @@
       document.getElementById('formType').value = item.typeText || resolvedType || '기타';
       document.getElementById('formChannel').value = item.channel || '';
       document.getElementById('formUrl').value = item.url || item.link || '';
+      clearUrlMetaPreview();
+      updateUrlMetaBtnState();
       document.getElementById('formLocation').value = item.location || '';
       document.getElementById('formMessage').value = item.message || '';
 
@@ -1973,6 +1987,8 @@
       document.getElementById('formUrl').placeholder = 'https://...';
       document.getElementById('formMessage').placeholder = '메모 또는 비고 (선택)';
       document.getElementById('formDate').value = formatDateYMD(new Date());
+      clearUrlMetaPreview();
+      updateUrlMetaBtnState();
 
       const linkContainer = document.getElementById('linkedSchedulesContainer');
       if (linkContainer) {
@@ -1984,6 +2000,7 @@
     }
 
     function closeModal() {
+      clearUrlMetaPreview();
       document.getElementById('editModalOverlay').classList.remove('active');
     }
 
@@ -2278,6 +2295,553 @@
       updateStagingBar();
       renderSchedules();
     });
+
+    // === URL 메타데이터 및 참고 정보 수집/표시/복사 엔진 ===
+    function decodeHtmlEntities(str) {
+      if (!str) return '';
+      const txt = document.createElement('textarea');
+      txt.innerHTML = str;
+      return txt.value;
+    }
+
+    function getUrlPlatformType(url) {
+      if (!url || typeof url !== 'string') return null;
+      const clean = url.trim();
+      if (/youtu\.be\/|youtube\.com\/(?:watch|shorts|live)/i.test(clean)) return 'youtube';
+      if (/(?:twitter\.com|x\.com)\/[^\/]+\/status\/\d+/i.test(clean)) return 'twitter';
+      if (/tiktok\.com\/(@[^\/]+\/video\/\d+|v\/|t\/)/i.test(clean) || /vt\.tiktok\.com\/[\w-]+/i.test(clean)) return 'tiktok';
+      if (/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i.test(clean)) return 'instagram';
+      if (/^https?:\/\//i.test(clean)) return 'web';
+      return null;
+    }
+
+    function updateUrlMetaBtnState() {
+      const urlInput = document.getElementById('formUrl');
+      const btn = document.getElementById('btnFetchUrlMeta');
+      const btnInline = document.getElementById('btnFetchUrlMetaInline');
+      if (!urlInput || !btn) return;
+
+      const type = getUrlPlatformType(urlInput.value);
+      if (!type) {
+        btn.style.display = 'none';
+        if (btnInline) btnInline.style.display = 'none';
+        return;
+      }
+
+      let label = '⚡ 정보 가져오기';
+      let inlineLabel = '⚡ 정보 가져오기';
+      let bg = 'rgba(56, 189, 248, 0.15)';
+      let color = '#38bdf8';
+      let border = 'rgba(56, 189, 248, 0.35)';
+
+      if (type === 'youtube') {
+        label = '▶️ 유튜브 정보 자동입력';
+        inlineLabel = '▶️ 유튜브 자동입력';
+        bg = 'rgba(239, 68, 68, 0.15)';
+        color = '#f87171';
+        border = 'rgba(239, 68, 68, 0.35)';
+      } else if (type === 'twitter') {
+        label = '𝕏 트위터 본문 가져오기';
+        inlineLabel = '𝕏 본문 가져오기';
+        bg = 'rgba(148, 163, 184, 0.15)';
+        color = '#e2e8f0';
+        border = 'rgba(148, 163, 184, 0.35)';
+      } else if (type === 'instagram') {
+        label = '📸 인스타 정보 가져오기';
+        inlineLabel = '📸 인스타 가져오기';
+        bg = 'rgba(236, 72, 153, 0.15)';
+        color = '#f472b6';
+        border = 'rgba(236, 72, 153, 0.35)';
+      } else if (type === 'tiktok') {
+        label = '🎵 틱톡 정보 가져오기';
+        inlineLabel = '🎵 틱톡 가져오기';
+        bg = 'rgba(45, 212, 191, 0.15)';
+        color = '#2dd4bf';
+        border = 'rgba(45, 212, 191, 0.35)';
+      } else if (type === 'web') {
+        label = '🌐 웹페이지 참고정보 조회';
+        inlineLabel = '🌐 참고정보 조회';
+        bg = 'rgba(124, 92, 252, 0.15)';
+        color = '#a78bfa';
+        border = 'rgba(124, 92, 252, 0.35)';
+      }
+
+      btn.style.display = 'inline-flex';
+      btn.innerHTML = label;
+      btn.style.background = bg;
+      btn.style.color = color;
+      btn.style.borderColor = border;
+
+      if (btnInline) {
+        btnInline.style.display = 'inline-flex';
+        btnInline.innerHTML = inlineLabel;
+        btnInline.style.background = bg;
+        btnInline.style.color = color;
+        btnInline.style.borderColor = border;
+      }
+    }
+
+    function clearUrlMetaPreview() {
+      const panel = document.getElementById('urlMetaPreviewPanel');
+      if (panel) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+      }
+    }
+
+    function copyToClipboard(text, btnElement) {
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        if (btnElement) {
+          const orig = btnElement.innerHTML;
+          btnElement.innerHTML = '✅ 복사됨!';
+          setTimeout(() => { btnElement.innerHTML = orig; }, 1500);
+        }
+        showToast('클립보드에 복사되었습니다.');
+      }).catch(() => {
+        showToast('복사에 실패했습니다.');
+      });
+    }
+
+    function applyValueToFormField(fieldId, val, btnElement) {
+      const el = document.getElementById(fieldId);
+      if (el) {
+        el.value = val;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        if (btnElement) {
+          const orig = btnElement.innerHTML;
+          btnElement.innerHTML = '✅ 적용됨';
+          setTimeout(() => { btnElement.innerHTML = orig; }, 1500);
+        }
+        showToast(`${fieldId === 'formTitle' ? '제목' : fieldId === 'formChannel' ? '채널' : '메모'}란에 적용되었습니다.`);
+      }
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 3800) {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(tid);
+        return response;
+      } catch (err) {
+        clearTimeout(tid);
+        throw err;
+      }
+    }
+
+    async function fetchUrlMetadata() {
+      const urlInput = document.getElementById('formUrl');
+      const panel = document.getElementById('urlMetaPreviewPanel');
+      const btn = document.getElementById('btnFetchUrlMeta');
+      const btnInline = document.getElementById('btnFetchUrlMetaInline');
+      if (!urlInput || !panel) return;
+
+      const rawUrl = urlInput.value.trim();
+      const type = getUrlPlatformType(rawUrl);
+      if (!type) {
+        showToast('올바른 URL을 입력해주세요.');
+        return;
+      }
+
+      const setButtonsLoading = (loading) => {
+        if (btn) btn.disabled = loading;
+        if (btnInline) btnInline.disabled = loading;
+      };
+
+      setButtonsLoading(true);
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); padding: 8px 0;">
+          <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #38bdf8; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+          <span>정보를 불러오는 중입니다...</span>
+        </div>
+      `;
+
+      try {
+        let meta = null;
+
+        // 1. YouTube
+        if (type === 'youtube') {
+          const res = await fetchWithTimeout(`https://www.youtube.com/oembed?url=${encodeURIComponent(rawUrl)}&format=json`);
+          if (!res.ok) throw new Error('유튜브 정보를 가져올 수 없습니다.');
+          const yt = await res.json();
+          meta = {
+            platform: 'youtube',
+            platformName: 'YouTube',
+            title: yt.title || '',
+            author: yt.author_name || '',
+            thumbnail: yt.thumbnail_url || '',
+            description: yt.title || '',
+            isSns: true
+          };
+        }
+        // 2. Twitter / X
+        else if (type === 'twitter') {
+          const res = await fetchWithTimeout(`https://publish.twitter.com/oembed?url=${encodeURIComponent(rawUrl)}&omit_script=true`);
+          if (!res.ok) throw new Error('트위터 oEmbed 조회 실패');
+          const tw = await res.json();
+          let tweetText = '';
+          if (tw.html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = tw.html;
+            const p = tempDiv.querySelector('p');
+            tweetText = p ? p.innerText.trim() : tempDiv.innerText.trim();
+          }
+          meta = {
+            platform: 'twitter',
+            platformName: 'X (Twitter)',
+            title: tweetText.split('\n')[0].slice(0, 60),
+            author: tw.author_name || '',
+            description: tweetText,
+            isSns: true
+          };
+        }
+        // 3. TikTok
+        else if (type === 'tiktok') {
+          const res = await fetchWithTimeout(`https://www.tiktok.com/oembed?url=${encodeURIComponent(rawUrl)}`);
+          if (!res.ok) throw new Error('틱톡 oEmbed 조회 실패');
+          const tk = await res.json();
+          meta = {
+            platform: 'tiktok',
+            platformName: 'TikTok',
+            title: tk.title || '',
+            author: tk.author_name || '',
+            thumbnail: tk.thumbnail_url || '',
+            description: tk.title || '',
+            isSns: true
+          };
+        }
+        // 4. Instagram
+        else if (type === 'instagram') {
+          const m = rawUrl.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i);
+          const shortcode = m ? m[1] : '';
+          let igCaption = '';
+          let igAuthor = 'rescene_official';
+          let igThumb = '';
+
+          const foundInCache = allSchedules.find(s => (s.url && s.url.includes(shortcode)) || (s.link && s.link.includes(shortcode)) || (s.id && s.id.includes(shortcode)));
+          if (foundInCache) {
+            igCaption = foundInCache.message || foundInCache.title || '';
+            igAuthor = foundInCache.channel || igAuthor;
+            igThumb = foundInCache.thumbnail || '';
+          } else {
+            try {
+              const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+              const proxyRes = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(embedUrl)}`, {}, 3000);
+              const proxyData = await proxyRes.json();
+              if (proxyData && proxyData.contents) {
+                const matchCap = proxyData.contents.match(/"text":"([^"]+)"/);
+                if (matchCap) {
+                  igCaption = JSON.parse(`"${matchCap[1]}"`);
+                }
+                const matchOwner = proxyData.contents.match(/"username":"([^"]+)"/);
+                if (matchOwner) igAuthor = matchOwner[1];
+              }
+            } catch (err) {}
+          }
+
+          meta = {
+            platform: 'instagram',
+            platformName: 'Instagram',
+            title: igCaption ? igCaption.split('\n')[0].slice(0, 60) : 'RESCENE Instagram',
+            author: igAuthor,
+            thumbnail: igThumb,
+            description: igCaption,
+            isSns: true
+          };
+        }
+        // 5. General Web (Open Graph 메타 파싱)
+        else {
+          let ogTitle = '';
+          let ogDesc = '';
+          let ogSite = '';
+          let ogImage = '';
+
+          try {
+            const urlObj = new URL(rawUrl);
+            ogSite = urlObj.hostname.replace(/^www\./, '');
+            if (ogSite.includes('naver.com')) ogSite = '네이버 뉴스';
+            else if (ogSite.includes('interpark.com')) ogSite = '인터파크 티켓';
+            else if (ogSite.includes('yes24.com')) ogSite = 'YES24 티켓';
+            else if (ogSite.includes('melon.com')) ogSite = '멜론 티켓';
+            else if (ogSite.includes('weverse.io')) ogSite = '위버스';
+            else if (ogSite.includes('daum.net')) ogSite = '다음 팬카페';
+          } catch(e) {}
+
+          try {
+            let htmlStr = '';
+            try {
+              const pRes1 = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`, {}, 3200);
+              if (pRes1.ok) {
+                const pd1 = await pRes1.json();
+                htmlStr = pd1?.contents || '';
+              }
+            } catch (e1) {
+              try {
+                const pRes2 = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`, {}, 3200);
+                if (pRes2.ok) htmlStr = await pRes2.text();
+              } catch (e2) {}
+            }
+
+            if (htmlStr) {
+              const doc = new DOMParser().parseFromString(htmlStr, 'text/html');
+              ogTitle = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.innerText || '';
+              ogDesc = doc.querySelector('meta[property="og:description"]')?.content || doc.querySelector('meta[name="description"]')?.content || '';
+              ogSite = doc.querySelector('meta[property="og:site_name"]')?.content || ogSite;
+              ogImage = doc.querySelector('meta[property="og:image"]')?.content || '';
+            }
+          } catch (e) {}
+
+          meta = {
+            platform: 'web',
+            platformName: ogSite || '일반 웹페이지',
+            title: ogTitle.trim(),
+            author: ogSite.trim(),
+            thumbnail: ogImage.trim(),
+            description: ogDesc.trim(),
+            isSns: false // 일반 웹페이지는 자동 입력 절대 안 함!
+          };
+        }
+
+        renderMetaPreviewPanel(meta);
+
+      } catch (err) {
+        panel.innerHTML = `
+          <div style="color: #ef4444; display: flex; align-items: center; justify-content: space-between; padding: 4px 0;">
+            <span>⚠️ 정보 조회에 실패했습니다. (${escapeHtml(err.message || '네트워크 오류')})</span>
+            <button type="button" class="btn-action" style="padding: 2px 6px; font-size: 10.5px;" onclick="clearUrlMetaPreview()">닫기</button>
+          </div>
+        `;
+      } finally {
+        setButtonsLoading(false);
+        updateUrlMetaBtnState();
+      }
+    }
+
+    function renderMetaPreviewPanel(meta) {
+      const panel = document.getElementById('urlMetaPreviewPanel');
+      if (!panel || !meta) return;
+      panel.innerHTML = '';
+
+      // 1) SNS인 경우: 폼에 자동 입력 반영
+      if (meta.isSns) {
+        if (meta.title) {
+          document.getElementById('formTitle').value = meta.title;
+        }
+
+        if (meta.author) {
+          document.getElementById('formChannel').value = meta.author;
+        }
+
+        if (meta.platform === 'youtube' || meta.platform === 'tiktok') {
+          document.getElementById('formType').value = '영상';
+        }
+
+        // 날짜 패턴 감지
+        const textToSearch = `${meta.title} ${meta.description}`;
+        const dateMatch = textToSearch.match(/(?:20)?(2[4-9])[-./년\s]*(0?[1-9]|1[0-2])[-./월\s]*(0?[1-9]|[12][0-9]|3[01])일?/);
+        if (dateMatch) {
+          const y = '20' + dateMatch[1];
+          const m = dateMatch[2].padStart(2, '0');
+          const d = dateMatch[3].padStart(2, '0');
+          document.getElementById('formDate').value = `${y}-${m}-${d}`;
+        }
+
+        const container = document.createElement('div');
+        container.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;';
+        header.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8;">${escapeHtml(meta.platformName)}</span>
+            <span style="font-weight: 600; color: var(--text-main);">✅ 폼 자동 입력 완료</span>
+          </div>
+        `;
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-action';
+        closeBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+        closeBtn.textContent = '✕ 닫기';
+        closeBtn.addEventListener('click', clearUrlMetaPreview);
+        header.appendChild(closeBtn);
+        container.appendChild(header);
+
+        if (meta.description) {
+          const descBox = document.createElement('div');
+          descBox.style.cssText = 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px; max-height: 120px; overflow-y: auto; color: var(--text-main); font-size: 11px; white-space: pre-wrap; word-break: break-word; line-height: 1.5;';
+          descBox.textContent = meta.description;
+          container.appendChild(descBox);
+
+          const btnRow = document.createElement('div');
+          btnRow.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-wrap: wrap;';
+
+          const copyDescBtn = document.createElement('button');
+          copyDescBtn.type = 'button';
+          copyDescBtn.className = 'btn-action';
+          copyDescBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+          copyDescBtn.textContent = '📋 본문 전체 복사';
+          copyDescBtn.addEventListener('click', () => copyToClipboard(meta.description, copyDescBtn));
+          btnRow.appendChild(copyDescBtn);
+
+          const applyMemoBtn = document.createElement('button');
+          applyMemoBtn.type = 'button';
+          applyMemoBtn.className = 'btn-action';
+          applyMemoBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+          applyMemoBtn.textContent = '📝 메모란에 넣기';
+          applyMemoBtn.addEventListener('click', () => applyValueToFormField('formMessage', meta.description, applyMemoBtn));
+          btnRow.appendChild(applyMemoBtn);
+
+          if (meta.title) {
+            const applyTitleBtn = document.createElement('button');
+            applyTitleBtn.type = 'button';
+            applyTitleBtn.className = 'btn-action';
+            applyTitleBtn.style.cssText = 'padding: 3px 8px; font-size: 11px;';
+            applyTitleBtn.textContent = '✏️ 제목란에 넣기';
+            applyTitleBtn.addEventListener('click', () => applyValueToFormField('formTitle', meta.title, applyTitleBtn));
+            btnRow.appendChild(applyTitleBtn);
+          }
+
+          container.appendChild(btnRow);
+        } else if (meta.title) {
+          const titleRow = document.createElement('div');
+          titleRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-muted);';
+          titleRow.innerHTML = `<span>제목: <strong style="color:var(--text-main);">${escapeHtml(meta.title)}</strong></span>`;
+          const copyTitleBtn = document.createElement('button');
+          copyTitleBtn.type = 'button';
+          copyTitleBtn.className = 'btn-action';
+          copyTitleBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          copyTitleBtn.textContent = '📋 제목 복사';
+          copyTitleBtn.addEventListener('click', () => copyToClipboard(meta.title, copyTitleBtn));
+          titleRow.appendChild(copyTitleBtn);
+          container.appendChild(titleRow);
+        }
+
+        panel.appendChild(container);
+        showToast('SNS 정보를 폼에 자동 입력했습니다.');
+      }
+      // 2) 일반 웹페이지인 경우: 폼 변경 없이 참고 정보만 표시!
+      else {
+        const container = document.createElement('div');
+        container.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;';
+        header.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd;">💡 웹페이지 참고 정보</span>
+            <span style="font-size: 10.5px; color: var(--text-muted);">(자동 입력 안 함 • 클릭하여 개별 적용)</span>
+          </div>
+        `;
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-action';
+        closeBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+        closeBtn.textContent = '✕ 닫기';
+        closeBtn.addEventListener('click', clearUrlMetaPreview);
+        header.appendChild(closeBtn);
+        container.appendChild(header);
+
+        // 출처/사이트명
+        if (meta.author) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; background: rgba(255,255,255,0.02); border-radius: 4px;';
+          row.innerHTML = `
+            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">
+              <span style="color: var(--text-muted);">출처/사이트:</span> <strong style="color: var(--text-main);">${escapeHtml(meta.author)}</strong>
+            </div>
+          `;
+          const act = document.createElement('div');
+          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0;';
+          const cpBtn = document.createElement('button');
+          cpBtn.type = 'button';
+          cpBtn.className = 'btn-action';
+          cpBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          cpBtn.textContent = '📋 복사';
+          cpBtn.addEventListener('click', () => copyToClipboard(meta.author, cpBtn));
+          act.appendChild(cpBtn);
+
+          const apBtn = document.createElement('button');
+          apBtn.type = 'button';
+          apBtn.className = 'btn-action';
+          apBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          apBtn.textContent = '⬇️ 채널에 적용';
+          apBtn.addEventListener('click', () => applyValueToFormField('formChannel', meta.author, apBtn));
+          act.appendChild(apBtn);
+          row.appendChild(act);
+          container.appendChild(row);
+        }
+
+        // 제목
+        if (meta.title) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; background: rgba(255,255,255,0.02); border-radius: 4px;';
+          row.innerHTML = `
+            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">
+              <span style="color: var(--text-muted);">제목:</span> <strong style="color: var(--text-main);">${escapeHtml(meta.title)}</strong>
+            </div>
+          `;
+          const act = document.createElement('div');
+          act.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0;';
+          const cpBtn = document.createElement('button');
+          cpBtn.type = 'button';
+          cpBtn.className = 'btn-action';
+          cpBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          cpBtn.textContent = '📋 복사';
+          cpBtn.addEventListener('click', () => copyToClipboard(meta.title, cpBtn));
+          act.appendChild(cpBtn);
+
+          const apBtn = document.createElement('button');
+          apBtn.type = 'button';
+          apBtn.className = 'btn-action';
+          apBtn.style.cssText = 'padding: 2px 6px; font-size: 10.5px;';
+          apBtn.textContent = '⬇️ 제목에 적용';
+          apBtn.addEventListener('click', () => applyValueToFormField('formTitle', meta.title, apBtn));
+          act.appendChild(apBtn);
+          row.appendChild(act);
+          container.appendChild(row);
+        }
+
+        // 본문 요약 / 설명
+        if (meta.description) {
+          const descBox = document.createElement('div');
+          descBox.style.cssText = 'padding: 6px 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;';
+          descBox.innerHTML = `
+            <div style="color: var(--text-muted); margin-bottom: 4px; font-size: 10.5px;">본문 요약 / 설명:</div>
+            <div style="color: var(--text-main); font-size: 11px; max-height: 80px; overflow-y: auto; line-height: 1.4; word-break: break-word; margin-bottom: 6px; white-space: pre-wrap;">${escapeHtml(meta.description)}</div>
+          `;
+          const act = document.createElement('div');
+          act.style.cssText = 'display: flex; gap: 6px;';
+          const cpBtn = document.createElement('button');
+          cpBtn.type = 'button';
+          cpBtn.className = 'btn-action';
+          cpBtn.style.cssText = 'padding: 2px 8px; font-size: 10.5px;';
+          cpBtn.textContent = '📋 요약 복사';
+          cpBtn.addEventListener('click', () => copyToClipboard(meta.description, cpBtn));
+          act.appendChild(cpBtn);
+
+          const apBtn = document.createElement('button');
+          apBtn.type = 'button';
+          apBtn.className = 'btn-action';
+          apBtn.style.cssText = 'padding: 2px 8px; font-size: 10.5px;';
+          apBtn.textContent = '⬇️ 메모에 적용';
+          apBtn.addEventListener('click', () => applyValueToFormField('formMessage', meta.description, apBtn));
+          act.appendChild(apBtn);
+          descBox.appendChild(act);
+          container.appendChild(descBox);
+        }
+
+        panel.appendChild(container);
+        showToast('웹페이지 참고 정보를 패널에 표시했습니다.');
+      }
+    }
+
+    // URL 이벤트 리스너 바인딩
+    document.getElementById('formUrl').addEventListener('input', updateUrlMetaBtnState);
+    document.getElementById('formUrl').addEventListener('change', updateUrlMetaBtnState);
+    document.getElementById('btnFetchUrlMeta').addEventListener('click', fetchUrlMetadata);
+    document.getElementById('btnFetchUrlMetaInline').addEventListener('click', fetchUrlMetadata);
 
     // 폼 저장
     document.getElementById('scheduleEditForm').addEventListener('submit', (e) => {
