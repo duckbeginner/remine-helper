@@ -77,6 +77,16 @@ export const DEFAULT_EXCLUDE_KEYWORDS = [
   '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
 ];
 
+export function isShortsSchedule(item) {
+  if (!item) return false;
+  if (item._isShorts) return true;
+  const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
+  if (/youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw)) return true;
+  if (/(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) return true;
+  if (/instagram\.com\/reels?\/[\w-]+/i.test(raw)) return true;
+  return false;
+}
+
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
     filterRules = {},
@@ -140,7 +150,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     if (item.isDeleted) return;
 
     // 쇼츠 제외 (커스텀 일정은 보호 대상 제외)
-    if (excludeShorts && item._isShorts && !item._isCustom) return;
+    if (excludeShorts && !item._isCustom && (item._isShorts || isShortsSchedule(item))) return;
 
     // 관리자 작성 또는 명시적 수정본은 필터링에서 보호
     const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
@@ -568,16 +578,20 @@ runTest("Test 8: filterRules 동적 필터링 및 관리자 작성/수정 일정
   const itemsWithShorts = [
     { id: "yt_normal", title: "정규 영상", source: "youtube", _isShorts: false, startTime: "2026-08-25" },
     { id: "yt_shorts", title: "쇼츠 영상", source: "youtube", _isShorts: true, startTime: "2026-08-26" },
+    { id: "yt_url_shorts", title: "URL 쇼츠", source: "blip", url: "https://www.youtube.com/shorts/OMiFkqmPWgc", startTime: "2026-08-26" },
+    { id: "yt_tag_shorts", title: "쇼츠 태그 포함 #Shorts", source: "blip", startTime: "2026-08-26" },
     { id: "custom_shorts", title: "커스텀 등록 쇼츠", source: "custom", _isShorts: true, _isCustom: true, startTime: "2026-08-27" }
   ];
   const shortsExcluded = mergeSchedulesV2(itemsWithShorts, { filterRules: { excludeShorts: true } });
   const shortsTitles1 = shortsExcluded.map(x => x.title);
   assert.ok(shortsTitles1.includes("정규 영상"), "정규 영상은 유지되어야 함");
-  assert.ok(!shortsTitles1.includes("쇼츠 영상"), "쇼츠 영상은 제외되어야 함");
+  assert.ok(!shortsTitles1.includes("쇼츠 영상"), "쇼츠 영상(_isShorts)은 제외되어야 함");
+  assert.ok(!shortsTitles1.includes("URL 쇼츠"), "URL 기반 쇼츠는 제외되어야 함");
+  assert.ok(!shortsTitles1.includes("쇼츠 태그 포함 #Shorts"), "태그 기반 쇼츠는 제외되어야 함");
   assert.ok(shortsTitles1.includes("커스텀 등록 쇼츠"), "커스텀 일정은 쇼츠여도 보호되어야 함");
 
   const shortsAllowed = mergeSchedulesV2(itemsWithShorts, { filterRules: { excludeShorts: false } });
-  assert.strictEqual(shortsAllowed.length, 3, "excludeShorts: false 설정 시 쇼츠 포함 3개 유지되어야 함");
+  assert.strictEqual(shortsAllowed.length, 5, "excludeShorts: false 설정 시 쇼츠 포함 5개 유지되어야 함");
 
   // 5) 종류별 제외 (excludeTypes) 검증
   const itemsWithTypes = [

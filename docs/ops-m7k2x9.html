@@ -1486,7 +1486,14 @@
       const monthStart = new Date(year, month, 1, 0, 0, 0).getTime();
       const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
 
-      // 필터링
+      // 필터링 및 제외 규칙 준비
+      const activeRules = pendingFilterRules || currentFilterRules;
+      const filterEnabled = activeRules.enabled !== false;
+      const excludeShorts = activeRules.excludeShorts !== false;
+      const excludeTypes = Array.isArray(activeRules.excludeTypes) ? activeRules.excludeTypes : [];
+      const excludeChannels = Array.isArray(activeRules.excludeChannels) ? activeRules.excludeChannels : [];
+      const excludeKeywords = Array.isArray(activeRules.excludeKeywords) ? activeRules.excludeKeywords : DEFAULT_EXCLUDE_KEYWORDS;
+
       const filtered = allSchedules.filter(item => {
         if (!item.startTime) return false;
         const d = new Date(item.startTime);
@@ -1510,6 +1517,52 @@
           const q = searchQuery.toLowerCase();
           const targetText = [item.title, item.channel, item.location, item.message].filter(Boolean).join(' ').toLowerCase();
           if (!targetText.includes(q)) return false;
+        }
+
+        // 4. 제외 필터 규칙 적용 (수정 중이거나 커스텀 일정은 보호)
+        const isProtected = item._isCustom || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
+
+        if (!isProtected) {
+          // 4-1. 쇼츠 제외
+          if (excludeShorts) {
+            const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
+            if (item._isShorts || /youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) {
+              return false;
+            }
+          }
+
+          // 4-2. 종류(typeText)별 제외
+          if (excludeTypes.length > 0) {
+            const resolvedType = resolveScheduleType(item);
+            if (excludeTypes.includes(resolvedType) || (item.typeText && excludeTypes.includes(item.typeText))) {
+              return false;
+            }
+          }
+
+          // 4-3. 채널(channel / extField)별 제외
+          if (excludeChannels.length > 0) {
+            const channelValues = [
+              item.channel,
+              (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)
+            ].filter(Boolean).map(s => s.trim().toLowerCase());
+
+            const isChannelExcluded = excludeChannels.some(ex => {
+              const cleanEx = ex.trim().toLowerCase();
+              if (!cleanEx) return false;
+              return channelValues.some(c => c === cleanEx || c.includes(cleanEx));
+            });
+            if (isChannelExcluded) return false;
+          }
+
+          // 4-4. 키워드 제외
+          if (filterEnabled && excludeKeywords.length > 0) {
+            const fullText = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ').toLowerCase();
+            const hasBlockedKw = excludeKeywords.some(kw => {
+              const cleanKw = kw.trim().toLowerCase();
+              return cleanKw && fullText.includes(cleanKw);
+            });
+            if (hasBlockedKw) return false;
+          }
         }
 
         return true;
@@ -1957,6 +2010,7 @@
       };
       closeFilterModal();
       updateStagingBar();
+      renderSchedules();
     });
 
     // 폼 저장

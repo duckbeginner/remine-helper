@@ -40,8 +40,9 @@ export function filterAndDeduplicateSchedules(schedules) {
     if (!item) continue;
     // 관리자가 직접 생성했거나 수정한 커스텀 일정은 키워드 매칭과 무관하게 100% 보존
     if (!item._isCustom) {
-      const text = (item.title || "") + " " + (item.message || "");
+      const text = (item.title || "") + " " + (item.message || "") + " " + (item.url || "") + " " + (item.link || "");
       if (EXCLUDE_SCHEDULE_REGEX.test(text)) continue;
+      if (item._isShorts || /youtube\.com\/shorts\//i.test(text) || /#shorts\b|#쇼츠\b/i.test(text) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(text)) continue;
     }
 
     // 중복 제거 가드 (동일 ID 또는 동일 시작일+제목)

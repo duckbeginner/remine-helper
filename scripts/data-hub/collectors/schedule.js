@@ -486,6 +486,19 @@ async function enrichSchedulesWithYouTubeOEmbed(schedules, allYtVideos = []) {
           isShorts = true;
         }
 
+        // 쇼츠 여부 2차 검사: 유튜브 /shorts/ 엔드포인트 HEAD 리다이렉트 판별 (캐시 지원)
+        if (!isShorts) {
+          if (typeof oeData.isShorts === 'boolean') {
+            isShorts = oeData.isShorts;
+          } else {
+            try {
+              const shortRes = await fetch(`https://www.youtube.com/shorts/${vid}`, { method: 'HEAD', redirect: 'manual' });
+              isShorts = (shortRes.status === 200);
+            } catch (e) { }
+            oeData.isShorts = isShorts;
+          }
+        }
+
         if (isShorts) {
           item._isShorts = true;
           return;
@@ -881,6 +894,16 @@ export const DEFAULT_EXCLUDE_KEYWORDS = [
   '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
 ];
 
+export function isShortsSchedule(item) {
+  if (!item) return false;
+  if (item._isShorts) return true;
+  const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
+  if (/youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw)) return true;
+  if (/(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) return true;
+  if (/instagram\.com\/reels?\/[\w-]+/i.test(raw)) return true;
+  return false;
+}
+
 // [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
@@ -953,7 +976,7 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     }
 
     // 쇼츠 제외 (커스텀 일정은 보호 대상 제외)
-    if (excludeShorts && item._isShorts && !item._isCustom) {
+    if (excludeShorts && !item._isCustom && (item._isShorts || isShortsSchedule(item))) {
       filterCount++;
       return;
     }
