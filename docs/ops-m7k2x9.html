@@ -415,6 +415,54 @@
       padding: 0 18px;
     }
 
+    /* 연속 멀티 먼스 스크롤 & 월 구분선 */
+    .month-section {
+      position: relative;
+    }
+
+    .month-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 28px 0 16px;
+      position: relative;
+    }
+
+    .month-divider::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+    }
+
+    .month-badge {
+      position: relative;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: -0.2px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .empty-month-placeholder {
+      text-align: center;
+      padding: 24px 0 32px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
     .date-group {
       margin-bottom: 22px;
     }
@@ -1817,12 +1865,12 @@
       }
     }
 
-    // 도어락 화면 / 메인 앱 화면 전환
     function showApp() {
       document.getElementById('gatekeeperScreen').style.display = 'none';
       document.getElementById('appHeader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'block';
     }
+    window.showApp = showApp;
 
     function showGatekeeper() {
       document.getElementById('gatekeeperScreen').style.display = 'flex';
@@ -2146,20 +2194,13 @@
       return '기타';
     }
 
-    // 렌더링
-    function renderSchedules() {
-      const container = document.getElementById('scheduleListContainer');
-      const year = currentViewDate.getFullYear();
-      const month = currentViewDate.getMonth();
-      const isSearching = Boolean(searchQuery && searchQuery.trim());
+    // 연속 멀티 먼스 스크롤 & 필터링 렌더러
+    let loadedMonths = []; // 예: ['2026-08', '2026-09']
+    let isScrollLoading = false;
 
-      document.getElementById('currentMonthText').textContent = isSearching ? '전체 기간 검색' : `${year}. ${String(month + 1).padStart(2, '0')}`;
-
-      // 월 범위 계산 (연속 일정 월간 교차 판별용)
-      const monthStart = new Date(year, month, 1, 0, 0, 0).getTime();
-      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
-
-      // 필터링 및 제외 규칙 준비
+    // 스케줄 필터링 헬퍼
+    function filterScheduleItems(items, options = {}) {
+      const { monthStart, monthEnd, isSearching } = options;
       const activeRules = pendingFilterRules || currentFilterRules;
       const filterEnabled = activeRules.enabled !== false;
       const excludeShorts = activeRules.excludeShorts !== false;
@@ -2167,26 +2208,26 @@
       const excludeChannels = Array.isArray(activeRules.excludeChannels) ? activeRules.excludeChannels : [];
       const excludeKeywords = Array.isArray(activeRules.excludeKeywords) ? activeRules.excludeKeywords : DEFAULT_EXCLUDE_KEYWORDS;
 
-      const filtered = allSchedules.filter(item => {
+      return items.filter(item => {
         if (!item.startTime) return false;
         const d = new Date(item.startTime);
         const startT = d.getTime();
         const endT = item.endTime ? new Date(item.endTime).getTime() : startT;
 
-        // 1. 검색 중이 아닐 때는 해당 월에 포함(교차)되는지 확인
-        if (!isSearching) {
+        // 1. 월 필터 (검색 모드가 아닐 때)
+        if (!isSearching && monthStart != null && monthEnd != null) {
           const overlapsMonth = (startT <= monthEnd && endT >= monthStart);
           if (!overlapsMonth) return false;
         }
 
-        // 2. 카테고리 필터 (임의 묶음 없이 1:1 매칭)
+        // 2. 카테고리 필터
         if (activeCategory !== 'all') {
           const itemCat = resolveScheduleType(item);
           if (itemCat !== activeCategory) return false;
         }
 
         // 3. 검색 필터
-        if (isSearching) {
+        if (isSearching && searchQuery) {
           const q = searchQuery.toLowerCase();
           const targetText = [item.title, item.channel, item.location, item.message].filter(Boolean).join(' ').toLowerCase();
           if (!targetText.includes(q)) return false;
@@ -2204,7 +2245,7 @@
             }
           }
 
-          // 4-2. 종류(typeText)별 제외
+          // 4-2. 종류별 제외
           if (excludeTypes.length > 0) {
             const resolvedType = resolveScheduleType(item);
             if (excludeTypes.includes(resolvedType) || (item.typeText && excludeTypes.includes(item.typeText))) {
@@ -2212,7 +2253,7 @@
             }
           }
 
-          // 4-3. 채널(channel / extField)별 제외
+          // 4-3. 채널별 제외
           if (excludeChannels.length > 0) {
             const channelValues = [
               item.channel,
@@ -2240,25 +2281,14 @@
 
         return true;
       });
+    }
 
-      if (filtered.length === 0) {
-        container.innerHTML = isSearching ? `
-          <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
-            <div style="font-size:32px; margin-bottom:8px;">🔍</div>
-            <div>검색어 "<strong style="color:var(--text-main);">${escapeHtml(searchQuery)}</strong>"와 일치하는 일정이 전체 기간에 없습니다.</div>
-          </div>
-        ` : `
-          <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
-            <div style="font-size:32px; margin-bottom:8px;">📅</div>
-            <div>해당 월에 표시할 일정이 없습니다.</div>
-          </div>
-        `;
-        return;
-      }
+    // 날짜별 그룹 HTML 생성기
+    function renderScheduleGroupsHTML(filteredItems) {
+      if (!filteredItems || filteredItems.length === 0) return '';
 
-      // 날짜별 그루핑
       const groups = {};
-      filtered.forEach((item, index) => {
+      filteredItems.forEach((item, index) => {
         const d = new Date(item.startTime);
         const ymd = formatDateYMD(d);
         if (!groups[ymd]) groups[ymd] = [];
@@ -2266,16 +2296,8 @@
       });
 
       const todayYMD = formatDateYMD(new Date());
-
       let html = '';
-      if (isSearching) {
-        html += `
-          <div style="background: rgba(124, 92, 252, 0.15); border: 1px solid rgba(124, 92, 252, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #c4b5fd; display:flex; justify-content:space-between; align-items:center;">
-            <span>🔍 전체 기간 검색 결과: <strong>${filtered.length}건</strong> (검색어: "${escapeHtml(searchQuery)}")</span>
-            <button onclick="document.getElementById('searchInput').value=''; searchQuery=''; renderSchedules();" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">✕ 검색 닫기</button>
-          </div>
-        `;
-      }
+
       Object.keys(groups).sort().forEach(ymd => {
         const groupItems = groups[ymd];
         const dateObj = new Date(ymd + 'T00:00:00');
@@ -2300,7 +2322,7 @@
           const stableId = item.id || item._originKey || getScheduleKey(item);
           if (renderedIdsInGroup.has(stableId)) return;
 
-          // 연관 연결된 클러스터 탐색 (동일 날짜 내에서 상호 묶인 일정들)
+          // 연관 연결된 클러스터 탐색
           let cluster = [item];
           const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
           if (linkedIds.length > 0) {
@@ -2315,13 +2337,11 @@
             });
           }
 
-          // 그룹 내 중복 렌더링 방지 등록
           cluster.forEach(c => {
             const cId = c.id || c._originKey || getScheduleKey(c);
             renderedIdsInGroup.add(cId);
           });
 
-          // 대표(Primary) 선출: 커스텀(수동) 우선 > 수정됨 우선 > 첫 번째
           let primaryItem = cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0];
           let subItems = cluster.filter(c => c !== primaryItem);
 
@@ -2347,7 +2367,6 @@
             stateBadge = '<span class="state-badge badge-new">수동 등록</span>';
           }
 
-          // 타입 뱃지 및 아이콘 (11개 독립 분류 1:1 매핑)
           const type = resolveScheduleType(primaryItem);
           let typeBadgeClass = 'badge-default';
           let placeholderIcon = '📅';
@@ -2383,7 +2402,6 @@
             placeholderIcon = '📢';
           }
 
-          // 시간 표기
           let timeStr = '종일';
           if (!primaryItem.isAllday && primaryItem.startTime) {
             const timeD = new Date(primaryItem.startTime);
@@ -2397,7 +2415,6 @@
           const safeKey = escapeHtml(key);
           const safeKeyJs = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-          // 서브 스택 UI (연결된 서브 일정이 있는 경우 겹친 UI 렌더링)
           let subStackHtml = '';
           if (subItems.length > 0) {
             let subRowsHtml = '';
@@ -2496,8 +2513,272 @@
         html += `</div>`;
       });
 
-      container.innerHTML = html;
+      return html;
     }
+
+    // 개별 월 섹션 HTML 생성
+    function buildMonthSectionHTML(year, month) {
+      const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const monthStart = new Date(year, month, 1, 0, 0, 0).getTime();
+      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
+
+      const itemsInMonth = filterScheduleItems(allSchedules, { monthStart, monthEnd, isSearching: false });
+
+      let contentHtml = '';
+      if (itemsInMonth.length === 0) {
+        contentHtml = `
+          <div class="empty-month-placeholder">
+            <span>📅 ${year}년 ${month + 1}월에 등록된 일정이 없습니다.</span>
+          </div>
+        `;
+      } else {
+        contentHtml = renderScheduleGroupsHTML(itemsInMonth);
+      }
+
+      return `
+        <div class="month-section" id="month-section-${ym}" data-month="${ym}">
+          <div class="month-divider">
+            <span class="month-badge">📅 ${year}년 ${month + 1}월</span>
+          </div>
+          ${contentHtml}
+        </div>
+      `;
+    }
+
+    // 다음 달 덧붙이기
+    function appendNextMonth(targetDate) {
+      if (searchQuery && searchQuery.trim()) return;
+      if (loadedMonths.length === 0) return;
+
+      let nextYear, nextMonth, nextYm;
+      if (targetDate) {
+        nextYear = targetDate.getFullYear();
+        nextMonth = targetDate.getMonth();
+        nextYm = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
+      } else {
+        const lastYm = loadedMonths[loadedMonths.length - 1];
+        const [y, m] = lastYm.split('-').map(Number);
+        const d = new Date(y, m, 1);
+        nextYear = d.getFullYear();
+        nextMonth = d.getMonth();
+        nextYm = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
+      }
+
+      if (loadedMonths.includes(nextYm)) return;
+
+      loadedMonths.push(nextYm);
+      const wrapper = document.getElementById('monthSectionsWrapper');
+      if (wrapper) {
+        const temp = document.createElement('div');
+        temp.innerHTML = buildMonthSectionHTML(nextYear, nextMonth);
+        if (temp.firstElementChild) {
+          wrapper.appendChild(temp.firstElementChild);
+        }
+      }
+    }
+
+    // 이전 달 위에 덧붙이기 (스크롤 위치 보정)
+    function prependPrevMonth(targetDate) {
+      if (searchQuery && searchQuery.trim()) return;
+      if (loadedMonths.length === 0) return;
+
+      let prevYear, prevMonth, prevYm;
+      if (targetDate) {
+        prevYear = targetDate.getFullYear();
+        prevMonth = targetDate.getMonth();
+        prevYm = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+      } else {
+        const firstYm = loadedMonths[0];
+        const [y, m] = firstYm.split('-').map(Number);
+        const d = new Date(y, m - 2, 1);
+        prevYear = d.getFullYear();
+        prevMonth = d.getMonth();
+        prevYm = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+      }
+
+      if (loadedMonths.includes(prevYm)) return;
+
+      loadedMonths.unshift(prevYm);
+      const wrapper = document.getElementById('monthSectionsWrapper');
+      if (wrapper) {
+        const oldScrollHeight = document.documentElement.scrollHeight;
+        const oldScrollTop = window.scrollY;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = buildMonthSectionHTML(prevYear, prevMonth);
+        if (temp.firstElementChild) {
+          wrapper.insertBefore(temp.firstElementChild, wrapper.firstChild);
+          const newScrollHeight = document.documentElement.scrollHeight;
+          const diff = newScrollHeight - oldScrollHeight;
+          if (diff > 0) {
+            window.scrollTo({ top: oldScrollTop + diff, behavior: 'instant' });
+          }
+        }
+      }
+    }
+
+    let isNavigatingLock = false;
+    let navigatingLockTimer = null;
+
+    // 현재 화면에 보이는 월 감지하여 상단 currentMonthText 갱신
+    function updateCurrentVisibleMonth() {
+      if (isNavigatingLock) return;
+      if (searchQuery && searchQuery.trim()) {
+        document.getElementById('currentMonthText').textContent = '전체 기간 검색';
+        return;
+      }
+
+      const sections = Array.from(document.querySelectorAll('.month-section'));
+      if (sections.length === 0) return;
+
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      let currentSection = sections[0];
+
+      // 스크롤이 페이지 하단에 완전히 도달한 경우 마지막 섹션 활성화
+      if (scrollY + windowHeight >= docHeight - 30 && sections.length > 1) {
+        currentSection = sections[sections.length - 1];
+      } else {
+        const checkPointY = Math.min(260, Math.floor(windowHeight * 0.4));
+        let bestSection = null;
+        let maxOverlap = -1;
+
+        for (let i = 0; i < sections.length; i++) {
+          const rect = sections[i].getBoundingClientRect();
+          // 체크포인트(260px 부근)에 걸쳐있는 섹션 우선 선택
+          if (rect.top <= checkPointY && rect.bottom > checkPointY) {
+            bestSection = sections[i];
+            break;
+          }
+          // 차선책: 뷰포트 내 가시 영역이 가장 큰 섹션
+          const visibleTop = Math.max(140, rect.top);
+          const visibleBottom = Math.min(windowHeight, rect.bottom);
+          const overlap = Math.max(0, visibleBottom - visibleTop);
+          if (overlap > maxOverlap) {
+            maxOverlap = overlap;
+            bestSection = sections[i];
+          }
+        }
+        if (bestSection) {
+          currentSection = bestSection;
+        }
+      }
+
+      const ym = currentSection.getAttribute('data-month');
+      if (ym) {
+        const [y, m] = ym.split('-');
+        document.getElementById('currentMonthText').textContent = `${y}. ${m}`;
+        currentViewDate = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+        window.currentViewDate = currentViewDate;
+      }
+    }
+
+    let hasUserScrolledDown = false;
+
+    // 스크롤 이벤트 핸들러
+    function handleContinuousScroll() {
+      if (searchQuery && searchQuery.trim()) return;
+      if (isScrollLoading) return;
+
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      if (scrollY > 150) {
+        hasUserScrolledDown = true;
+      }
+
+      // 1. 하단 도달 시 다음 달 자동 로드
+      if (scrollY + windowHeight >= docHeight - 350) {
+        isScrollLoading = true;
+        appendNextMonth();
+        setTimeout(() => { isScrollLoading = false; }, 150);
+      }
+
+      // 2. 상단 도달 시 이전 달 자동 로드 (사용자가 아래로 스크롤한 후 다시 맨 위로 스크롤했을 때만)
+      if (hasUserScrolledDown && scrollY <= 10 && loadedMonths.length > 0) {
+        isScrollLoading = true;
+        prependPrevMonth();
+        setTimeout(() => { isScrollLoading = false; }, 150);
+      }
+
+      // 3. 현재 뷰포트에 보이는 월 감지하여 상단 텍스트 갱신
+      updateCurrentVisibleMonth();
+    }
+
+    // 전역 스크롤 리스너 바인딩
+    window.removeEventListener('scroll', handleContinuousScroll);
+    window.addEventListener('scroll', handleContinuousScroll, { passive: true });
+
+    // 외부 연동 및 전역 참조 노출
+    window.appendNextMonth = appendNextMonth;
+    window.prependPrevMonth = prependPrevMonth;
+    window.updateCurrentVisibleMonth = updateCurrentVisibleMonth;
+
+    // 메인 렌더링 진입점
+    function renderSchedules() {
+      const container = document.getElementById('scheduleListContainer');
+      const isSearching = Boolean(searchQuery && searchQuery.trim());
+
+      // 외부(테스트 등)에서 window.allSchedules나 window.currentViewDate를 주입한 경우 동기화
+      if (window.allSchedules && Array.isArray(window.allSchedules) && window.allSchedules !== allSchedules) {
+        allSchedules = window.allSchedules;
+      }
+      if (window.currentViewDate && window.currentViewDate instanceof Date && window.currentViewDate !== currentViewDate) {
+        currentViewDate = window.currentViewDate;
+      }
+
+      if (isSearching) {
+        document.getElementById('currentMonthText').textContent = '전체 기간 검색';
+        const filtered = filterScheduleItems(allSchedules, { isSearching: true });
+
+        if (filtered.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center; padding: 50px 0; color: var(--text-muted);">
+              <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+              <div>검색어 "<strong style="color:var(--text-main);">${escapeHtml(searchQuery)}</strong>"와 일치하는 일정이 전체 기간에 없습니다.</div>
+            </div>
+          `;
+          return;
+        }
+
+        const searchBanner = `
+          <div style="background: rgba(124, 92, 252, 0.15); border: 1px solid rgba(124, 92, 252, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #c4b5fd; display:flex; justify-content:space-between; align-items:center;">
+            <span>🔍 전체 기간 검색 결과: <strong>${filtered.length}건</strong> (검색어: "${escapeHtml(searchQuery)}")</span>
+            <button onclick="document.getElementById('searchInput').value=''; searchQuery=''; renderSchedules();" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">✕ 검색 닫기</button>
+          </div>
+        `;
+
+        container.innerHTML = searchBanner + renderScheduleGroupsHTML(filtered);
+        return;
+      }
+
+      // 일반 모드: 연속 멀티 먼스 피드
+      hasUserScrolledDown = false;
+      const year = currentViewDate.getFullYear();
+      const month = currentViewDate.getMonth();
+      const currentYm = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+      document.getElementById('currentMonthText').textContent = `${year}. ${String(month + 1).padStart(2, '0')}`;
+      loadedMonths = [currentYm];
+
+      container.innerHTML = `
+        <div id="monthSectionsWrapper">
+          ${buildMonthSectionHTML(year, month)}
+        </div>
+      `;
+
+      // 초기 렌더링 높이가 낮아 스크롤이 불가능한 경우, 자연스러운 스크롤을 위해 다음 달 자동 프리로드
+      setTimeout(() => {
+        if (!searchQuery && document.documentElement.scrollHeight <= window.innerHeight + 150) {
+          appendNextMonth();
+        }
+      }, 80);
+    }
+    window.renderSchedules = renderSchedules;
+
 
     // 모달 열기
     function openEditModalByKey(key) {
@@ -4129,18 +4410,90 @@
     document.getElementById('btnRefresh').addEventListener('click', loadSchedules);
 
     document.getElementById('btnPrevMonth').addEventListener('click', () => {
-      currentViewDate.setMonth(currentViewDate.getMonth() - 1);
-      renderSchedules();
+      if (searchQuery && searchQuery.trim()) {
+        searchQuery = '';
+        document.getElementById('searchInput').value = '';
+      }
+      const targetDate = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1);
+      const targetYm = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+      let el = document.getElementById(`month-section-${targetYm}`);
+      if (!el) {
+        prependPrevMonth(targetDate);
+        el = document.getElementById(`month-section-${targetYm}`);
+      }
+      isNavigatingLock = true;
+      clearTimeout(navigatingLockTimer);
+      navigatingLockTimer = setTimeout(() => { isNavigatingLock = false; }, 600);
+
+      currentViewDate = targetDate;
+      window.currentViewDate = currentViewDate;
+      document.getElementById('currentMonthText').textContent = `${targetDate.getFullYear()}. ${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+
+      if (el) {
+        const headerOffset = 140;
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: elementPosition - headerOffset, behavior: 'smooth' });
+      } else {
+        renderSchedules();
+      }
     });
 
     document.getElementById('btnNextMonth').addEventListener('click', () => {
-      currentViewDate.setMonth(currentViewDate.getMonth() + 1);
-      renderSchedules();
+      if (searchQuery && searchQuery.trim()) {
+        searchQuery = '';
+        document.getElementById('searchInput').value = '';
+      }
+      const targetDate = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1);
+      const targetYm = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+      let el = document.getElementById(`month-section-${targetYm}`);
+      if (!el) {
+        appendNextMonth(targetDate);
+        el = document.getElementById(`month-section-${targetYm}`);
+      }
+      isNavigatingLock = true;
+      clearTimeout(navigatingLockTimer);
+      navigatingLockTimer = setTimeout(() => { isNavigatingLock = false; }, 600);
+
+      currentViewDate = targetDate;
+      window.currentViewDate = currentViewDate;
+      document.getElementById('currentMonthText').textContent = `${targetDate.getFullYear()}. ${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+
+      if (el) {
+        const headerOffset = 140;
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: elementPosition - headerOffset, behavior: 'smooth' });
+      } else {
+        renderSchedules();
+      }
     });
 
     document.getElementById('btnToday').addEventListener('click', () => {
-      currentViewDate = new Date();
-      renderSchedules();
+      if (searchQuery && searchQuery.trim()) {
+        searchQuery = '';
+        document.getElementById('searchInput').value = '';
+      }
+      const now = new Date();
+      const todayYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      let el = document.getElementById(`month-section-${todayYm}`);
+      if (!el) {
+        currentViewDate = now;
+        window.currentViewDate = currentViewDate;
+        renderSchedules();
+        el = document.getElementById(`month-section-${todayYm}`);
+      }
+      const todayHeader = document.querySelector('.date-header.today');
+      if (todayHeader) {
+        const headerOffset = 150;
+        const elementPosition = todayHeader.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: elementPosition - headerOffset, behavior: 'smooth' });
+      } else if (el) {
+        const headerOffset = 140;
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: elementPosition - headerOffset, behavior: 'smooth' });
+      }
+      currentViewDate = now;
+      window.currentViewDate = currentViewDate;
+      document.getElementById('currentMonthText').textContent = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
 
     document.getElementById('searchInput').addEventListener('input', (e) => {
