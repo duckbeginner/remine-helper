@@ -947,15 +947,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
-            <span>관련 링크 (유튜브/SNS/공지/티켓 URL)</span>
-            <button type="button" id="btnFetchUrlMeta" style="display: none; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 4px; cursor: pointer; transition: all 0.2s;">
-              ⚡ 정보 가져오기
-            </button>
-          </label>
+          <label class="form-label">관련 링크 (유튜브/SNS/공지/티켓 URL)</label>
           <div style="display: flex; gap: 6px; align-items: center;">
             <input type="url" class="form-input" id="formUrl" placeholder="https://..." style="flex: 1;">
-            <button type="button" id="btnFetchUrlMetaInline" class="btn-action" style="display: none; white-space: nowrap; height: 38px; padding: 0 10px; font-size: 12px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: var(--radius-sm); cursor: pointer;">
+            <button type="button" id="btnFetchUrlMeta" class="btn-action" style="display: none; white-space: nowrap; height: 38px; padding: 0 12px; font-size: 12px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;">
               ⚡ 정보 가져오기
             </button>
           </div>
@@ -2318,49 +2313,41 @@
     function updateUrlMetaBtnState() {
       const urlInput = document.getElementById('formUrl');
       const btn = document.getElementById('btnFetchUrlMeta');
-      const btnInline = document.getElementById('btnFetchUrlMetaInline');
       if (!urlInput || !btn) return;
 
       const type = getUrlPlatformType(urlInput.value);
       if (!type) {
         btn.style.display = 'none';
-        if (btnInline) btnInline.style.display = 'none';
         return;
       }
 
       let label = '⚡ 정보 가져오기';
-      let inlineLabel = '⚡ 정보 가져오기';
       let bg = 'rgba(56, 189, 248, 0.15)';
       let color = '#38bdf8';
       let border = 'rgba(56, 189, 248, 0.35)';
 
       if (type === 'youtube') {
-        label = '▶️ 유튜브 정보 자동입력';
-        inlineLabel = '▶️ 유튜브 자동입력';
+        label = '▶️ 유튜브 자동입력';
         bg = 'rgba(239, 68, 68, 0.15)';
         color = '#f87171';
         border = 'rgba(239, 68, 68, 0.35)';
       } else if (type === 'twitter') {
-        label = '𝕏 트위터 본문 가져오기';
-        inlineLabel = '𝕏 본문 가져오기';
+        label = '𝕏 본문 가져오기';
         bg = 'rgba(148, 163, 184, 0.15)';
         color = '#e2e8f0';
         border = 'rgba(148, 163, 184, 0.35)';
       } else if (type === 'instagram') {
-        label = '📸 인스타 정보 가져오기';
-        inlineLabel = '📸 인스타 가져오기';
+        label = '📸 인스타 가져오기';
         bg = 'rgba(236, 72, 153, 0.15)';
         color = '#f472b6';
         border = 'rgba(236, 72, 153, 0.35)';
       } else if (type === 'tiktok') {
-        label = '🎵 틱톡 정보 가져오기';
-        inlineLabel = '🎵 틱톡 가져오기';
+        label = '🎵 틱톡 가져오기';
         bg = 'rgba(45, 212, 191, 0.15)';
         color = '#2dd4bf';
         border = 'rgba(45, 212, 191, 0.35)';
       } else if (type === 'web') {
-        label = '🌐 웹페이지 참고정보 조회';
-        inlineLabel = '🌐 참고정보 조회';
+        label = '🌐 참고정보 조회';
         bg = 'rgba(124, 92, 252, 0.15)';
         color = '#a78bfa';
         border = 'rgba(124, 92, 252, 0.35)';
@@ -2371,14 +2358,6 @@
       btn.style.background = bg;
       btn.style.color = color;
       btn.style.borderColor = border;
-
-      if (btnInline) {
-        btnInline.style.display = 'inline-flex';
-        btnInline.innerHTML = inlineLabel;
-        btnInline.style.background = bg;
-        btnInline.style.color = color;
-        btnInline.style.borderColor = border;
-      }
     }
 
     function clearUrlMetaPreview() {
@@ -2434,7 +2413,6 @@
       const urlInput = document.getElementById('formUrl');
       const panel = document.getElementById('urlMetaPreviewPanel');
       const btn = document.getElementById('btnFetchUrlMeta');
-      const btnInline = document.getElementById('btnFetchUrlMetaInline');
       if (!urlInput || !panel) return;
 
       const rawUrl = urlInput.value.trim();
@@ -2445,8 +2423,10 @@
       }
 
       const setButtonsLoading = (loading) => {
-        if (btn) btn.disabled = loading;
-        if (btnInline) btnInline.disabled = loading;
+        if (btn) {
+          btn.disabled = loading;
+          btn.innerHTML = loading ? '⏳ 조회 중...' : btn.innerHTML;
+        }
       };
 
       setButtonsLoading(true);
@@ -2841,7 +2821,6 @@
     document.getElementById('formUrl').addEventListener('input', updateUrlMetaBtnState);
     document.getElementById('formUrl').addEventListener('change', updateUrlMetaBtnState);
     document.getElementById('btnFetchUrlMeta').addEventListener('click', fetchUrlMetadata);
-    document.getElementById('btnFetchUrlMetaInline').addEventListener('click', fetchUrlMetadata);
 
     // 폼 저장
     document.getElementById('scheduleEditForm').addEventListener('submit', (e) => {
