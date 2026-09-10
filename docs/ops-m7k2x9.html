@@ -1643,12 +1643,42 @@
           return tA - tB;
         });
 
+        const renderedIdsInGroup = new Set();
+
         groupItems.forEach(({ item, originalIndex }) => {
-          const key = getScheduleKey(item);
-          const isDeleted = pendingOverrides.deleted.has(key) || item._isDeleted;
+          const stableId = item.id || item._originKey || getScheduleKey(item);
+          if (renderedIdsInGroup.has(stableId)) return;
+
+          // 연관 연결된 클러스터 탐색 (동일 날짜 내에서 상호 묶인 일정들)
+          let cluster = [item];
+          const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
+          if (linkedIds.length > 0) {
+            linkedIds.forEach(tId => {
+              const matched = groupItems.find(g => {
+                const gId = g.item.id || g.item._originKey || getScheduleKey(g.item);
+                return gId === tId;
+              });
+              if (matched && !cluster.includes(matched.item)) {
+                cluster.push(matched.item);
+              }
+            });
+          }
+
+          // 그룹 내 중복 렌더링 방지 등록
+          cluster.forEach(c => {
+            const cId = c.id || c._originKey || getScheduleKey(c);
+            renderedIdsInGroup.add(cId);
+          });
+
+          // 대표(Primary) 선출: 커스텀(수동) 우선 > 수정됨 우선 > 첫 번째
+          let primaryItem = cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0];
+          let subItems = cluster.filter(c => c !== primaryItem);
+
+          const key = getScheduleKey(primaryItem);
+          const isDeleted = pendingOverrides.deleted.has(key) || primaryItem._isDeleted;
           const isPendingMod = Boolean(pendingOverrides.modified[key]);
-          const isSavedMod = Boolean(item._isModified);
-          const isCustom = Boolean(item._isCustom);
+          const isSavedMod = Boolean(primaryItem._isModified);
+          const isCustom = Boolean(primaryItem._isCustom);
 
           let statusClass = '';
           let stateBadge = '';
@@ -1667,7 +1697,7 @@
           }
 
           // 타입 뱃지 및 아이콘 (11개 독립 분류 1:1 매핑)
-          const type = resolveScheduleType(item);
+          const type = resolveScheduleType(primaryItem);
           let typeBadgeClass = 'badge-default';
           let placeholderIcon = '📅';
           if (type === '영상') {
@@ -1704,8 +1734,8 @@
 
           // 시간 표기
           let timeStr = '종일';
-          if (!item.isAllday && item.startTime) {
-            const timeD = new Date(item.startTime);
+          if (!primaryItem.isAllday && primaryItem.startTime) {
+            const timeD = new Date(primaryItem.startTime);
             if (!isNaN(timeD.getTime())) {
               const hours = String(timeD.getHours()).padStart(2, '0');
               const mins = String(timeD.getMinutes()).padStart(2, '0');
@@ -1716,28 +1746,90 @@
           const safeKey = escapeHtml(key);
           const safeKeyJs = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
+          // 서브 스택 UI (연결된 서브 일정이 있는 경우 겹친 UI 렌더링)
+          let subStackHtml = '';
+          if (subItems.length > 0) {
+            let subRowsHtml = '';
+            subItems.forEach(sub => {
+              const subKey = getScheduleKey(sub);
+              const subKeyJs = subKey.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+              const subType = resolveScheduleType(sub) || '기타';
+              const subSource = sub.source || (sub._isCustom ? 'custom' : 'blip');
+              let sourceBadgeBg = 'rgba(255,255,255,0.08)';
+              let sourceBadgeColor = 'var(--text-muted)';
+              let sourceName = '기타';
+              if (subSource === 'mnet') {
+                sourceBadgeBg = 'rgba(236,72,153,0.15)';
+                sourceBadgeColor = '#ec4899';
+                sourceName = 'Mnet';
+              } else if (subSource === 'blip') {
+                sourceBadgeBg = 'rgba(59,130,246,0.15)';
+                sourceBadgeColor = '#3b82f6';
+                sourceName = 'Blip';
+              } else if (sub._isCustom) {
+                sourceBadgeBg = 'rgba(168,85,247,0.15)';
+                sourceBadgeColor = '#a855f7';
+                sourceName = '수동';
+              }
+
+              let subTime = '종일';
+              if (!sub.isAllday && sub.startTime) {
+                const subD = new Date(sub.startTime);
+                if (!isNaN(subD.getTime())) {
+                  subTime = `${String(subD.getHours()).padStart(2, '0')}:${String(subD.getMinutes()).padStart(2, '0')}`;
+                }
+              }
+
+              subRowsHtml += `
+                <div class="linked-sub-card" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-size: 11px;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden;">
+                    <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${sourceBadgeBg}; color: ${sourceBadgeColor}; flex-shrink: 0;">${sourceName}</span>
+                    <span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); flex-shrink: 0;">${escapeHtml(subType)}</span>
+                    <span style="font-weight: 500; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(sub.title)}</span>
+                    <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${subTime}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-shrink: 0;">
+                    ${sub.url ? `<a href="${escapeHtml(sub.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
+                    <button class="btn-action" style="padding: 2px 6px; font-size: 10.5px;" onclick="openEditModalByKey('${subKeyJs}')">✏️ 수정</button>
+                    <button class="btn-action btn-del" style="padding: 2px 6px; font-size: 10.5px;" title="연결 해제" onclick="unlinkSchedulePair('${safeKeyJs}', '${subKeyJs}')">🔗 해제</button>
+                  </div>
+                </div>
+              `;
+            });
+
+            subStackHtml = `
+              <div class="linked-sub-stack" style="margin-top: 10px; padding: 8px 10px; background: rgba(56, 189, 248, 0.04); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-size: 10.5px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; justify-content: space-between;">
+                  <span>🔗 함께 합성된 연관 일정 (${subItems.length}건)</span>
+                  <span style="font-size: 10px; font-weight: normal; color: var(--text-muted);">사용자 화면엔 1개로 통합 노출</span>
+                </div>
+                ${subRowsHtml}
+              </div>
+            `;
+          }
+
           html += `
             <div class="schedule-card ${statusClass}" data-key="${safeKey}">
               <div class="card-top">
                 <div class="thumb-box">
-                  ${item.thumbnail ? `<img src="${escapeHtml(item.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${placeholderIcon}</div>`}
+                  ${primaryItem.thumbnail ? `<img src="${escapeHtml(primaryItem.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${placeholderIcon}</div>`}
                 </div>
                 <div class="card-meta">
                   <div class="meta-badges">
                     <span class="type-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
-                    ${item.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(item.channel)}</span>` : ''}
+                    ${primaryItem.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(primaryItem.channel)}</span>` : ''}
                     ${stateBadge}
-                    ${(Array.isArray(item.linkedScheduleIds) && item.linkedScheduleIds.length > 0) ? `<span class="state-badge" style="background:rgba(56,189,248,0.2); color:#38bdf8;" title="연결된 ID: ${escapeHtml(item.linkedScheduleIds.join(', '))}">🔗 연관 연결</span>` : ''}
+                    ${subItems.length > 0 ? `<span class="state-badge" style="background:rgba(56,189,248,0.2); color:#38bdf8; font-weight:600;" title="연관 일정 ${subItems.length}건과 1개로 합성됨">🔗 연관 ${subItems.length}건 합성</span>` : ''}
                   </div>
-                  <div class="card-title">${escapeHtml(item.title)}</div>
-                  ${item.location ? `<div class="card-subtext">📍 ${escapeHtml(item.location)}</div>` : ''}
+                  <div class="card-title">${escapeHtml(primaryItem.title)}</div>
+                  ${primaryItem.location ? `<div class="card-subtext">📍 ${escapeHtml(primaryItem.location)}</div>` : ''}
                 </div>
               </div>
 
               <div class="card-bottom">
                 <div class="card-time">⏰ ${timeStr}</div>
                 <div class="card-actions">
-                  ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
+                  ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
                   ${isDeleted ? 
                     `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` : 
                     `<button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
@@ -1745,6 +1837,7 @@
                   }
                 </div>
               </div>
+              ${subStackHtml}
             </div>
           `;
         });
@@ -1932,6 +2025,57 @@
 
       updateStagingBar();
       renderSchedules();
+    }
+
+    // 연관 일정 연결 해제 (상호 양방향 분리)
+    function unlinkSchedulePair(keyA, keyB) {
+      if (!confirm('이 일정과의 연관 연결을 해제하시겠습니까? (서로 독립된 일정으로 분리됩니다)')) return;
+
+      const itemA = allSchedules.find(s => (s.id && s.id === keyA) || s._originKey === keyA || getScheduleKey(s) === keyA || getRawScheduleKey(s) === keyA);
+      const itemB = allSchedules.find(s => (s.id && s.id === keyB) || s._originKey === keyB || getScheduleKey(s) === keyB || getRawScheduleKey(s) === keyB);
+
+      if (!itemA || !itemB) return;
+
+      const idA = itemA.id || itemA._originKey || getScheduleKey(itemA);
+      const idB = itemB.id || itemB._originKey || getScheduleKey(itemB);
+
+      const applyUnlink = (target, unlinkId) => {
+        if (!target) return;
+        let links = Array.isArray(target.linkedScheduleIds) ? [...target.linkedScheduleIds] : [];
+        target.linkedScheduleIds = links.filter(id => id !== unlinkId && id !== keyA && id !== keyB);
+        target._isModified = true;
+
+        const targetKey = target.id || target._originKey || getScheduleKey(target);
+        const modObj = {
+          title: target.title,
+          startTime: target.startTime,
+          endTime: target.endTime,
+          isAllday: target.isAllday,
+          typeText: target.typeText,
+          channel: target.channel,
+          url: target.url,
+          location: target.location,
+          message: target.message,
+          thumbnail: target.thumbnail,
+          isOfficialYoutube: target.isOfficialYoutube,
+          linkedScheduleIds: target.linkedScheduleIds
+        };
+
+        if (target._isCustom) {
+          const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === targetKey) || c._originKey === targetKey || getScheduleKey(c) === targetKey);
+          if (cIdx >= 0) pendingOverrides.created[cIdx] = { ...target, ...modObj };
+          else pendingOverrides.created.push({ ...target, ...modObj });
+        } else {
+          pendingOverrides.modified[targetKey] = modObj;
+        }
+      };
+
+      applyUnlink(itemA, idB);
+      applyUnlink(itemB, idA);
+
+      updateStagingBar();
+      renderSchedules();
+      showToast('연관 일정 연결이 해제되었습니다.');
     }
 
     // === 제외 필터 설정 모달 제어 ===
