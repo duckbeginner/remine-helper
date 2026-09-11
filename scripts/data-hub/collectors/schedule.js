@@ -58,7 +58,7 @@ export function slimScheduleItem(item) {
     id: item.id || undefined,
     title: item.title,
     startTime: item.startTime,
-    endTime: item.endTime,
+    endTime: (item.endTime && item.endTime !== item.startTime) ? item.endTime : undefined,
     isAllday: Boolean(item.isAllday),
     typeId: item.typeId,
     url: item.url || item.link || undefined,

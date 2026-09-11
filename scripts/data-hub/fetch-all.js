@@ -72,10 +72,21 @@ async function main() {
 
     // 3. 최근 14일 ~ 미래 끝까지의 활성 스케줄 필터링 (새 일정 및 변경 사항 즉시 반영용)
     const fourteenDaysAgo = nowTimestamp - (14 * 24 * 60 * 60 * 1000);
-    const activeItems = (schedule.items || []).filter(item => {
-      const t = item.startTime ? new Date(item.startTime).getTime() : 0;
-      return t >= fourteenDaysAgo;
-    });
+    const activeItems = (schedule.items || [])
+      .filter(item => {
+        const t = item.startTime ? new Date(item.startTime).getTime() : 0;
+        return t >= fourteenDaysAgo;
+      })
+      .map(item => {
+        const slim = { ...item };
+        if (slim.extField && (slim.channel || slim.location)) {
+          delete slim.extField;
+        }
+        if (slim.message) {
+          delete slim.message;
+        }
+        return slim;
+      });
 
     // 4. [계층 1] core.json (초경량 헤드: 약 20~25 KB)
     const coreData = {
