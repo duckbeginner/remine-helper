@@ -38,7 +38,7 @@ export async function run() {
     'svg/tiktok.svg'
   ];
 
-  ['remine-helper', 'remine-helper-firefox'].forEach(platform => {
+  ['remine-helper'].forEach(platform => {
     runner.test(`[${platform}] 모든 확장 프로그램 아이콘 및 멤버 프로필 이미지 파일 실존성`, () => {
       const iconsDir = path.join(BASE_DIR, platform, 'icons');
       requiredIcons.forEach(iconName => {

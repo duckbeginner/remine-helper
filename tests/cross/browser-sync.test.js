@@ -1,8 +1,9 @@
 // tests/cross/browser-sync.test.js
-// Chrome ↔ Firefox 확장 프로그램 소스 파일 동기화 완전 일치성 검증
+// Chrome ↔ Firefox 단일 소스(Single Source) 빌드 무결성 및 매니페스트 동기화 검증
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { TestRunner, assert } from '../test-helper.js';
 
@@ -11,64 +12,67 @@ const __dirname = path.dirname(__filename);
 const BASE_DIR = path.resolve(__dirname, '../..');
 
 export async function run() {
-  const runner = new TestRunner('Cross - Browser Sync & Rules Integrity');
+  const runner = new TestRunner('Cross - Single Source Build & Firefox Integration');
   runner.run();
 
   const chromeDir = path.join(BASE_DIR, 'remine-helper');
-  const firefoxDir = path.join(BASE_DIR, 'remine-helper-firefox');
+  const firefoxManifestPath = path.join(BASE_DIR, 'manifests/manifest.firefox.json');
+  const tempBuildDir = path.join(BASE_DIR, 'build/test-firefox');
 
-  // 1. 공통 소스 파일 일치성 검사 목록
-  const sharedFiles = [
-    'constants.js',
-    'sidepanel.js',
-    'sidepanel.css',
-    'sidepanel.html',
-    'dashboard.js',
-    'dashboard.css',
-    'dashboard.html',
-    'background.js',
-    'common/common.js',
-    'common/common.css',
-    'common/templates.js',
-    'common/theme-preload.js',
-    'common/modules/calendar.js',
-    'common/modules/modals.js',
-    'common/modules/storage.js',
-    'common/modules/sns-embeds.js',
-    'common/modules/tabs.js',
-    'common/modules/theme.js',
-    'common/modules/youtube.js'
-  ];
+  // 1. manifests/manifest.firefox.json 스키마 유효성
+  runner.test('Firefox Manifest: MV2 규격 및 필수 필드 유효성', () => {
+    assert(fs.existsSync(firefoxManifestPath), 'manifests/manifest.firefox.json이 존재해야 합니다.');
+    const ffManifest = JSON.parse(fs.readFileSync(firefoxManifestPath, 'utf8'));
 
-  runner.test('Source Code Sync: Chrome과 Firefox 간의 공유 모듈 100% 일치 검증', () => {
-    sharedFiles.forEach(relPath => {
-      const cFile = path.join(chromeDir, relPath);
-      const fFile = path.join(firefoxDir, relPath);
-
-      assert(fs.existsSync(cFile), `Chrome 파일 누락: ${relPath}`);
-      assert(fs.existsSync(fFile), `Firefox 파일 누락: ${relPath}`);
-
-      const cContent = fs.readFileSync(cFile, 'utf8');
-      const fContent = fs.readFileSync(fFile, 'utf8');
-
-      assert.strictEqual(cContent, fContent, `Chrome과 Firefox의 소스 불일치 발견: ${relPath}`);
-    });
+    assert.strictEqual(ffManifest.manifest_version, 2, 'Firefox는 Manifest V2 규격이어야 합니다.');
+    assert(ffManifest.name, '매니페스트 name 필드 누락');
+    assert(ffManifest.version, '매니페스트 version 필드 누락');
+    assert(Array.isArray(ffManifest.permissions), 'permissions는 배열이어야 합니다.');
+    assert(ffManifest.browser_specific_settings?.gecko?.id, 'Firefox Gecko ID가 명시되어야 합니다.');
   });
 
-  // 2. Firefox 전용 rules.json 유효성 검사
-  runner.test('Firefox rules.json: declarativeNetRequest 규칙 유효성', () => {
-    const rulesPath = path.join(firefoxDir, 'rules.json');
-    assert(fs.existsSync(rulesPath), 'Firefox rules.json이 존재해야 합니다.');
+  // 2. build-firefox.sh 단일 소스 빌드 파이프라인 무결성 검증
+  runner.test('Single Source Build Pipeline: scripts/build-firefox.sh 실행 및 아티팩트 일치성', () => {
+    try {
+      execSync(`bash scripts/build-firefox.sh "${tempBuildDir}"`, { cwd: BASE_DIR, stdio: 'pipe' });
 
-    const rules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
-    assert(Array.isArray(rules), 'rules.json은 규칙 배열이어야 합니다.');
-    assert(rules.length > 0, '최소 1개 이상의 DNR 규칙이 있어야 합니다.');
+      assert(fs.existsSync(tempBuildDir), '임시 빌드 디렉터리가 생성되어야 합니다.');
 
-    rules.forEach(r => {
-      assert(typeof r.id === 'number', '규칙 id는 숫자여야 합니다.');
-      assert(r.condition && r.condition.urlFilter, '규칙에 urlFilter 조건이 있어야 합니다.');
-      assert(r.action && r.action.type, '규칙에 action type이 있어야 합니다.');
-    });
+      const builtManifestPath = path.join(tempBuildDir, 'manifest.json');
+      assert(fs.existsSync(builtManifestPath), '빌드 결과물에 manifest.json이 생성되어야 합니다.');
+
+      const builtManifest = JSON.parse(fs.readFileSync(builtManifestPath, 'utf8'));
+      assert.strictEqual(builtManifest.manifest_version, 2, '빌드 결과물의 매니페스트는 Firefox MV2여야 합니다.');
+
+      // 공통 소스 파일들이 누락 없이 완벽 복사되었는지 확인
+      const keyFiles = [
+        'background.js',
+        'sidepanel.html',
+        'sidepanel.js',
+        'dashboard.html',
+        'dashboard.js',
+        'constants.js',
+        'common/common.js',
+        'common/modules/calendar.js',
+        'common/modules/modals.js',
+        'common/modules/storage.js'
+      ];
+
+      keyFiles.forEach(rel => {
+        const srcFile = path.join(chromeDir, rel);
+        const builtFile = path.join(tempBuildDir, rel);
+
+        assert(fs.existsSync(builtFile), `빌드 결과물에 필수 파일 누락: ${rel}`);
+
+        const srcContent = fs.readFileSync(srcFile, 'utf8');
+        const builtContent = fs.readFileSync(builtFile, 'utf8');
+        assert.strictEqual(srcContent, builtContent, `원본과 빌드본의 소스 내용 불일치: ${rel}`);
+      });
+    } finally {
+      if (fs.existsSync(tempBuildDir)) {
+        fs.rmSync(tempBuildDir, { recursive: true, force: true });
+      }
+    }
   });
 
   return runner.summary();

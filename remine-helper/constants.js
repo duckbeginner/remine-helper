@@ -81,11 +81,6 @@ export const CHANNEL_DATA_MAP = {
     url: 'https://www.youtube.com/@helloiamwoninicetomeetyou', // [수정] 최신 핸들 주소로 변경
     img: 'icons/hellowoni_profile.jpg'
   },
-  dcinside: {
-    name: 'dcinside',
-    url: 'https://m.dcinside.com/board/rescene1',
-    img: 'icons/dc_logo.png'
-  },
   instagram: {
     name: 'Instagram',
     url: 'https://www.instagram.com/rescene_official',

@@ -15,7 +15,7 @@ export async function run() {
   runner.run();
 
   const chromeManifestPath = path.join(BASE_DIR, 'remine-helper/manifest.json');
-  const firefoxManifestPath = path.join(BASE_DIR, 'remine-helper-firefox/manifest.json');
+  const firefoxManifestPath = path.join(BASE_DIR, 'manifests/manifest.firefox.json');
 
   assert(fs.existsSync(chromeManifestPath), 'Chrome manifest.json이 존재해야 합니다.');
   assert(fs.existsSync(firefoxManifestPath), 'Firefox manifest.json이 존재해야 합니다.');

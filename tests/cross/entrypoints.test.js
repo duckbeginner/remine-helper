@@ -24,10 +24,7 @@ export async function run() {
       'remine-helper/common/common.html',
       'remine-helper/common/common.js',
       'remine-helper/common/theme-preload.js',
-      'remine-helper-firefox/sidepanel.html',
-      'remine-helper-firefox/sidepanel.js',
-      'remine-helper-firefox/dashboard.html',
-      'remine-helper-firefox/dashboard.js',
+      'manifests/manifest.firefox.json',
       'scripts/data-hub/fetch-all.js'
     ];
 

@@ -10,13 +10,9 @@
     "tabs",
     "webRequest",
     "webRequestBlocking",
-    "https://*.youtube.com/*",
     "https://gist.githubusercontent.com/*",
     "https://duckbeginner.github.io/*",
-    "https://blip.kr/*",
-    "https://*.mnetplus.world/*",
-    "https://*.bstage.in/*",
-    "https://*.instagram.com/*",
+    "https://*.youtube.com/*",
     "https://*.tiktok.com/*"
   ],
   "background": {
@@ -43,7 +39,7 @@
     "default_icon": "icons/logo32.png",
     "default_panel": "sidepanel.html"
   },
-  "content_security_policy": "script-src 'self'; object-src 'self'; frame-src 'self' https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://www.tiktok.com https://*.mnetplus.world https://blip.kr https://*.bstage.in https://*.x.com https://platform.twitter.com https://platform.x.com https://syndication.twitter.com;",
+  "content_security_policy": "script-src 'self'; object-src 'self'; frame-src 'self' https://adam-yam.github.io https://clip.naver.com https://*.youtube.com https://*.instagram.com https://www.tiktok.com https://*.x.com https://platform.twitter.com https://syndication.twitter.com;",
   "browser_specific_settings": {
     "gecko": {
       "id": "{8e25f021-4c94-49f8-91b7-18f5f3e5a810}",
