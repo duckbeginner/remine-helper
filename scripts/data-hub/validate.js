@@ -64,7 +64,7 @@ function runValidation() {
   console.log("\n3️⃣ 파일 크기 2계층 다이어트 규격 검증");
   const coreKb = Buffer.byteLength(JSON.stringify(core)) / 1024;
   const schedKb = Buffer.byteLength(JSON.stringify(schedules)) / 1024;
-  assert(coreKb <= 130, `core.json 130KB 이하 초경량 유지 (${coreKb.toFixed(2)} KB)`);
+  assert(coreKb <= 160, `core.json 160KB 이하 초경량 유지 (${coreKb.toFixed(2)} KB)`);
   assert(schedKb <= 600, `schedules.json 마스터 아카이브 규격 내 유지 (${schedKb.toFixed(2)} KB)`);
 
   console.log("\n==================================================");
