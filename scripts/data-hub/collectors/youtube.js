@@ -74,7 +74,6 @@ async function parseYouTubeRss(xmlText, channelName = "") {
   // 쇼츠 여부 병렬 판별
   const videos = await Promise.all(rawEntries.map(async (entry) => {
     const isShort = await isVideoShorts(entry.videoId, entry.title, entry.entryXml);
-    const finalUrl = isShort ? `https://www.youtube.com/shorts/${entry.videoId}` : entry.rawUrl;
 
     return {
       id: entry.videoId,

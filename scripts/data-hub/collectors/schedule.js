@@ -704,7 +704,7 @@ function normalizeTitle(title) {
 }
 
 // 스케줄 중복 판별
-function areSchedulesDuplicate(item1, item2) {
+export function areSchedulesDuplicate(item1, item2) {
   const extractYtId = (item) => {
     const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
     const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
@@ -732,7 +732,7 @@ function areSchedulesDuplicate(item1, item2) {
   return false;
 }
 
-function pickBestTitle(title1, title2) {
+export function pickBestTitle(title1, title2) {
   if (!title1) return title2 || "";
   if (!title2) return title1 || "";
   if (title1.includes('(') && !title2.includes('(')) return title1;
