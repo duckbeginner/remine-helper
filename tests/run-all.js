@@ -32,6 +32,7 @@ import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
 import { run as runOpsMemberBadgesTest } from './docs/ops-member-badges.test.js';
+import { run as runOpsPayloadV2CleanupTest } from './docs/ops-payload-v2-cleanup.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
 import { run as runManifestTest } from './cross/manifest.test.js';
@@ -132,6 +133,7 @@ async function main() {
     runPagesTest,
     runOpsToolTest,
     runOpsMemberBadgesTest,
+    runOpsPayloadV2CleanupTest,
     runSeoTest
   ];
 

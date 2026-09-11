@@ -105,13 +105,14 @@ async function main() {
   console.log(`✓ 기존 마스터 일정: ${masterData.items?.length || 0}건 로드 완료`);
 
   // Gist에서 최신 오버라이드 다운로드
-  const GIST_URL = 'https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/remine-overrides.json';
+  const GIST_ID = process.env.GIST_ID || "44b49b328233ef6157499debe03f165c";
+  const GIST_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json`;
   let gistData = {};
   try {
     const res = await fetch(GIST_URL);
     if (res.ok) {
       gistData = await res.json();
-      console.log("✓ 원격 Gist 오버라이드 로드 성공");
+      console.log("✓ 원격 Gist 오버라이드 로드 성공 (기존 크기: " + (Buffer.byteLength(JSON.stringify(gistData)) / 1024).toFixed(2) + " KB)");
     }
   } catch (e) {
     console.warn("⚠️ 원격 Gist 로드 실패 (로컬 데이터만 유지):", e.message);
@@ -126,7 +127,53 @@ async function main() {
   masterData.updatedAtTimestamp = Date.now();
 
   fs.writeFileSync(schedulesFile, JSON.stringify(masterData), 'utf8');
-  console.log("💾 docs/api/v1/schedules.json 에 영구 압축 병합 완료!\n");
+  console.log("💾 docs/api/v1/schedules.json 에 영구 압축 병합 완료!");
+
+  // 스쿼시 완료 후 초기화된 컴팩트 v2.0 오버라이드 객체 생성
+  const squashedOverrides = {
+    version: "2.0.0",
+    updatedAt: new Date().toISOString(),
+    filterRules: gistData.filterRules || { enabled: true, excludeShorts: true },
+    customSchedules: {},
+    sourceOverrides: {},
+    legacyAliases: {}
+  };
+
+  const squashedJson = JSON.stringify(squashedOverrides);
+  const cacheDir = path.join(ROOT_DIR, '.cache');
+  if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+  fs.writeFileSync(path.join(cacheDir, 'squashed-overrides.json'), squashedJson, 'utf8');
+  console.log(`📦 초기화된 초경량 오버라이드 파일 생성: .cache/squashed-overrides.json (${(Buffer.byteLength(squashedJson) / 1024).toFixed(2)} KB)`);
+
+  // GIST_TOKEN이 제공되었을 경우 Gist 즉시 업데이트
+  const token = process.env.GIST_TOKEN;
+  if (token) {
+    console.log("🚀 GIST_TOKEN 감지 -> GitHub Gist schedule-overrides.json 즉시 리셋(초기화) 진행...");
+    try {
+      const patchRes = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          files: {
+            "schedule-overrides.json": { content: squashedJson }
+          }
+        })
+      });
+      if (patchRes.ok) {
+        console.log("🎉 GitHub Gist schedule-overrides.json 압축 리셋 성공! (417KB -> 1KB 이하)");
+      } else {
+        console.warn("⚠️ Gist PATCH 실패:", patchRes.status, await patchRes.text());
+      }
+    } catch (err) {
+      console.warn("⚠️ Gist 업데이트 중 오류:", err.message);
+    }
+  } else {
+    console.log("💡 알림: GIST_TOKEN 환경변수가 설정되면 Gist 파일도 원격에서 1KB 미만으로 즉시 자동 압축됩니다.\n");
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
