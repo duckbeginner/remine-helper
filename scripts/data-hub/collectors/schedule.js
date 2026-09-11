@@ -3,9 +3,12 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
+import { CACHE_CONFIG, DEFAULT_EXCLUDE_KEYWORDS } from '../config.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CACHE_DIR = path.resolve(__dirname, '../../../.cache');
+const CACHE_DIR = CACHE_CONFIG.cacheDir;
+const RAW_CACHE_DIR = CACHE_CONFIG.rawCacheDir;
 const OEMBED_CACHE_FILE = path.join(CACHE_DIR, 'oembed-cache.json');
 const STREAMS_CACHE_FILE = path.join(CACHE_DIR, 'streams-cache.json');
 const OVERRIDES_CACHE_FILE = path.join(CACHE_DIR, 'schedule-overrides.json');
@@ -16,6 +19,36 @@ function ensureCacheDir() {
   if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
   }
+  if (!fs.existsSync(RAW_CACHE_DIR)) {
+    fs.mkdirSync(RAW_CACHE_DIR, { recursive: true });
+  }
+}
+
+// SHA-256 해시 계산 헬퍼
+export function getSha256Hash(data) {
+  const str = typeof data === 'string' ? data : JSON.stringify(data);
+  return crypto.createHash('sha256').update(str).digest('hex');
+}
+
+// Raw 응답 원본 JSON 캐싱
+export function saveRawCache(source, ymKey, data) {
+  try {
+    ensureCacheDir();
+    const filePath = path.join(RAW_CACHE_DIR, `${source}_${ymKey}.json`);
+    const hash = getSha256Hash(data);
+    fs.writeFileSync(filePath, JSON.stringify({ hash, data, cachedAt: Date.now() }), 'utf8');
+  } catch (e) {}
+}
+
+// Raw 응답 원본 JSON 로드
+export function loadRawCache(source, ymKey) {
+  try {
+    const filePath = path.join(RAW_CACHE_DIR, `${source}_${ymKey}.json`);
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+  } catch (e) {}
+  return null;
 }
 
 // 유튜브 비디오 ID 안전 추출 정규식 파서
@@ -727,6 +760,7 @@ async function fetchMonthRawSchedules(year, month) {
       });
       if (res.ok) {
         const json = await res.json();
+        saveRawCache('mnet', `${year}_${paddedMonth}`, json);
         if (json && Array.isArray(json.events)) {
           return json.events.map(ev => {
             const loc = ev.location || ev.place || ev.venue || ev.locationName || ev.address || null;
@@ -787,6 +821,7 @@ async function fetchMonthRawSchedules(year, month) {
       });
       if (res.ok) {
         const json = await res.json();
+        saveRawCache('blip', `${year}_${paddedMonth}`, json);
         const data = Array.isArray(json) ? json : (json.data || []);
         return data.map(item => {
           const ext = item.extField || null;
@@ -932,15 +967,7 @@ export async function collectScheduleData(allYtVideos = []) {
   };
 }
 
-export const DEFAULT_EXCLUDE_KEYWORDS = [
-  // 투표
-  '투표', '사전투표', '실시간투표', 'vote', 'voting', 'poll',
-  '덕애드', '스타패스', '아이돌챔프', '뮤빗', '팬플러스', '포도알', '케이돌', '엠넷플러스 투표',
-  // 직캠
-  '직캠', '풀캠', '팬캠', '페이스캠', '입덕직캠', '최애직캠', '팔로우캠', '안방1열', '음중직캠', 'fancam', 'choreo',
-  // 단순 이벤트 및 공지
-  '포스터 이벤트', '사인 이벤트', '싸인 이벤트', '이벤트 안내', '안내 (Notice)', '빅크', 'BIGC', '응모 이벤트', '증정 이벤트', '특전 이벤트', '구매자 이벤트', '럭키드로우', '럭드'
-];
+export { DEFAULT_EXCLUDE_KEYWORDS };
 
 export function isShortsSchedule(item) {
   if (!item) return false;

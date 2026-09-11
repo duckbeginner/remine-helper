@@ -27,6 +27,7 @@ import { run as runDataSpecTest } from './data-hub/data-spec.test.js';
 import { run as runSchedulePipelineTest } from './data-hub/schedule-pipeline.test.js';
 import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.test.js';
 import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimming.test.js';
+import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test.js';
 
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
@@ -111,7 +112,8 @@ async function main() {
     runDataSpecTest,
     runSchedulePipelineTest,
     runUrlCleanerAndIdTest,
-    runDataPayloadSlimmingTest
+    runDataPayloadSlimmingTest,
+    runSquashAndConfigTest
   ];
 
   for (const suite of hubSuites) {
