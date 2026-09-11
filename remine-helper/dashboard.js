@@ -260,6 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   // Step 2: 브라우저 유휴 시간 백그라운드 스토리지 동기화 (Visibility Aware)
   // =========================================================================
+  let lastSyncDataHash = '';
+
   const syncTask = () => {
     // 탭이 백그라운드에 있으면 사이드패널 오픈 중 자원 경합을 방지하기 위해 동기화 보류
     if (document.hidden) {
@@ -306,6 +308,19 @@ document.addEventListener('DOMContentLoaded', () => {
           if (tabListChanged || fanpagesChanged) {
             renderDashboardViews(settings.tabList, settings.fanpages, { cachedStorage: res });
           } else {
+            // 유튜브/스케줄 등 핵심 데이터가 실제로 변경되었을 때만 재렌더링
+            const dataHash = JSON.stringify([
+              (res.latestVideos || []).map(v => v.id),
+              (res.officialPlaylistVideos || []).map(v => v.id),
+              (res.woniVideos || []).map(v => v.id),
+              (res.blipSchedules || []).map(s => `${s.id || s.title}_${s.startDateTime || ''}_${s.state || ''}`),
+              res.isLive,
+              res.isLiveStreaming,
+              res.channelOrder
+            ]);
+            if (dataHash === lastSyncDataHash) return;
+            lastSyncDataHash = dataHash;
+
             initAppStorageData({
               hubContainerId: 'hubContainer',
               liveBannerId: 'liveBanner',

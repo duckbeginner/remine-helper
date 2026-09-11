@@ -18,6 +18,7 @@ import { run as runBackgroundTest } from './client/background.test.js';
 import { run as runYoutubeTest } from './client/youtube.test.js';
 import { run as runSnsTest } from './client/sns.test.js';
 import { run as runTabsThemeTest } from './client/tabs-theme.test.js';
+import { run as runUnnecessaryRefreshTest } from './client/unnecessary-refresh-prevent.test.js';
 
 import { run as runSeedsTest } from './data-hub/seeds.test.js';
 import { run as runCollectorsTest } from './data-hub/collectors.test.js';
@@ -84,7 +85,8 @@ async function main() {
     runBackgroundTest,
     runYoutubeTest,
     runSnsTest,
-    runTabsThemeTest
+    runTabsThemeTest,
+    runUnnecessaryRefreshTest
   ];
 
   for (const suite of clientSuites) {

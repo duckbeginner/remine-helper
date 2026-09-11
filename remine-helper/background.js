@@ -778,7 +778,7 @@ async function fetchMasterSchedules(force = false) {
   return null;
 }
 
-async function applyCentralDataToStorage(data) {
+async function applyCentralDataToStorage(data, force = false) {
   if (!data || data.notModified) return false;
 
   const isLive = Boolean(data.youtube?.isLive);
@@ -816,13 +816,45 @@ async function applyCentralDataToStorage(data) {
     storagePayload.centralCoreEtag = data._newEtag;
   }
 
-  const local = await chrome.storage.local.get(['blipSchedules', 'schedulesMasterUpdatedAt']);
-  let needMasterSync = false;
+  const COMPARE_KEYS = [
+    'latestVideos', 'officialPlaylistVideos', 'woniVideos',
+    'isLive', 'isLiveStreaming', 'liveVideoInfo', 'activeSchedules',
+    'xFeeds', 'instaFeeds', 'tiktokFeeds'
+  ];
 
+  const local = await chrome.storage.local.get([
+    ...COMPARE_KEYS,
+    'blipSchedules',
+    'schedulesMasterUpdatedAt'
+  ]);
+
+  let needMasterSync = false;
   if (!local.blipSchedules || local.blipSchedules.length === 0) {
     needMasterSync = true;
   } else if (masterUpdatedAt && local.schedulesMasterUpdatedAt !== masterUpdatedAt) {
     needMasterSync = true;
+  }
+
+  // ── 데이터 변경 감지: 핵심 키 값이 실제로 달라진 경우에만 전체 스토리지 기록 ──
+  const hasDataChange = COMPARE_KEYS.some(key =>
+    JSON.stringify(storagePayload[key]) !== JSON.stringify(local[key])
+  );
+
+  if (!force && !hasDataChange && !needMasterSync) {
+    // 실질적 데이터 변경 없음: ETag와 동기화 시간만 갱신하고 전체 UI 재렌더링 방지
+    if (data._newEtag) {
+      await chrome.storage.local.set({
+        centralCoreEtag: data._newEtag,
+        lastCentralSyncTime: Date.now()
+      });
+    }
+    const currentList = local.blipSchedules || activeSchedules;
+    if (currentList.length > 0) {
+      checkUpcomingScheduleAlerts(currentList);
+      checkDailyScheduleNotification(currentList);
+    }
+    console.log("⚡ [Central Hub] 데이터 변경 없음 - 불필요한 스토리지/UI 갱신 생략");
+    return true;
   }
 
   if (needMasterSync) {
@@ -897,7 +929,7 @@ async function executeAllBackgroundRefreshes(force = false) {
         }
 
         if (centralData) {
-          const applied = await applyCentralDataToStorage(centralData);
+          const applied = await applyCentralDataToStorage(centralData, force);
           if (applied) {
             lastBackgroundRefreshTime = Date.now();
             console.log("⚡ [Central Hub] 중앙 데이터 허브에서 최신 데이터 즉시 동기화 완료!", {

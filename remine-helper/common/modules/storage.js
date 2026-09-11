@@ -210,8 +210,20 @@ export function initAppStorageData({
       chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local') return;
 
+        // 실질적 데이터 변경이 있는 키만 필터링 (JSON 깊은 비교)
+        const realChanges = {};
+        for (const [key, change] of Object.entries(changes)) {
+          if (!storageKeys.includes(key) && key !== 'isLive' && key !== 'liveVideoInfo' && key !== 'isLiveStreaming') {
+            continue;
+          }
+          if (JSON.stringify(change.newValue) !== JSON.stringify(change.oldValue)) {
+            realChanges[key] = change;
+          }
+        }
+        if (Object.keys(realChanges).length === 0) return;
+
         // 라이브 상태 변경 시 배너 즉시 반영
-        if (changes.isLive || changes.liveVideoInfo || changes.isLiveStreaming) {
+        if (realChanges.isLive || realChanges.liveVideoInfo || realChanges.isLiveStreaming) {
           const liveBanner = typeof liveBannerId === 'string' ? document.getElementById(liveBannerId) : liveBannerId;
           if (liveBanner) {
             chrome.storage.local.get(['isLive', 'isLiveStreaming', 'latestVideos', 'liveVideoInfo'], (res) => {
@@ -232,7 +244,7 @@ export function initAppStorageData({
         }
 
         // 관련 데이터 변경 시 전체 재검증
-        const hasRelevantChanges = Object.keys(changes).some(k => storageKeys.includes(k));
+        const hasRelevantChanges = Object.keys(realChanges).some(k => storageKeys.includes(k));
         if (hasRelevantChanges) {
           chrome.storage.local.get(storageKeys, (res) => {
             if (res) processResult(res);
