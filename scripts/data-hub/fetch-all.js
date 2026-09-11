@@ -90,9 +90,9 @@ async function main() {
         woniVideos: youtube.woniVideos
       },
       sns: {
-        instagram: sns.instagram,
-        tiktok: sns.tiktok,
-        x: sns.x
+        instagram: (sns.instagram || []).slice(0, 20),
+        tiktok: (sns.tiktok || []).slice(0, 20),
+        x: (sns.x || []).slice(0, 20)
       },
       schedules: {
         activeItems: activeItems,
