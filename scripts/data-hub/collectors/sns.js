@@ -2,6 +2,7 @@
 // Instagram, TikTok, X (Twitter) 공식 SNS 피드 수집 및 정제 엔진
 
 import { MNET_API_BASE } from '../constants.js';
+import { cleanUrl } from '../utils/url-cleaner.js';
 
 // 1. 인스타그램 공식 직접 수집
 async function fetchInstagramDirect() {
@@ -284,8 +285,8 @@ export async function collectSnsData() {
       return {
         id: f.id,
         desc: f.desc && f.desc !== "내용 없음" ? String(f.desc).slice(0, 140) : undefined,
-        thumb: f.thumb && !f.thumb.includes("icons/rescene-logo.png") ? f.thumb : undefined,
-        link: f.link || (f.id ? `https://twitter.com/RESCENEofficial/status/${f.id}` : undefined)
+        thumb: f.thumb && !f.thumb.includes("icons/rescene-logo.png") ? cleanUrl(f.thumb) : undefined,
+        link: f.link ? cleanUrl(f.link) : (f.id ? `https://twitter.com/RESCENEofficial/status/${f.id}` : undefined)
       };
     }
     if (platform === 'instagram') {
@@ -297,9 +298,8 @@ export async function collectSnsData() {
         id: f.id,
         shortcode,
         type,
-        desc: f.desc && f.desc !== "내용 없음" ? String(f.desc).slice(0, 100) : undefined,
-        thumb: f.thumb && !f.thumb.includes("icons/rescene-logo.png") ? f.thumb : undefined,
-        link: link || `https://www.instagram.com/${type}/${shortcode}/`
+        desc: f.desc && f.desc !== "내용 없음" ? String(f.desc).slice(0, 100) : undefined
+        // 클라이언트 공식 iframe 임베드에서 미사용하는 700자 만료 CDN thumb 및 중복 link 생략
       };
     }
     if (platform === 'tiktok') {
@@ -307,6 +307,7 @@ export async function collectSnsData() {
         id: f.id,
         title: f.title ? String(f.title).slice(0, 80) : undefined,
         thumb: f.thumb || f.cover || undefined
+        // 클라이언트 모달 플레이어(openTiktokModal)에서 미사용하는 중복 link 생략
       };
     }
     return f;

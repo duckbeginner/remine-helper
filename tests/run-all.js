@@ -25,6 +25,7 @@ import { run as runCollectorsTest } from './data-hub/collectors.test.js';
 import { run as runSyncToolsTest } from './data-hub/sync-tools.test.js';
 import { run as runDataSpecTest } from './data-hub/data-spec.test.js';
 import { run as runSchedulePipelineTest } from './data-hub/schedule-pipeline.test.js';
+import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.test.js';
 
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
@@ -106,7 +107,8 @@ async function main() {
     runCollectorsTest,
     runSyncToolsTest,
     runDataSpecTest,
-    runSchedulePipelineTest
+    runSchedulePipelineTest,
+    runUrlCleanerAndIdTest
   ];
 
   for (const suite of hubSuites) {

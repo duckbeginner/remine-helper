@@ -188,8 +188,8 @@ export function createVideoCardHTML(video) {
   const title = escapeHtml(video.title || '영상');
   const rawDate = video.publishedAt || video.published || video.date;
   const dateStr = rawDate ? (getTimeAgo(rawDate) || rawDate) : '';
-  const url = video.url || video.videoUrl || (video.id ? `https://www.youtube.com/watch?v=${video.id}` : '#');
-  const thumbnail = video.thumbnail || 'icons/rescene_official_profile.jpg';
+  const url = video.url || video.videoUrl || (video.id ? (video.isShorts ? `https://www.youtube.com/shorts/${video.id}` : `https://www.youtube.com/watch?v=${video.id}`) : '#');
+  const thumbnail = video.thumbnail || (video.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : 'icons/rescene_official_profile.jpg');
 
   const calIcon = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
 

@@ -81,8 +81,6 @@ async function parseYouTubeRss(xmlText, channelName = "") {
       title: entry.title,
       published: entry.published,
       publishedAt: entry.publishedAt,
-      url: finalUrl,
-      thumbnail: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
       channelName: channelName,
       isShorts: isShort,
       isLive: false
@@ -312,8 +310,6 @@ async function fetchPlaylistHtml(channelOrPlaylistId, channelName = "", limit = 
         title,
         published: "",
         publishedAt: null,
-        url: isShort ? `https://www.youtube.com/shorts/${id}` : `https://www.youtube.com/watch?v=${id}`,
-        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
         channelName: channelName,
         isShorts: isShort,
         isLive: false
