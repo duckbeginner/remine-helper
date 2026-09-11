@@ -15,6 +15,7 @@ export async function run() {
   // 1. getMemberDisplayName
   runner.test('getMemberDisplayName: 닉네임 매핑 및 기본값 반환', () => {
     assert.strictEqual(getMemberDisplayName('별이빛나는맘'), '원이');
+    assert.strictEqual(getMemberDisplayName('원이입니다'), '원이'); // ⭐️ 원이 신규 닉네임
     assert.strictEqual(getMemberDisplayName('올리브🫒'), '리브');
     assert.strictEqual(getMemberDisplayName('올리브'), '리브');
     assert.strictEqual(getMemberDisplayName('김깨구리제로천사'), '제나');
@@ -22,6 +23,25 @@ export async function run() {
     assert.strictEqual(getMemberDisplayName('minami'), '미나미');
     assert.strictEqual(getMemberDisplayName('일반팬'), '일반팬');
     assert.strictEqual(getMemberDisplayName(''), '멤버');
+  });
+
+  runner.test('getMemberDisplayName: 불변 고유 ID 기반 1차 매핑 (탈퇴회원/가변닉네임 복원)', () => {
+    // 1) 원이 기존 탈퇴 계정 ID + '탈퇴 회원' 닉네임 ➔ '원이'로 100% 자동 복원
+    assert.strictEqual(getMemberDisplayName({ id: '67a59215db2769150bfbf5df', nickname: '탈퇴 회원' }), '원이');
+    assert.strictEqual(getMemberDisplayName({ id: '67a59215db2769150bfbf5df', nickname: '별이빛나는맘' }), '원이');
+
+    // 2) 원이 신규 계정 ID + 새 닉네임 ➔ '원이'
+    assert.strictEqual(getMemberDisplayName({ id: '6a85595d92c2d65318a474de', nickname: '원이입니다' }), '원이');
+
+    // 3) 다른 멤버들의 고유 ID ➔ 닉네임이 임의로 바뀌어도 활동명 100% 유지
+    assert.strictEqual(getMemberDisplayName({ id: '67a5925e0425fa520d4fbf81', nickname: '새로운미나미닉' }), '미나미');
+    assert.strictEqual(getMemberDisplayName({ id: '67a5924253c0ed13ba18b38a', nickname: '새로운리브닉' }), '리브');
+    assert.strictEqual(getMemberDisplayName({ id: '67a5927866121779ad93d317', nickname: '새로운제나닉' }), '제나');
+    assert.strictEqual(getMemberDisplayName({ id: '67a4ddac2248254b7dd6d9a7', nickname: '새로운메이닉' }), '메이');
+
+    // 4) 미등록 ID인 경우 닉네임 2차 폴백
+    assert.strictEqual(getMemberDisplayName({ id: 'unknown_id', nickname: '원이입니다' }), '원이');
+    assert.strictEqual(getMemberDisplayName({ id: 'unknown_id', nickname: '일반팬' }), '일반팬');
   });
 
   runner.test('getMemberAvatarUrl: 멤버 이름 기반 프로필 이미지 URL 매핑 및 폴백', () => {

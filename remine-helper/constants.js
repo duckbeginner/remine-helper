@@ -1,8 +1,19 @@
 export const DEFAULT_CHANNEL_ORDER = ['youtube', 'helloiamwoni', 'instagram', 'x', 'x_twt', 'tiktok', 'clip', 'facebook', 'mnet', 'blip', 'themuze'];
 
-// Mnet Plus / Bstage 스타 닉네임 -> 실제 멤버 활동명 매핑 테이블
+// Mnet Plus / Bstage 스타 고유 ID (ObjectId) -> 실제 멤버 활동명 1차 불변 매핑 테이블 (Single Source of Truth)
+export const MEMBER_ID_MAP = {
+  '67a59215db2769150bfbf5df': '원이', // 원이 (기존 탈퇴 계정)
+  '6a85595d92c2d65318a474de': '원이', // 원이 (신규 계정)
+  '67a5924253c0ed13ba18b38a': '리브',
+  '67a5927866121779ad93d317': '제나',
+  '67a4ddac2248254b7dd6d9a7': '메이',
+  '67a5925e0425fa520d4fbf81': '미나미'
+};
+
+// Mnet Plus / Bstage 스타 닉네임 -> 실제 멤버 활동명 2차 폴백 매핑 테이블
 export const MEMBER_NICKNAME_MAP = {
   '별이빛나는맘': '원이',
+  '원이입니다': '원이',
   '올리브🫒': '리브',
   '올리브': '리브',
   '김깨구리제로천사': '제나',

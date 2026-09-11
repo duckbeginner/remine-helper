@@ -267,7 +267,7 @@ export function showScheduleModal(scheduleData) {
   const attendees = scheduleData.starAttendees || scheduleData.members || [];
   if (Array.isArray(attendees) && attendees.length > 0) {
     const attendeesHtml = attendees.map(a => {
-      const realName = getMemberDisplayName(a.nickname || a.name);
+      const realName = getMemberDisplayName(a);
       const avatarUrl = getMemberAvatarUrl(realName, a.avatarImgPath || a.profileImg);
       const avatar = avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; vertical-align:-2px; margin-right:4px; border:1px solid rgba(255,105,180,0.4);" alt="${escapeHtml(realName)}">` : '';
       const rawNick = a.nickname || a.name || '';

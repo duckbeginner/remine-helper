@@ -1,12 +1,31 @@
 // common/modules/storage.js - 크롬 스토리지 연동, 닉네임/아바타 매핑 및 백그라운드 갱신 요청
-import { MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
+import { MEMBER_ID_MAP, MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
 import { renderOfficialYoutubeList, renderWoniYoutubeList, extractAllShortsVideos, renderShortsList } from './youtube.js';
 import { setupHorizontalScroller, setupHubIconReordering } from './tabs.js';
 import { renderScheduleList } from './calendar.js';
 
-export function getMemberDisplayName(rawNickname) {
-  if (!rawNickname) return '멤버';
-  const trimmed = String(rawNickname).trim();
+export function getMemberDisplayName(attendeeOrNickname) {
+  if (!attendeeOrNickname) return '멤버';
+
+  // 1순위: 불변 고유 ID (ObjectId) 기반 1차 매핑
+  if (typeof attendeeOrNickname === 'object' && attendeeOrNickname !== null) {
+    if (attendeeOrNickname.id && MEMBER_ID_MAP && MEMBER_ID_MAP[attendeeOrNickname.id]) {
+      return MEMBER_ID_MAP[attendeeOrNickname.id];
+    }
+  } else if (typeof attendeeOrNickname === 'string') {
+    const trimmedId = attendeeOrNickname.trim();
+    if (MEMBER_ID_MAP && MEMBER_ID_MAP[trimmedId]) {
+      return MEMBER_ID_MAP[trimmedId];
+    }
+  }
+
+  // 2순위: 가변 닉네임 기반 2차 폴백 매핑
+  const raw = typeof attendeeOrNickname === 'object' && attendeeOrNickname !== null
+    ? (attendeeOrNickname.nickname || attendeeOrNickname.name || '')
+    : String(attendeeOrNickname);
+  const trimmed = raw.trim();
+  if (!trimmed) return '멤버';
+
   if (MEMBER_NICKNAME_MAP && MEMBER_NICKNAME_MAP[trimmed]) return MEMBER_NICKNAME_MAP[trimmed];
   if (MEMBER_NICKNAME_MAP) {
     for (const [nick, realName] of Object.entries(MEMBER_NICKNAME_MAP)) {
