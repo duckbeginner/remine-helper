@@ -67,7 +67,7 @@ function runValidation() {
   assert(coreKb <= 160, `core.json 160KB 이하 초경량 유지 (${coreKb.toFixed(2)} KB)`);
   assert(schedKb <= 600, `schedules.json 마스터 아카이브 규격 내 유지 (${schedKb.toFixed(2)} KB)`);
 
-  console.log("\n4️⃣ [DATA_SPECIFICATION.md] 데이터 계약 및 스키마 전수 검증");
+  console.log("\n4️⃣ [specs/DATA_SPECIFICATION.md] 데이터 계약 및 스키마 전수 검증");
   let invalidScheduleCount = 0;
   let invalidDateCount = 0;
   let extFieldCount = 0;

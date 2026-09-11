@@ -8,7 +8,8 @@ import { TestRunner, assert } from '../test-helper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DOCS_DIR = path.resolve(__dirname, '../../docs');
+const ROOT_DIR = path.resolve(__dirname, '../..');
+const DOCS_DIR = path.join(ROOT_DIR, 'docs');
 
 export async function run() {
   const runner = new TestRunner('Docs - GitHub Pages Integrity');
@@ -32,11 +33,11 @@ export async function run() {
     assert(fs.existsSync(schedulesApi), 'docs/api/v1/schedules.json이 존재해야 합니다.');
   });
 
-  runner.test('Shorts & Geombang Subpages: 서브페이지 존재 및 Iframe 임베드 준비성', () => {
+  runner.test('Shorts & Geombang Subpages: 서브페이지 존재 및 아카이브 상태 확인', () => {
     const shortsHtml = path.join(DOCS_DIR, 'shorts/index.html');
-    const geombangHtml = path.join(DOCS_DIR, 'geombang/index.html');
+    const geombangHtml = path.join(ROOT_DIR, 'archive/docs/geombang/index.html');
     assert(fs.existsSync(shortsHtml), 'docs/shorts/index.html이 존재해야 합니다.');
-    assert(fs.existsSync(geombangHtml), 'docs/geombang/index.html이 존재해야 합니다.');
+    assert(fs.existsSync(geombangHtml), 'archive/docs/geombang/index.html이 존재해야 합니다.');
   });
 
   return runner.summary();

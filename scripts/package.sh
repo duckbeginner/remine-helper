@@ -37,13 +37,13 @@ echo "=== [3/3] Packaging Zip Files ==="
 CHROME_ZIP="$PUBLISH_DIR/remine-helper-chrome-v$VERSION.zip"
 echo "Creating Chrome package: $CHROME_ZIP"
 rm -f "$CHROME_ZIP"
-(cd "$CHROME_DIR" && zip -r "$CHROME_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*")
+(cd "$CHROME_DIR" && zip -r "$CHROME_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*" "test-sandbox.*")
 
 # Firefox Packaging (빌드된 Firefox 아티팩트 패키징)
 FIREFOX_ZIP="$PUBLISH_DIR/remine-helper-firefox-v$VERSION.zip"
 echo "Creating Firefox package: $FIREFOX_ZIP"
 rm -f "$FIREFOX_ZIP"
-(cd "$FIREFOX_BUILD_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*")
+(cd "$FIREFOX_BUILD_DIR" && zip -r "$FIREFOX_ZIP" . -x "*.DS_Store" "*_metadata/*" "*.git*" "*.github*" "tests/*" "test-sandbox.*")
 
 # 임시 빌드 디렉터리 정리
 rm -rf "$FIREFOX_BUILD_DIR"

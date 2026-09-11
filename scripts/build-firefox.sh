@@ -23,8 +23,8 @@ fi
 rm -rf "$DEST_DIR"
 mkdir -p "$DEST_DIR"
 
-# 1. remine-helper 소스 복사 (manifest.json, git, tests, DS_Store 제외)
-rsync -a --exclude='manifest.json' --exclude='.DS_Store' --exclude='.git/' --exclude='tests/' "$SRC_DIR/" "$DEST_DIR/"
+# 1. remine-helper 소스 복사 (manifest.json, git, tests, DS_Store, test-sandbox 제외)
+rsync -a --exclude='manifest.json' --exclude='.DS_Store' --exclude='.git/' --exclude='tests/' --exclude='test-sandbox.*' "$SRC_DIR/" "$DEST_DIR/"
 
 # 2. Firefox 전용 매니페스트를 manifest.json으로 복사
 cp "$MANIFEST_SRC" "$DEST_DIR/manifest.json"

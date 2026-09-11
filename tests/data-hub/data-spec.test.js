@@ -9,7 +9,7 @@ import { TestRunner, assert } from '../test-helper.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
-const SPEC_FILE = path.join(ROOT_DIR, 'docs/DATA_SPECIFICATION.md');
+const SPEC_FILE = path.join(ROOT_DIR, 'specs/DATA_SPECIFICATION.md');
 const API_DIR = path.join(ROOT_DIR, 'docs/api/v1');
 const CORE_FILE = path.join(API_DIR, 'core.json');
 const SCHEDULES_FILE = path.join(API_DIR, 'schedules.json');
@@ -20,7 +20,7 @@ export async function run() {
 
   // 1. DATA_SPECIFICATION.md 문서 존재 및 핵심 규격 정의 확인
   runner.test('DATA_SPECIFICATION.md: 공식 데이터 계약 문서 실존성 및 규격 정의 검증', () => {
-    assert(fs.existsSync(SPEC_FILE), 'docs/DATA_SPECIFICATION.md 문서가 존재해야 합니다.');
+    assert(fs.existsSync(SPEC_FILE), 'specs/DATA_SPECIFICATION.md 문서가 존재해야 합니다.');
     const content = fs.readFileSync(SPEC_FILE, 'utf8');
     assert(content.includes('Data Specification Contract'), '명세서 제목이 포함되어야 합니다.');
     assert(content.includes('ScheduleItem'), 'ScheduleItem 스키마 정의가 포함되어야 합니다.');
