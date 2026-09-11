@@ -2686,7 +2686,7 @@
     // 일정 분류 결정 헬퍼 (Mnet, Blip, YouTube 1:1 표준 매핑)
     function resolveScheduleType(item) {
       if (item.typeText && item.typeText.trim()) return item.typeText.trim();
-      const text = ((item.title || '') + ' ' + (item.message || '') + ' ' + (item.channel || '')).toLowerCase();
+      const text = ((item.title || '') + ' ' + (item.message || '') + ' ' + (item.channel || '') + ' ' + (item.location || '') + ' ' + ((item.extField && item.extField.value) || '')).toLowerCase();
       if (/라디오|파워fm|fm4u|sbs 파워|정오의 희망곡|가요광장|영스트리트|친한친구|별이 빛나는 밤에|두시탈출|컬투쇼|아이돌 라디오|러브게임/i.test(text)) return '라디오';
       if (/팬사인|팬싸|영통|대면\s*사인|fansign/i.test(text)) return '팬사인회';
       if (/콘서트|concert|쇼케이스|showcase|단독\s*공연/i.test(text)) return '공연';
@@ -2704,6 +2704,8 @@
       if (item.typeId === 5) return '행사';
       if (item.typeId === 6) return '화보';
       if (item.typeId === 8) return '공지';
+      if (item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사'))) return '방송';
+      if (item.location || (item.extField && item.extField.key === '장소')) return '행사';
       return '기타';
     }
 
@@ -2798,7 +2800,7 @@
 
           // 4-4. 키워드 제외
           if (filterEnabled && excludeKeywords.length > 0) {
-            const fullText = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ').toLowerCase();
+            const fullText = [item.title, item.message, item.url, item.link, item.channel, item.location, (item.extField && item.extField.value)].filter(Boolean).join(' ').toLowerCase();
             const hasBlockedKw = excludeKeywords.some(kw => {
               const cleanKw = kw.trim().toLowerCase();
               return cleanKw && fullText.includes(cleanKw);
@@ -5950,10 +5952,12 @@
         const activeClass = isActive ? ' active' : '';
 
         let extraInfo = '';
-        if (item.channel) {
-          extraInfo = `<span class="user-sp-extra-info">(${escapeHtml(item.channel)})</span>`;
-        } else if (item.location) {
-          extraInfo = `<span class="user-sp-extra-info">📍${escapeHtml(item.location)}</span>`;
+        const ch = item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null);
+        const loc = item.location || (item.extField && item.extField.key === '장소' ? item.extField.value : null);
+        if (ch) {
+          extraInfo = `<span class="user-sp-extra-info">(${escapeHtml(ch)})</span>`;
+        } else if (loc) {
+          extraInfo = `<span class="user-sp-extra-info">📍${escapeHtml(loc)}</span>`;
         }
 
         const safeTitle = escapeHtml(item.title || item.message || '스케줄');

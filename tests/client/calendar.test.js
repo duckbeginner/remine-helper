@@ -9,7 +9,10 @@ import {
   parseTitleStructure,
   areSchedulesDuplicate,
   deduplicateScheduleList,
-  pickBestTitle
+  pickBestTitle,
+  getScheduleTypeInfo,
+  getMemberAttendeeBadgesHTML,
+  createScheduleItemHTML
 } from '../../remine-helper/common/modules/calendar.js';
 
 export async function run() {
@@ -100,6 +103,55 @@ export async function run() {
     assert.strictEqual(pickBestTitle('더쇼 생방송 리센느', '더쇼'), '더쇼 생방송 리센느');
     assert.strictEqual(pickBestTitle('', '음악중심'), '음악중심');
     assert.strictEqual(pickBestTitle('음악중심', ''), '음악중심');
+  });
+
+  // 7. 클라이언트 방어 코드: extField 없는 순수 최상위 필드 처리 (TDD)
+  runner.test('getScheduleTypeInfo: extField 없이 channel 및 location 최상위 필드만으로 타입 분류', () => {
+    // 7-1. channel 필드로 방송 분류
+    const broadcastItem = { title: '특별 생방송', channel: 'SBS' };
+    const broadcastType = getScheduleTypeInfo(broadcastItem);
+    assert.strictEqual(broadcastType.typeText, '방송');
+
+    // 7-2. location 필드로 행사 분류
+    const eventItem = { title: '야외 공연', location: '올림픽공원' };
+    const eventType = getScheduleTypeInfo(eventItem);
+    assert.strictEqual(eventType.typeText, '행사');
+  });
+
+  runner.test('areSchedulesDuplicate: extField 없이 channel vs location 최상위 필드만으로 방송과 공연 분리 보존', () => {
+    const item1 = { title: '리센느 스페셜', channel: 'SBS' };
+    const item2 = { title: '리센느 스페셜', location: '올림픽공원 체조경기장' };
+    // 동일한 제목이라도 하나는 방송이고 하나는 현장 행사이므로 절대 병합되지 않아야 함
+    assert.strictEqual(areSchedulesDuplicate(item1, item2), false);
+  });
+
+  // 8. 참석 멤버(starAttendees) 미니 아바타 뱃지(14px) 렌더링 (TDD)
+  runner.test('getMemberAttendeeBadgesHTML: starAttendees 배열이 주어졌을 때 14px 미니 아바타 뱃지 생성', () => {
+    const attendees = [
+      { id: '67a5924253c0ed13ba18b38a', name: '리브' },
+      { name: '원이' }
+    ];
+    const badgeHtml = getMemberAttendeeBadgesHTML(attendees);
+    assert(badgeHtml.includes('icons/member_liv.jpeg'));
+    assert(badgeHtml.includes('icons/member_woni.jpeg'));
+    assert(badgeHtml.includes('title="리브"'));
+    assert(badgeHtml.includes('title="원이"'));
+    assert(badgeHtml.includes('14px'));
+  });
+
+  runner.test('createScheduleItemHTML: extField 없는 순수 객체 및 starAttendees 뱃지가 카드에 포함되는지 검증', () => {
+    const item = {
+      title: '뮤직뱅크 본방송',
+      channel: 'KBS2',
+      startTime: '2026-09-15T17:00:00+09:00',
+      starAttendees: [{ name: '제나' }]
+    };
+    const html = createScheduleItemHTML(item, 0);
+    // 최상위 channel 정보가 렌더링되었는지 확인
+    assert(html.includes('KBS2'));
+    // 제나 아바타 뱃지가 렌더링되었는지 확인
+    assert(html.includes('icons/member_zena.jpeg'));
+    assert(html.includes('title="제나"'));
   });
 
   return runner.summary();

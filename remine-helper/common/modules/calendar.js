@@ -1,6 +1,57 @@
 // common/modules/calendar.js - 스케줄 중복제거, 캘린더 매니저 및 뷰 렌더러
+import { MEMBER_ID_MAP, MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
 import { escapeHtml } from '../templates.js';
 import { showScheduleModal } from './modals.js';
+
+export function getMemberAttendeeBadgesHTML(attendees) {
+  if (!Array.isArray(attendees) || attendees.length === 0) return '';
+
+  const badges = attendees.map(a => {
+    if (!a) return '';
+    let realName = '멤버';
+    if (typeof a === 'object' && a !== null) {
+      if (a.id && MEMBER_ID_MAP && MEMBER_ID_MAP[a.id]) {
+        realName = MEMBER_ID_MAP[a.id];
+      } else {
+        const raw = (a.nickname || a.name || '').trim();
+        if (MEMBER_NICKNAME_MAP && MEMBER_NICKNAME_MAP[raw]) {
+          realName = MEMBER_NICKNAME_MAP[raw];
+        } else if (MEMBER_NICKNAME_MAP) {
+          let found = false;
+          for (const [nick, name] of Object.entries(MEMBER_NICKNAME_MAP)) {
+            if (raw.includes(nick) || nick.includes(raw)) {
+              realName = name;
+              found = true;
+              break;
+            }
+          }
+          if (!found) realName = raw || '멤버';
+        } else {
+          realName = raw || '멤버';
+        }
+      }
+    } else if (typeof a === 'string') {
+      const raw = a.trim();
+      if (MEMBER_ID_MAP && MEMBER_ID_MAP[raw]) {
+        realName = MEMBER_ID_MAP[raw];
+      } else if (MEMBER_NICKNAME_MAP && MEMBER_NICKNAME_MAP[raw]) {
+        realName = MEMBER_NICKNAME_MAP[raw];
+      } else {
+        realName = raw;
+      }
+    }
+
+    const avatarUrl = (MEMBER_AVATAR_MAP && MEMBER_AVATAR_MAP[realName]) || (a && (a.avatarImgPath || a.profileImg)) || '';
+
+    if (avatarUrl) {
+      return `<img src="${escapeHtml(avatarUrl)}" class="attendee-mini-avatar" style="width:14px; height:14px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,105,180,0.6); vertical-align:-2px; flex-shrink:0;" alt="${escapeHtml(realName)}" title="${escapeHtml(realName)}">`;
+    }
+    return `<span class="attendee-mini-badge" style="display:inline-block; width:14px; height:14px; line-height:14px; border-radius:50%; background:#ff4081; color:#fff; font-size:9px; text-align:center; font-weight:bold; vertical-align:-2px;" title="${escapeHtml(realName)}">${escapeHtml(realName.slice(0, 1))}</span>`;
+  }).filter(Boolean);
+
+  if (badges.length === 0) return '';
+  return `<span class="schedule-attendees-badges" style="display:inline-flex; align-items:center; gap:2px; margin-left:4px; vertical-align:middle;">${badges.join('')}</span>`;
+}
 
 export function parseSafeDate(startTimeStr) {
   if (!startTimeStr) return new Date();
@@ -95,12 +146,26 @@ export function areSchedulesDuplicate(item1, item2) {
     return false; // 서로 다른 영상 ID면 절대로 중복 아님!
   }
 
+  // 1단계: 카테고리/형태가 명확히 다른 경우(방송 vs 현장 공연/행사 등) 병합 거부
+  const type1 = item1.typeId || 0;
+  const type2 = item2.typeId || 0;
+  const isBroadcasting1 = type1 === 1 || Boolean(item1.channel) || (item1.extField && (item1.extField.key === '채널' || item1.extField.key === '방송사')) || (item1.typeText === '방송');
+  const isPhysicalEvent1 = type1 === 5 || Boolean(item1.location) || (item1.extField && item1.extField.key === '장소') || (item1.typeText === '공연' || item1.typeText === '행사');
+  const isBroadcasting2 = type2 === 1 || Boolean(item2.channel) || (item2.extField && (item2.extField.key === '채널' || item2.extField.key === '방송사')) || (item2.typeText === '방송');
+  const isPhysicalEvent2 = type2 === 5 || Boolean(item2.location) || (item2.extField && item2.extField.key === '장소') || (item2.typeText === '공연' || item2.typeText === '행사');
+
+  // 하나는 순수 방송(온라인/중계)이고 하나는 순수 현장 공연/행사인 경우 분리 보존
+  if ((isBroadcasting1 && !isPhysicalEvent1 && isPhysicalEvent2 && !isBroadcasting2) ||
+    (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
+    return false;
+  }
+
   // 순수 제목 기준 비교 (본문 메시지에 의한 오병합 방지)
   const t1 = item1.title || "";
   const t2 = item2.title || "";
   if (!t1 || !t2) return false;
 
-  // 1단계: 구조적 메인-부제(Sub-event) 분석 기반 정밀 판별 (하드코딩 0%)
+  // 2단계: 구조적 메인-부제(Sub-event) 분석 기반 정밀 판별 (하드코딩 0%)
   const s1 = parseTitleStructure(t1);
   const s2 = parseTitleStructure(t2);
 
@@ -130,20 +195,6 @@ export function areSchedulesDuplicate(item1, item2) {
     if (s2.sub && s1.main && Math.min(s2.sub.length, s1.main.length) >= 4 && (s2.sub === s1.main || s2.sub.includes(s1.main) || s1.main.includes(s2.sub))) {
       return true;
     }
-  }
-
-  // 2단계: 카테고리/형태가 명확히 다른 경우(방송 vs 현장 공연/행사 등) 병합 거부
-  const type1 = item1.typeId || 0;
-  const type2 = item2.typeId || 0;
-  const isBroadcasting1 = type1 === 1 || (item1.extField && item1.extField.key === '채널') || (item1.typeText === '방송');
-  const isPhysicalEvent1 = type1 === 5 || (item1.extField && item1.extField.key === '장소') || (item1.typeText === '공연' || item1.typeText === '행사');
-  const isBroadcasting2 = type2 === 1 || (item2.extField && item2.extField.key === '채널') || (item2.typeText === '방송');
-  const isPhysicalEvent2 = type2 === 5 || (item2.extField && item2.extField.key === '장소') || (item2.typeText === '공연' || item2.typeText === '행사');
-
-  // 하나는 순수 방송(온라인/중계)이고 하나는 순수 현장 공연/행사인 경우 분리 보존
-  if ((isBroadcasting1 && !isPhysicalEvent1 && isPhysicalEvent2 && !isBroadcasting2) ||
-    (isBroadcasting2 && !isPhysicalEvent2 && isPhysicalEvent1 && !isBroadcasting1)) {
-    return false;
   }
 
   // 3단계: 정규화 텍스트 완전 일치 및 포함 관계
@@ -323,7 +374,7 @@ export function getScheduleTypeInfo(item) {
   }
 
   // 1. [태그] 형식 추출 및 이모지 표준화
-  const combinedText = `${item.title || ""} ${item.message || ""} ${(item.extField && item.extField.value) || ""} ${item.url || ""} ${item.link || ""}`;
+  const combinedText = `${item.title || ""} ${item.message || ""} ${item.channel || ""} ${item.location || ""} ${(item.extField && item.extField.value) || ""} ${item.url || ""} ${item.link || ""}`;
   const bracketMatch = combinedText.match(/\[(.*?)\]/);
   if (!typeText && bracketMatch) {
     const rawTag = bracketMatch[1].trim();
@@ -395,6 +446,10 @@ export function getScheduleTypeInfo(item) {
       /youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|@helloiamwoninicetomeetyou|@rescene_official)/i.test(lower)
     ) {
       typeText = "영상";
+    } else if (item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사'))) {
+      typeText = "방송";
+    } else if (item.location || (item.extField && item.extField.key === '장소')) {
+      typeText = "행사";
     } else {
       typeText = typeText || "일정";
     }
@@ -456,6 +511,80 @@ export function getChannelIconHTML(item, { isSmall = false } = {}) {
   return '';
 }
 
+export function createScheduleItemHTML(item, globalIdx = 0, nextIndex = -1) {
+  let dateLabel = "일정";
+  let timeStr = "";
+  const rawDate = item.startTime || item.date;
+
+  if (rawDate) {
+    const d = parseSafeDate(rawDate);
+    const currentYear = new Date().getFullYear();
+    const itemYear = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    if (itemYear !== currentYear) {
+      // 올해가 아니면 연도 표기 (예: '24.03/26)
+      const shortYear = String(itemYear).slice(2);
+      dateLabel = `'${shortYear}.${month}/${day}`;
+    } else {
+      dateLabel = `${month}/${day}`;
+    }
+
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
+    if (!isAllDay) {
+      const ap = h >= 12 ? '오후' : '오전';
+      const displayH = h % 12 || 12;
+      timeStr = ` ${ap} ${displayH}:${m}`;
+    } else {
+      timeStr = " 종일";
+    }
+  }
+
+  const { typeText, bg, color } = getScheduleTypeInfo(item);
+  let typeBadge = '';
+  if (typeText) {
+    typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
+  }
+
+  const fullTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
+  const cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄', 42);
+  let extraInfo = '';
+  const ext = item.extField;
+  const loc = item.location || (ext && ext.key === '장소' ? ext.value : null);
+  const ch = item.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : null);
+
+  if (loc && String(loc).trim()) {
+    extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(String(loc).trim())}</span>`;
+  } else if (ch && String(ch).trim()) {
+    extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>${escapeHtml(String(ch).trim())}</span>`;
+  } else if (ext && ext.value && String(ext.value).trim()) {
+    const keyLabel = ext.key ? `${ext.key}: ` : '';
+    extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px;">(${escapeHtml(keyLabel)}${escapeHtml(String(ext.value).trim())})</span>`;
+  }
+
+  // 참석 멤버 미니 아바타 뱃지 (14px)
+  const attendees = item.starAttendees || item.members || [];
+  const attendeeBadgesHtml = getMemberAttendeeBadgesHTML(attendees);
+
+  const channelIconHtml = getChannelIconHTML(item);
+  const titleText = escapeHtml(cleanTitle);
+  const isNext = (globalIdx === nextIndex);
+  const activeClass = isNext ? ' active' : '';
+
+  return `
+    <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${globalIdx}" title="${escapeHtml(fullTitle)}">
+      <div class="schedule-line">
+        <span class="schedule-date-time">[${dateLabel}${timeStr}]</span>
+        ${typeBadge}
+        <span class="schedule-title">${channelIconHtml}${titleText}${extraInfo}${attendeeBadgesHtml}</span>
+      </div>
+    </div>
+  `;
+}
+
 export function renderScheduleList(container, schedules = [], isDark = false, onSelectDate) {
   if (!container) return;
 
@@ -514,76 +643,7 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   let startIndex = Math.max(0, nextIndex - CHUNK_SIZE);
   let endIndex = Math.min(schedules.length, nextIndex + CHUNK_SIZE + 1);
 
-  // 개별 일정 아이템 HTML 생성 함수
-  function createItemHTML(item, globalIdx) {
-    let dateLabel = "일정";
-    let timeStr = "";
-    const rawDate = item.startTime || item.date;
-
-    if (rawDate) {
-      const d = parseSafeDate(rawDate);
-      const currentYear = new Date().getFullYear();
-      const itemYear = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-
-      if (itemYear !== currentYear) {
-        // 올해가 아니면 연도 표기 (예: '24.03/26)
-        const shortYear = String(itemYear).slice(2);
-        dateLabel = `'${shortYear}.${month}/${day}`;
-      } else {
-        dateLabel = `${month}/${day}`;
-      }
-
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
-      const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
-      if (!isAllDay) {
-        const ap = h >= 12 ? '오후' : '오전';
-        const displayH = h % 12 || 12;
-        timeStr = ` ${ap} ${displayH}:${m}`;
-      } else {
-        timeStr = " 종일";
-      }
-    }
-
-    const { typeText, bg, color } = getScheduleTypeInfo(item);
-    let typeBadge = '';
-    if (typeText) {
-      typeBadge = `<span class="schedule-type-badge" style="background:${bg}; color:${color}; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:600; margin:0 4px; flex-shrink:0;">${escapeHtml(typeText)}</span>`;
-    }
-
-    const fullTitle = cleanDisplayTitle(item.title || item.message || '스케줄');
-    const cleanTitle = cleanDisplayTitle(item.title || item.message || '스케줄', 42);
-    let extraInfo = '';
-    const ext = item.extField;
-    const loc = item.location || (ext && ext.key === '장소' ? ext.value : null);
-    const ch = item.channel || (ext && (ext.key === '채널' || ext.key === '방송사') ? ext.value : null);
-
-    if (loc && String(loc).trim()) {
-      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(String(loc).trim())}</span>`;
-    } else if (ch && String(ch).trim()) {
-      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; flex-shrink:0;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>${escapeHtml(String(ch).trim())}</span>`;
-    } else if (ext && ext.value && String(ext.value).trim()) {
-      const keyLabel = ext.key ? `${ext.key}: ` : '';
-      extraInfo = ` <span class="schedule-ext-info" style="color:#888; font-size:10.5px; margin-left:4px;">(${escapeHtml(keyLabel)}${escapeHtml(String(ext.value).trim())})</span>`;
-    }
-
-    const channelIconHtml = getChannelIconHTML(item);
-    const titleText = escapeHtml(cleanTitle);
-    const isNext = (globalIdx === nextIndex);
-    const activeClass = isNext ? ' active' : '';
-
-    return `
-      <div class="schedule-item${activeClass}" data-date="${escapeHtml(rawDate)}" data-index="${globalIdx}" title="${escapeHtml(fullTitle)}">
-        <div class="schedule-line">
-          <span class="schedule-date-time">[${dateLabel}${timeStr}]</span>
-          ${typeBadge}
-          <span class="schedule-title">${channelIconHtml}${titleText}${extraInfo}</span>
-        </div>
-      </div>
-    `;
-  }
+  const createItemHTML = (item, idx) => createScheduleItemHTML(item, idx, nextIndex);
 
   // 초기 렌더링
   let initialHtml = '';

@@ -22,6 +22,7 @@ import { run as runTabsThemeTest } from './client/tabs-theme.test.js';
 import { run as runSeedsTest } from './data-hub/seeds.test.js';
 import { run as runCollectorsTest } from './data-hub/collectors.test.js';
 import { run as runSyncToolsTest } from './data-hub/sync-tools.test.js';
+import { run as runDataSpecTest } from './data-hub/data-spec.test.js';
 
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
@@ -60,8 +61,10 @@ async function main() {
   }
 
   try {
-    execSync('node scripts/data-hub/validate.js', { cwd: ROOT_DIR, stdio: 'inherit' });
-    totalPassed += 14;
+    const out = execSync('node scripts/data-hub/validate.js', { cwd: ROOT_DIR, encoding: 'utf8' });
+    process.stdout.write(out);
+    const match = out.match(/통과\s+(\d+)개/);
+    totalPassed += match ? parseInt(match[1], 10) : 17;
     suiteCount++;
   } catch (e) {
     totalFailed += 1;
@@ -98,7 +101,8 @@ async function main() {
   const hubSuites = [
     runSeedsTest,
     runCollectorsTest,
-    runSyncToolsTest
+    runSyncToolsTest,
+    runDataSpecTest
   ];
 
   for (const suite of hubSuites) {

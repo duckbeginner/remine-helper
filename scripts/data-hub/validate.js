@@ -67,6 +67,34 @@ function runValidation() {
   assert(coreKb <= 160, `core.json 160KB 이하 초경량 유지 (${coreKb.toFixed(2)} KB)`);
   assert(schedKb <= 600, `schedules.json 마스터 아카이브 규격 내 유지 (${schedKb.toFixed(2)} KB)`);
 
+  console.log("\n4️⃣ [DATA_SPECIFICATION.md] 데이터 계약 및 스키마 전수 검증");
+  let invalidScheduleCount = 0;
+  let invalidDateCount = 0;
+  let extFieldCount = 0;
+
+  schedules.items.forEach(item => {
+    if (!item.id || !item.title || !item.startTime) {
+      invalidScheduleCount++;
+    }
+    if (isNaN(new Date(item.startTime).getTime())) {
+      invalidDateCount++;
+    }
+    if (item.extField && item.extField.key && item.extField.value) {
+      extFieldCount++;
+    }
+    if (Array.isArray(item.starAttendees)) {
+      item.starAttendees.forEach(att => {
+        if (!att || typeof att.name !== 'string') {
+          invalidScheduleCount++;
+        }
+      });
+    }
+  });
+
+  assert(invalidScheduleCount === 0, `모든 스케줄 필수 필드 및 스키마 무결성 (위반 0건)`);
+  assert(invalidDateCount === 0, `모든 스케줄 시작 일시 ISO-8601 파싱 유효성 (오류 0건)`);
+  assert(extFieldCount > 0, `배포 v1.0.3 하위 호환성을 위한 extField 유예 정책 유지 (${extFieldCount}건)`);
+
   console.log("\n==================================================");
   console.log(`📊 검증 결과: 통과 ${passed}개, 실패 ${failed}개`);
   console.log("==================================================");
