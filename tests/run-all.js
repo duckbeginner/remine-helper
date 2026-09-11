@@ -30,6 +30,7 @@ import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimm
 
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
+import { run as runOpsMemberBadgesTest } from './docs/ops-member-badges.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
 import { run as runManifestTest } from './cross/manifest.test.js';
@@ -128,6 +129,7 @@ async function main() {
   const docsSuites = [
     runPagesTest,
     runOpsToolTest,
+    runOpsMemberBadgesTest,
     runSeoTest
   ];
 

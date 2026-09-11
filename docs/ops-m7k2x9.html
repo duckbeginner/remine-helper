@@ -1830,6 +1830,18 @@
           </div>
 
           <div class="form-group"
+            style="margin-top: 10px; padding: 12px; background: rgba(255, 105, 180, 0.04); border: 1px dashed rgba(255, 105, 180, 0.25); border-radius: 8px;">
+            <label class="form-label"
+              style="display: flex; align-items: center; justify-content: space-between; color: #ff80ab; margin-bottom: 6px;">
+              <span>🌟 참석 멤버 (starAttendees)</span>
+              <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">미선택 시 단체(전원) 참석</span>
+            </label>
+            <div id="attendeesSelector" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <!-- 5명 멤버 선택 칩 동적 렌더링 -->
+            </div>
+          </div>
+
+          <div class="form-group"
             style="margin-top: 14px; padding: 12px; background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 8px;">
             <label class="form-label"
               style="display: flex; align-items: center; justify-content: space-between; color: #38bdf8; margin-bottom: 6px;">
@@ -2154,6 +2166,84 @@
           if (toast.parentNode) toast.remove();
         }, 250);
       }, duration);
+    }
+
+    // RESCENE 멤버 및 아바타 매핑 (Single Source of Truth)
+    const RESCENE_MEMBERS = [
+      { id: '6a85595d92c2d65318a474de', name: '원이', avatar: 'icons/member_woni.jpeg' },
+      { id: '67a5924253c0ed13ba18b38a', name: '리브', avatar: 'icons/member_liv.jpeg' },
+      { id: '67a5925e0425fa520d4fbf81', name: '미나미', avatar: 'icons/member_minami.jpeg' },
+      { id: '67a4ddac2248254b7dd6d9a7', name: '메이', avatar: 'icons/member_may.jpeg' },
+      { id: '67a5927866121779ad93d317', name: '제나', avatar: 'icons/member_zena.jpeg' }
+    ];
+
+    const MEMBER_ID_MAP = {
+      '67a59215db2769150bfbf5df': '원이',
+      '6a85595d92c2d65318a474de': '원이',
+      '67a5924253c0ed13ba18b38a': '리브',
+      '67a5927866121779ad93d317': '제나',
+      '67a4ddac2248254b7dd6d9a7': '메이',
+      '67a5925e0425fa520d4fbf81': '미나미'
+    };
+
+    const MEMBER_NICKNAME_MAP = {
+      '별이빛나는맘': '원이',
+      '원이입니다': '원이',
+      '올리브🫒': '리브',
+      '올리브': '리브',
+      '김깨구리제로천사': '제나',
+      '메2': '메이',
+      '𝕞𝕚𝕟𝕒𝕞𝕚': '미나미',
+      'minami': '미나미'
+    };
+
+    const MEMBER_AVATAR_MAP = {
+      '원이': 'icons/member_woni.jpeg',
+      '리브': 'icons/member_liv.jpeg',
+      '제나': 'icons/member_zena.jpeg',
+      '메이': 'icons/member_may.jpeg',
+      '미나미': 'icons/member_minami.jpeg'
+    };
+
+    function getMemberAttendeeBadgesHTML(attendees) {
+      if (!Array.isArray(attendees) || attendees.length === 0) return '';
+
+      const badges = attendees.map(a => {
+        if (!a) return '';
+        let realName = '멤버';
+        if (typeof a === 'object' && a !== null) {
+          if (a.id && MEMBER_ID_MAP[a.id]) {
+            realName = MEMBER_ID_MAP[a.id];
+          } else {
+            const raw = (a.nickname || a.name || '').trim();
+            if (MEMBER_NICKNAME_MAP[raw]) {
+              realName = MEMBER_NICKNAME_MAP[raw];
+            } else {
+              let found = false;
+              for (const [nick, name] of Object.entries(MEMBER_NICKNAME_MAP)) {
+                if (raw.includes(nick) || nick.includes(raw)) {
+                  realName = name;
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) realName = raw || '멤버';
+            }
+          }
+        } else if (typeof a === 'string') {
+          const raw = a.trim();
+          realName = MEMBER_ID_MAP[raw] || MEMBER_NICKNAME_MAP[raw] || raw;
+        }
+
+        const avatarUrl = MEMBER_AVATAR_MAP[realName] || (a && (a.profileImage || a.profileImg)) || '';
+        if (avatarUrl) {
+          return `<img src="${escapeHtml(avatarUrl)}" class="attendee-mini-avatar" style="width:14px; height:14px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,105,180,0.6); vertical-align:-2px; flex-shrink:0;" alt="${escapeHtml(realName)}" title="${escapeHtml(realName)}">`;
+        }
+        return `<span class="attendee-mini-badge" style="display:inline-block; width:14px; height:14px; line-height:14px; border-radius:50%; background:#ff4081; color:#fff; font-size:9px; text-align:center; font-weight:bold; vertical-align:-2px;" title="${escapeHtml(realName)}">${escapeHtml(realName.slice(0, 1))}</span>`;
+      }).filter(Boolean);
+
+      if (badges.length === 0) return '';
+      return `<span class="schedule-attendees-badges" style="display:inline-flex; align-items:center; gap:2px; margin-left:4px; vertical-align:middle;">${badges.join('')}</span>`;
     }
 
     // 상태 관리
@@ -3010,6 +3100,7 @@
                     <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${sourceBadgeBg}; color: ${sourceBadgeColor}; flex-shrink: 0;">${sourceName}</span>
                     <span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); flex-shrink: 0;">${escapeHtml(subType)}</span>
                     <span style="font-weight: 500; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(sub.title)}</span>
+                    ${getMemberAttendeeBadgesHTML(sub.starAttendees)}
                     <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${subTime}</span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-shrink: 0;">
@@ -3045,6 +3136,7 @@
                     ${primaryItem.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(primaryItem.channel)}</span>` : ''}
                     ${stateBadge}
                     ${subItems.length > 0 ? `<span class="state-badge" style="background:rgba(56,189,248,0.2); color:#38bdf8; font-weight:600;" title="연관 일정 ${subItems.length}건과 1개로 합성됨">🔗 연관 ${subItems.length}건 합성</span>` : ''}
+                    ${getMemberAttendeeBadgesHTML(primaryItem.starAttendees)}
                   </div>
                   <div class="card-title">${escapeHtml(primaryItem.title)}</div>
                   ${primaryItem.location ? `<div class="card-subtext">📍 ${escapeHtml(primaryItem.location)}</div>` : ''}
@@ -3499,6 +3591,32 @@
       document.getElementById('formLocation').value = item.location || '';
       document.getElementById('formMessage').value = item.message || '';
 
+      // 참석 멤버 셀렉터 렌더링
+      const attendeesContainer = document.getElementById('attendeesSelector');
+      if (attendeesContainer) {
+        attendeesContainer.innerHTML = '';
+        const currentAttendees = Array.isArray(item.starAttendees) ? item.starAttendees : [];
+        const currentNames = currentAttendees.map(a => {
+          if (typeof a === 'string') return MEMBER_ID_MAP[a] || MEMBER_NICKNAME_MAP[a] || a;
+          if (a && a.name) return a.name;
+          if (a && a.id && MEMBER_ID_MAP[a.id]) return MEMBER_ID_MAP[a.id];
+          if (a && a.nickname && MEMBER_NICKNAME_MAP[a.nickname]) return MEMBER_NICKNAME_MAP[a.nickname];
+          return '';
+        }).filter(Boolean);
+
+        RESCENE_MEMBERS.forEach(m => {
+          const isChecked = currentNames.includes(m.name);
+          const chip = document.createElement('label');
+          chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); user-select: none; transition: all 0.2s;';
+          chip.innerHTML = `
+            <input type="checkbox" class="attendee-cb" value="${escapeHtml(m.name)}" data-id="${escapeHtml(m.id)}" data-avatar="${escapeHtml(m.avatar)}" ${isChecked ? 'checked' : ''} style="margin: 0; cursor: pointer;">
+            <img src="${escapeHtml(m.avatar)}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,105,180,0.5);">
+            <span style="font-weight: 600;">${escapeHtml(m.name)}</span>
+          `;
+          attendeesContainer.appendChild(chip);
+        });
+      }
+
       // 연관 일정 연결 후보 렌더링 (KST 기준 동일 날짜 및 인접 날짜 ±1일)
       const linkContainer = document.getElementById('linkedSchedulesContainer');
       if (linkContainer) {
@@ -3621,6 +3739,21 @@
       document.getElementById('formDate').value = formatDateYMD(new Date());
       clearUrlMetaPreview();
       updateUrlMetaBtnState();
+
+      const attendeesContainer = document.getElementById('attendeesSelector');
+      if (attendeesContainer) {
+        attendeesContainer.innerHTML = '';
+        RESCENE_MEMBERS.forEach(m => {
+          const chip = document.createElement('label');
+          chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); user-select: none; transition: all 0.2s;';
+          chip.innerHTML = `
+            <input type="checkbox" class="attendee-cb" value="${escapeHtml(m.name)}" data-id="${escapeHtml(m.id)}" data-avatar="${escapeHtml(m.avatar)}" style="margin: 0; cursor: pointer;">
+            <img src="${escapeHtml(m.avatar)}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,105,180,0.5);">
+            <span style="font-weight: 600;">${escapeHtml(m.name)}</span>
+          `;
+          attendeesContainer.appendChild(chip);
+        });
+      }
 
       const linkContainer = document.getElementById('linkedSchedulesContainer');
       if (linkContainer) {
@@ -4717,6 +4850,17 @@
         isOfficialYoutube = false;
       }
 
+      // 선택된 참석 멤버 수집
+      const attendeeCbs = document.querySelectorAll('.attendee-cb:checked');
+      let starAttendees = undefined;
+      if (attendeeCbs.length > 0) {
+        starAttendees = Array.from(attendeeCbs).map(cb => ({
+          name: cb.value,
+          id: cb.dataset.id || undefined,
+          profileImage: cb.dataset.avatar || undefined
+        }));
+      }
+
       if (isNew) {
         const datePart = startTime ? startTime.slice(2, 10).replace(/-/g, '') : '000000';
         const rand = Math.random().toString(36).slice(2, 8);
@@ -4735,6 +4879,7 @@
           message,
           thumbnail,
           isOfficialYoutube,
+          starAttendees,
           _isCustom: true
         };
         const nKey = getRawScheduleKey(newItem);
@@ -4758,6 +4903,7 @@
           item.message = message;
           if (thumbnail) item.thumbnail = thumbnail;
           if (isOfficialYoutube !== undefined) item.isOfficialYoutube = isOfficialYoutube;
+          item.starAttendees = starAttendees;
           item._isModified = true;
 
           // 연관 일정 연결 처리 (상호 양방향 동기화)
@@ -5970,6 +6116,7 @@
               <span class="user-sp-title-area">
                 <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeTitle}</span>
                 ${extraInfo}
+                ${getMemberAttendeeBadgesHTML(item.starAttendees)}
               </span>
             </div>
           </div>
@@ -5989,9 +6136,9 @@
       setTimeout(() => {
         const activeEl = listEl.querySelector('.user-sp-item.active');
         if (activeEl) {
-          activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 50);
+      }, 100);
     }
 
     function showUserPreviewDetail(item) {
@@ -6008,7 +6155,7 @@
       const type = resolveScheduleType(item);
       const badgeStyle = TYPE_BADGE_STYLES[type] || TYPE_BADGE_STYLES['기타'];
 
-      badgeRow.innerHTML = `<span class="user-sp-type-badge" style="background: ${badgeStyle.bg}; color: ${badgeStyle.color}; font-size: 11px; padding: 2px 7px;">${escapeHtml(type)}</span>`;
+      badgeRow.innerHTML = `<span class="user-sp-type-badge" style="background: ${badgeStyle.bg}; color: ${badgeStyle.color}; font-size: 11px; padding: 2px 7px;">${escapeHtml(type)}</span>` + getMemberAttendeeBadgesHTML(item.starAttendees);
       titleEl.textContent = item.title || item.message || '제목 없음';
 
       let timeText = '종일';
