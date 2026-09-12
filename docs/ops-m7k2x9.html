@@ -5104,11 +5104,20 @@
 
               const targetItem = allSchedules.find(s => (s.id && s.id === targetId) || s._originKey === targetId || getScheduleKey(s) === targetId);
               if (targetItem) {
-                let tLinked = Array.isArray(targetItem.linkedScheduleIds) ? [...targetItem.linkedScheduleIds] : [];
+                const origLinked = Array.isArray(targetItem.linkedScheduleIds) ? [...targetItem.linkedScheduleIds] : [];
+                const wasLinked = origLinked.includes(currentId) || origLinked.includes(stableKey);
+                const linkStateChanged = wasLinked !== isChecked;
+
+                // 연결 상태가 실제로 변하지 않은 무관한 후보는 수정 대기열에 절대 등록하지 않음!
+                if (!linkStateChanged) {
+                  return;
+                }
+
+                let tLinked = [...origLinked];
                 if (isChecked) {
                   if (!tLinked.includes(currentId)) tLinked.push(currentId);
                 } else {
-                  tLinked = tLinked.filter(id => id !== currentId);
+                  tLinked = tLinked.filter(id => id !== currentId && id !== stableKey);
                 }
                 targetItem.linkedScheduleIds = tLinked;
                 targetItem._isModified = true;
