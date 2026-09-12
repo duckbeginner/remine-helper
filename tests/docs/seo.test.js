@@ -31,6 +31,22 @@ export async function run() {
 
     assert(content.includes('User-agent:'), 'User-agent 디렉티브가 선언되어야 합니다.');
     assert(content.includes('Sitemap:'), 'Sitemap 경로가 선언되어야 합니다.');
+    assert(content.includes('Disallow: /ops-m7k2x9.html'), '운영자 페이지 /ops-m7k2x9.html 차단 규칙이 선언되어야 합니다.');
+  });
+
+  runner.test('ops-m7k2x9.html: 검색엔진 색인 및 노출 차단(noindex, nofollow) 메타 태그 검증', () => {
+    const opsPath = path.join(DOCS_DIR, 'ops-m7k2x9.html');
+    assert(fs.existsSync(opsPath), 'docs/ops-m7k2x9.html이 존재해야 합니다.');
+    const content = fs.readFileSync(opsPath, 'utf8');
+
+    assert(
+      /<meta\s+name=["']robots["']\s+content=["'][^"']*noindex[^"']*["']/i.test(content),
+      'ops-m7k2x9.html에 noindex robots 메타 태그가 선언되어야 합니다.'
+    );
+    assert(
+      /<meta\s+name=["']robots["']\s+content=["'][^"']*nofollow[^"']*["']/i.test(content),
+      'ops-m7k2x9.html에 nofollow robots 메타 태그가 선언되어야 합니다.'
+    );
   });
 
   return runner.summary();
