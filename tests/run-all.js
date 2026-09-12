@@ -33,6 +33,7 @@ import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runOpsToolTest } from './docs/ops-tool.test.js';
 import { run as runOpsMemberBadgesTest } from './docs/ops-member-badges.test.js';
 import { run as runOpsPayloadV2CleanupTest } from './docs/ops-payload-v2-cleanup.test.js';
+import { run as runOpsLifecycleTest } from './docs/ops-lifecycle.test.js';
 import { run as runOpsMobileResponsiveTest } from './docs/ops-mobile-responsive.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
@@ -135,6 +136,7 @@ async function main() {
     runOpsToolTest,
     runOpsMemberBadgesTest,
     runOpsPayloadV2CleanupTest,
+    runOpsLifecycleTest,
     runOpsMobileResponsiveTest,
     runSeoTest
   ];

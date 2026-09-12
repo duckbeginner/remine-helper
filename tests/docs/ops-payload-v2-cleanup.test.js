@@ -34,7 +34,7 @@ export async function run() {
   test('ops-m7k2x9.html: Gist payload에서 v1.0 중복 필드(deleted, modified, created) 배제 확인', () => {
     // onSaveToGistClick 함수 내 JSON.stringify 영역 확인
     const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
-    const payloadSection = saveFuncSection.slice(0, saveFuncSection.indexOf('fetch(`https://api.github.com/gists/'));
+    const payloadSection = saveFuncSection.slice(0, saveFuncSection.indexOf("method: 'PATCH'"));
 
     assert(!payloadSection.includes('deleted: Array.from(mergedDeleted)'), 'deleted 필드가 제거되어야 합니다.');
     assert(!payloadSection.includes('modified: mergedModified'), 'modified 필드가 제거되어야 합니다.');
@@ -44,7 +44,7 @@ export async function run() {
   // 2. v2.0 필수 필드(sourceOverrides, customSchedules, filterRules) 보존 확인
   test('ops-m7k2x9.html: v2.0 필수 필드(version, filterRules, customSchedules, sourceOverrides) 유지 확인', () => {
     const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
-    const payloadSection = saveFuncSection.slice(0, saveFuncSection.indexOf('fetch(`https://api.github.com/gists/'));
+    const payloadSection = saveFuncSection.slice(0, saveFuncSection.indexOf("method: 'PATCH'"));
 
     assert(payloadSection.includes('version: "2.0.0"'), 'version: "2.0.0"이 포함되어야 합니다.');
     assert(payloadSection.includes('filterRules: finalFilterRules'), 'filterRules가 포함되어야 합니다.');
