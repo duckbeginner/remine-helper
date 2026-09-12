@@ -38,6 +38,7 @@ import { run as runOpsLinkedCandidateNoOpTest } from './docs/ops-linked-candidat
 import { run as runOpsCrossBrowserDatetimeTest } from './docs/ops-cross-browser-datetime.test.js';
 import { run as runOpsMobileResponsiveTest } from './docs/ops-mobile-responsive.test.js';
 import { run as runOpsSyncAndSuggestionsTest } from './docs/ops-sync-and-suggestions.test.js';
+import { run as runOpsPipelineIntegrityTest } from './docs/ops-pipeline-integrity.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
 import { run as runManifestTest } from './cross/manifest.test.js';
@@ -144,6 +145,7 @@ async function main() {
     runOpsCrossBrowserDatetimeTest,
     runOpsMobileResponsiveTest,
     runOpsSyncAndSuggestionsTest,
+    runOpsPipelineIntegrityTest,
     runSeoTest
   ];
 

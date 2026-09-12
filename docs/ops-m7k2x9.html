@@ -2679,6 +2679,15 @@
       return resolved;
     }
 
+    // [스키마 유효성 검증기] 유령/껍데기 일정 진입 원천 차단 (최소 필수 3대 속성 검증)
+    function isValidScheduleItem(item) {
+      if (!item || typeof item !== 'object') return false;
+      if (!item.id || typeof item.id !== 'string') return false;
+      if (!item.title || typeof item.title !== 'string' || !item.title.trim()) return false;
+      if (!item.startTime || isNaN(new Date(item.startTime).getTime())) return false;
+      return true;
+    }
+
     // 아이템과 일치하는 오버라이드 객체 검색 (직접 키, 제목, 체인 등 다각도 매칭)
     function findMatchingOverride(item, modifiedMap) {
       if (!item || !modifiedMap) return null;
@@ -2687,14 +2696,20 @@
       const originKey = item._originKey || rawKey;
       const datePart = rawKey.split('_')[0];
 
-      if (modifiedMap[originKey]) return modifiedMap[originKey];
-      if (modifiedMap[rawKey]) return modifiedMap[rawKey];
-      if (modifiedMap[item.title]) return modifiedMap[item.title];
+      // 고유 ID 불일치 방어 가드: mod에 지정된 ID가 다른 소스의 고유 ID인 경우 매칭 차단
+      const isIdMismatch = (mod) => {
+        if (!mod || !mod.id || !item.id) return false;
+        return mod.id !== item.id && (String(mod.id).startsWith('blip_') || /^[a-f0-9]{24}$/.test(String(mod.id)));
+      };
+
+      if (modifiedMap[originKey] && !isIdMismatch(modifiedMap[originKey])) return modifiedMap[originKey];
+      if (modifiedMap[rawKey] && !isIdMismatch(modifiedMap[rawKey])) return modifiedMap[rawKey];
+      if (modifiedMap[item.title] && !isIdMismatch(modifiedMap[item.title])) return modifiedMap[item.title];
 
       for (const [mKey, mVal] of Object.entries(modifiedMap)) {
         if (mKey.startsWith(datePart + '_')) {
           if (mVal.title === item.title || (mVal._originTitle && mVal._originTitle === item.title)) {
-            return mVal;
+            if (!isIdMismatch(mVal)) return mVal;
           }
         }
       }
@@ -2868,19 +2883,31 @@
           return false;
         };
 
-        // 3. baseItems에 appliedOverrides 병합 (실제 화면 덮어쓰기!)
+        // 3. baseItems에 appliedOverrides 병합 (안전 필드만 덮어쓰고 ID/Source 불변성 보장!)
+        const SAFE_OVERRIDE_FIELDS = ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'typeId', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'];
         allSchedules = baseItems.map(item => {
           const itemCopy = { ...item };
+          const origId = item.id;
+          const origSource = item.source;
           const rawKey = getRawScheduleKey(itemCopy);
-          itemCopy._originKey = rawKey;
+          itemCopy._originKey = origId || rawKey;
 
           // Gist에 저장된 수정본이 있으면 실제 속성 덮어쓰기! (체인 반영 최신본 매칭)
           const mod = findMatchingOverride(itemCopy, appliedOverrides.modified);
           if (mod) {
-            Object.assign(itemCopy, mod);
-            itemCopy._originKey = rawKey; // 고유 원본 키 유지
+            SAFE_OVERRIDE_FIELDS.forEach(f => {
+              if (mod[f] !== undefined) itemCopy[f] = mod[f];
+            });
+            if (mod.linkedScheduleIds) {
+              itemCopy.linkedScheduleIds = Array.from(new Set([...(itemCopy.linkedScheduleIds || []), ...mod.linkedScheduleIds]));
+            }
             itemCopy._isModified = true;
           }
+
+          // ID 및 Source 불변성 영구 보존
+          if (origId) itemCopy.id = origId;
+          if (origSource) itemCopy.source = origSource;
+          itemCopy._originKey = origId || rawKey;
 
           if (checkIsDeleted(itemCopy)) {
             itemCopy._isDeleted = true;
@@ -2908,19 +2935,23 @@
             if (!v) return;
             const alreadyExists = allSchedules.some(s => (s.id && (s.id === k || s.id === v.id)) || getScheduleKey(s) === k || getRawScheduleKey(s) === k);
             if (!alreadyExists) {
+              // ⚠️ [스키마 유효성 검증] 유효한 제목과 시작일시가 없는 불완전 껍데기 조각(URL/채널만 있는 데이터)은 유령 일정 생성을 막기 위해 복원 제외!
+              const vCandidate = { ...v, id: v.id || k };
+              if (!isValidScheduleItem(vCandidate)) return;
+
               const isBlip = String(k).startsWith('blip_') || (v.id && String(v.id).startsWith('blip_'));
               const isMnet = String(k).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(k));
-              const sourceName = isBlip ? '블립' : (isMnet ? 'Mnet' : '연관');
               const sourceVal = v.source || (isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom'));
 
               const resItem = {
                 ...v,
                 id: v.id || k,
                 _originKey: k,
-                title: v.title || `${sourceName} 수집 일정 (${k})`,
+                title: v.title,
                 source: sourceVal,
                 _isDeleted: Boolean(v.isDeleted || appliedOverrides.deleted.has(k) || (v.id && appliedOverrides.deleted.has(v.id)))
               };
+              if (!isValidScheduleItem(resItem)) return;
               if (checkIsDeleted(resItem)) resItem._isDeleted = true;
               allSchedules.push(resItem);
             }
@@ -3186,8 +3217,9 @@
         });
 
         groupItems.forEach(({ item, originalIndex }) => {
-          const stableId = item.id || item._originKey || getScheduleKey(item);
-          if ((stableId && renderedGlobalScheduleIds.has(stableId)) || (item.id && renderedGlobalScheduleIds.has(item.id)) || (item._originKey && renderedGlobalScheduleIds.has(item._originKey))) return;
+          if (item.id && renderedGlobalScheduleIds.has(item.id)) return;
+          const fallbackKey = item._originKey || getScheduleKey(item);
+          if (!item.id && fallbackKey && renderedGlobalScheduleIds.has(fallbackKey)) return;
 
           // 연관 연결된 클러스터 탐색 (allSchedules 전체에서 탐색)
           let cluster = [item];
@@ -3196,8 +3228,7 @@
           if (linkedIds.length > 0) {
             linkedIds.forEach(tId => {
               const matched = allList.find(cand => {
-                const candId = cand.id || cand._originKey || getScheduleKey(cand);
-                return candId === tId || (cand.id && cand.id === tId);
+                return (cand.id && cand.id === tId) || cand._originKey === tId || getScheduleKey(cand) === tId;
               });
               if (matched && !cluster.includes(matched)) {
                 cluster.push(matched);
@@ -3209,17 +3240,19 @@
           allList.forEach(cand => {
             if (cand === item || cluster.includes(cand)) return;
             const cLinked = Array.isArray(cand.linkedScheduleIds) ? cand.linkedScheduleIds : [];
-            const itemId = item.id || item._originKey || getScheduleKey(item);
-            if (cLinked.includes(itemId) || (item.id && cLinked.includes(item.id))) {
+            const cItemId = item.id;
+            const cItemKey = item._originKey || getScheduleKey(item);
+            if ((cItemId && cLinked.includes(cItemId)) || (cItemKey && cLinked.includes(cItemKey))) {
               cluster.push(cand);
             }
           });
 
           cluster.forEach(c => {
-            const cId = c.id || c._originKey || getScheduleKey(c);
-            renderedGlobalScheduleIds.add(cId);
-            if (c.id) renderedGlobalScheduleIds.add(c.id);
-            if (c._originKey) renderedGlobalScheduleIds.add(c._originKey);
+            if (c.id) {
+              renderedGlobalScheduleIds.add(c.id);
+            } else if (c._originKey) {
+              renderedGlobalScheduleIds.add(c._originKey);
+            }
           });
 
           let primaryItem = determineClusterPrimary(cluster);
