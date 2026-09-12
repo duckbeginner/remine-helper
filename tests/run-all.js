@@ -35,6 +35,7 @@ import { run as runOpsMemberBadgesTest } from './docs/ops-member-badges.test.js'
 import { run as runOpsPayloadV2CleanupTest } from './docs/ops-payload-v2-cleanup.test.js';
 import { run as runOpsLifecycleTest } from './docs/ops-lifecycle.test.js';
 import { run as runOpsLinkedCandidateNoOpTest } from './docs/ops-linked-candidate-no-op.test.js';
+import { run as runOpsCrossBrowserDatetimeTest } from './docs/ops-cross-browser-datetime.test.js';
 import { run as runOpsMobileResponsiveTest } from './docs/ops-mobile-responsive.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
@@ -139,6 +140,7 @@ async function main() {
     runOpsPayloadV2CleanupTest,
     runOpsLifecycleTest,
     runOpsLinkedCandidateNoOpTest,
+    runOpsCrossBrowserDatetimeTest,
     runOpsMobileResponsiveTest,
     runSeoTest
   ];
