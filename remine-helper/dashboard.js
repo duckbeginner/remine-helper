@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
               (res.latestVideos || []).map(v => v.id),
               (res.officialPlaylistVideos || []).map(v => v.id),
               (res.woniVideos || []).map(v => v.id),
-              (res.blipSchedules || []).map(s => `${s.id || s.title}_${s.startDateTime || ''}_${s.state || ''}`),
+              (res.blipSchedules || []).map(s => `${s.id || s.title}_${s.startTime || ''}_${s.state || ''}`),
               res.isLive,
               res.isLiveStreaming,
               res.channelOrder

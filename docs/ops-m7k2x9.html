@@ -1953,6 +1953,7 @@
             <div class="form-group">
               <label class="form-label">시작 시간</label>
               <input type="time" class="form-input" id="formTime">
+              <div id="suggestTime" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
             </div>
           </div>
 
@@ -1991,6 +1992,7 @@
                 ⚡ 정보 가져오기
               </button>
             </div>
+            <div id="suggestUrl" class="field-suggestion" style="display: none; margin-top: 5px;"></div>
             <!-- 메타데이터 참고 & 복사 패널 -->
             <div id="urlMetaPreviewPanel"
               style="display: none; margin-top: 8px; padding: 10px 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; font-size: 11.5px;">
@@ -2818,6 +2820,11 @@
             });
             if (apiRes.ok) {
               const gistData = await apiRes.json();
+              if (gistData.files && gistData.files['core.json'] && gistData.files['core.json'].content) {
+                try {
+                  window.latestGistCoreData = JSON.parse(gistData.files['core.json'].content);
+                } catch (ce) { }
+              }
               const overFile = gistData.files && gistData.files['schedule-overrides.json'];
               if (overFile && overFile.content) {
                 overridesJson = JSON.parse(overFile.content);
@@ -3103,6 +3110,47 @@
       });
     }
 
+    // [클러스터 대표 일정 선출 알고리즘] Ops 포털 및 데이터 허브 공통 통일 규칙
+    function determineClusterPrimary(cluster) {
+      if (!cluster || cluster.length === 0) return null;
+      if (cluster.length === 1) return cluster[0];
+
+      // 1순위: 관리자 명시 대표 지정 (isPrimary: true)
+      const explicit = cluster.find(c => c && c.isPrimary);
+      if (explicit) return explicit;
+
+      // 2순위: 수동 커스텀 등록 일정 (_isCustom)
+      const custom = cluster.find(c => c && c._isCustom);
+      if (custom) return custom;
+
+      // 3순위: 관리자 수정 일정 (_isModified)
+      const modified = cluster.find(c => c && (c._isModified || (pendingOverrides.modified && pendingOverrides.modified[getScheduleKey(c)])));
+      if (modified) return modified;
+
+      // 4순위: 소스 우선순위 (blip > mnet > 기타) 및 세부 정보 충실도
+      const sourceScore = (src) => src === 'blip' ? 30 : src === 'mnet' ? 20 : 10;
+      const detailScore = (item) => {
+        let s = 0;
+        if (item.channel) s += 5;
+        if (item.location) s += 5;
+        if (item.url) s += 3;
+        if (item.thumbnail) s += 3;
+        if (item.starAttendees && item.starAttendees.length > 0) s += 4;
+        return s;
+      };
+
+      const sorted = [...cluster].sort((a, b) => {
+        const scoreA = (sourceScore(a.source) || 0) + detailScore(a);
+        const scoreB = (sourceScore(b.source) || 0) + detailScore(b);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        // 5순위: 고유 ID 결정론적 정렬
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      });
+
+      return sorted[0];
+    }
+    window.determineClusterPrimary = determineClusterPrimary;
+
     // 날짜별 그룹 HTML 생성기
     function renderScheduleGroupsHTML(filteredItems) {
       if (!filteredItems || filteredItems.length === 0) return '';
@@ -3139,8 +3187,7 @@
 
         groupItems.forEach(({ item, originalIndex }) => {
           const stableId = item.id || item._originKey || getScheduleKey(item);
-          const rawId = getRawScheduleKey(item);
-          if (renderedGlobalScheduleIds.has(stableId) || renderedGlobalScheduleIds.has(rawId) || (item.id && renderedGlobalScheduleIds.has(item.id))) return;
+          if ((stableId && renderedGlobalScheduleIds.has(stableId)) || (item.id && renderedGlobalScheduleIds.has(item.id)) || (item._originKey && renderedGlobalScheduleIds.has(item._originKey))) return;
 
           // 연관 연결된 클러스터 탐색 (allSchedules 전체에서 탐색)
           let cluster = [item];
@@ -3150,7 +3197,7 @@
             linkedIds.forEach(tId => {
               const matched = allList.find(cand => {
                 const candId = cand.id || cand._originKey || getScheduleKey(cand);
-                return candId === tId || (cand.id && cand.id === tId) || getRawScheduleKey(cand) === tId;
+                return candId === tId || (cand.id && cand.id === tId);
               });
               if (matched && !cluster.includes(matched)) {
                 cluster.push(matched);
@@ -3163,20 +3210,19 @@
             if (cand === item || cluster.includes(cand)) return;
             const cLinked = Array.isArray(cand.linkedScheduleIds) ? cand.linkedScheduleIds : [];
             const itemId = item.id || item._originKey || getScheduleKey(item);
-            if (cLinked.includes(itemId) || (item.id && cLinked.includes(item.id)) || cLinked.includes(getRawScheduleKey(item))) {
+            if (cLinked.includes(itemId) || (item.id && cLinked.includes(item.id))) {
               cluster.push(cand);
             }
           });
 
           cluster.forEach(c => {
             const cId = c.id || c._originKey || getScheduleKey(c);
-            const rId = getRawScheduleKey(c);
             renderedGlobalScheduleIds.add(cId);
-            renderedGlobalScheduleIds.add(rId);
             if (c.id) renderedGlobalScheduleIds.add(c.id);
+            if (c._originKey) renderedGlobalScheduleIds.add(c._originKey);
           });
 
-          let primaryItem = (item.linkedScheduleIds && item.linkedScheduleIds.length > 0) ? item : (cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0]);
+          let primaryItem = determineClusterPrimary(cluster);
           let subItems = cluster.filter(c => c !== primaryItem);
 
           const key = getScheduleKey(primaryItem);
@@ -3304,6 +3350,7 @@
                     <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${subTime}</span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-shrink: 0;">
+                    <button type="button" class="btn-action set-primary-btn" style="padding: 2px 6px; font-size: 10.5px; background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3); color: #eab308; border-radius: 4px;" title="이 일정을 대표 일정으로 지정" onclick="setClusterPrimary('${subKeyJs}', '${safeKeyJs}')">⭐ 대표 지정</button>
                     ${sub.url ? `<a href="${escapeHtml(sub.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
                     ${(sub._isModified || (pendingOverrides.modified && pendingOverrides.modified[subKey])) && !sub._isCustom && Array.isArray(rawBaseSchedules) && rawBaseSchedules.some(b => (b.id && (b.id === subKey || b.id === sub.id)) || getScheduleKey(b) === subKey || getRawScheduleKey(b) === subKey) ? `<button type="button" class="btn-action btn-restore-mod" style="padding: 2px 6px; font-size: 10.5px;" onclick="restoreModifiedItem('${subKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
                     <button class="btn-action" style="padding: 2px 6px; font-size: 10.5px;" onclick="openEditModalByKey('${subKeyJs}')">✏️ 수정</button>
@@ -3870,11 +3917,12 @@
             const row = document.createElement('label');
             row.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; padding: 6px 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; transition: background 0.2s;';
             row.innerHTML = `
-              <input type="checkbox" class="linked-cand-cb" value="${escapeHtml(candId)}" ${isChecked ? 'checked' : ''} style="cursor: pointer; accent-color: #38bdf8;">
+              <input type="checkbox" class="linked-cand-cb" value="${escapeHtml(candId)}" ${isChecked ? 'checked' : ''} style="cursor: pointer; accent-color: #38bdf8;" onchange="updateLinkedScheduleSuggestions()">
               <span style="display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 600; border-radius: 4px; background: rgba(255,255,255,0.1); color: var(--text-muted);">${escapeHtml(candType)}</span>
               ${dayTag}
               <span style="font-weight: 500; color: var(--text-main); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(cand.title)}</span>
               <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(candTime)}</span>
+              <button type="button" class="btn-action fill-linked-btn" style="padding: 2px 6px; font-size: 10.5px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; border-radius: 4px; margin-left: 6px; flex-shrink: 0; cursor: pointer;" onclick="fillFromLinkedSchedule('${escapeHtml(candId)}', event)" title="이 일정의 정보로 양식 자동 채우기">📥 채우기</button>
             `;
             linkContainer.appendChild(row);
           });
@@ -3922,6 +3970,7 @@
 
       document.getElementById('btnModalDelete').style.display = 'block';
       updateFormLivePreview();
+      updateLinkedScheduleSuggestions();
       document.getElementById('editModalOverlay').classList.add('active');
     }
 
@@ -4178,6 +4227,79 @@
       renderSchedules();
       showToast('연관 일정 연결이 해제되었습니다.');
     }
+    window.unlinkSchedulePair = unlinkSchedulePair;
+
+    // 연관 일정 클러스터 대표 일정 지정
+    function setClusterPrimary(targetSubKey, formerPrimaryKey) {
+      const targetItem = allSchedules.find(s => (s.id && s.id === targetSubKey) || s._originKey === targetSubKey || getScheduleKey(s) === targetSubKey || getRawScheduleKey(s) === targetSubKey);
+      const formerItem = allSchedules.find(s => (s.id && s.id === formerPrimaryKey) || s._originKey === formerPrimaryKey || getScheduleKey(s) === formerPrimaryKey || getRawScheduleKey(s) === formerPrimaryKey);
+
+      if (!targetItem) return;
+
+      // 1. targetItem을 isPrimary = true로 설정
+      targetItem.isPrimary = true;
+      targetItem._isModified = true;
+
+      const targetKey = targetItem.id || targetItem._originKey || getScheduleKey(targetItem);
+      const targetModObj = {
+        title: targetItem.title,
+        startTime: targetItem.startTime,
+        endTime: targetItem.endTime,
+        isAllday: targetItem.isAllday,
+        typeText: targetItem.typeText,
+        channel: targetItem.channel,
+        url: targetItem.url,
+        location: targetItem.location,
+        message: targetItem.message,
+        thumbnail: targetItem.thumbnail,
+        isOfficialYoutube: targetItem.isOfficialYoutube,
+        linkedScheduleIds: Array.isArray(targetItem.linkedScheduleIds) ? [...targetItem.linkedScheduleIds] : [],
+        isPrimary: true
+      };
+
+      if (targetItem._isCustom) {
+        const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === targetKey) || c._originKey === targetKey || getScheduleKey(c) === targetKey);
+        if (cIdx >= 0) pendingOverrides.created[cIdx] = { ...targetItem, ...targetModObj };
+        else pendingOverrides.created.push({ ...targetItem, ...targetModObj });
+      } else {
+        pendingOverrides.modified[targetKey] = { ...(pendingOverrides.modified[targetKey] || {}), ...targetModObj };
+      }
+
+      // 2. formerItem (및 클러스터 내 다른 항목)의 isPrimary 해제
+      if (formerItem && formerItem !== targetItem) {
+        delete formerItem.isPrimary;
+        formerItem._isModified = true;
+        const formerKey = formerItem.id || formerItem._originKey || getScheduleKey(formerItem);
+        const formerModObj = {
+          title: formerItem.title,
+          startTime: formerItem.startTime,
+          endTime: formerItem.endTime,
+          isAllday: formerItem.isAllday,
+          typeText: formerItem.typeText,
+          channel: formerItem.channel,
+          url: formerItem.url,
+          location: formerItem.location,
+          message: formerItem.message,
+          thumbnail: formerItem.thumbnail,
+          isOfficialYoutube: formerItem.isOfficialYoutube,
+          linkedScheduleIds: Array.isArray(formerItem.linkedScheduleIds) ? [...formerItem.linkedScheduleIds] : [],
+          isPrimary: false
+        };
+
+        if (formerItem._isCustom) {
+          const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === formerKey) || c._originKey === formerKey || getScheduleKey(c) === formerKey);
+          if (cIdx >= 0) pendingOverrides.created[cIdx] = { ...formerItem, ...formerModObj };
+          else pendingOverrides.created.push({ ...formerItem, ...formerModObj });
+        } else {
+          pendingOverrides.modified[formerKey] = { ...(pendingOverrides.modified[formerKey] || {}), ...formerModObj };
+        }
+      }
+
+      updateStagingBar();
+      renderSchedules();
+      showToast(`'${targetItem.title}' 일정이 대표 일정으로 지정되었습니다.`);
+    }
+    window.setClusterPrimary = setClusterPrimary;
 
     // === 제외 필터 설정 모달 제어 ===
     let tempFilterKeywords = [];
@@ -4743,7 +4865,7 @@
       });
     }
     function clearFieldSuggestions() {
-      ['suggestTitle','suggestDate','suggestType','suggestChannel','suggestLocation','suggestMessage']
+      ['suggestTitle','suggestDate','suggestTime','suggestType','suggestChannel','suggestUrl','suggestLocation','suggestMessage']
         .forEach(id => {
           const el = document.getElementById(id);
           if (el) { el.innerHTML = ''; el.style.display = 'none'; }
@@ -4756,16 +4878,133 @@
       showToast(`${fieldId.replace('form','')}에 적용되었습니다.`);
     }
     function applyAllFieldSuggestions() {
-      const fields = ['formTitle','formDate','formType','formChannel','formLocation','formMessage'];
+      const fields = ['formTitle','formDate','formTime','formType','formChannel','formUrl','formLocation','formMessage'];
       fields.forEach(f => {
         const input = document.getElementById(f);
         if (input && !input.value) {
           const container = document.getElementById('suggest' + f.replace('form',''));
           const chip = container?.querySelector('.suggest-chip');
-          if (chip) applyFieldSuggestion(f, chip.textContent);
+          if (chip) applyFieldSuggestion(f, chip.dataset.val || chip.textContent);
         }
       });
     }
+
+    // ---------- 연관 일정 추천 칩 및 정보 채우기 UI ----------
+    function updateLinkedScheduleSuggestions() {
+      const checkedCbs = Array.from(document.querySelectorAll('.linked-cand-cb:checked'));
+      // 기존 연관 추천 칩 제거
+      document.querySelectorAll('.linked-suggest-chip').forEach(el => el.remove());
+
+      if (checkedCbs.length === 0) {
+        ['suggestTitle','suggestDate','suggestTime','suggestType','suggestChannel','suggestUrl','suggestLocation','suggestMessage'].forEach(id => {
+          const c = document.getElementById(id);
+          if (c && c.querySelectorAll('.suggest-chip').length === 0) c.style.display = 'none';
+        });
+        return;
+      }
+
+      const map = {
+        title:    {field: 'formTitle',    container: 'suggestTitle'},
+        date:     {field: 'formDate',     container: 'suggestDate'},
+        time:     {field: 'formTime',     container: 'suggestTime'},
+        type:     {field: 'formType',     container: 'suggestType'},
+        channel:  {field: 'formChannel',  container: 'suggestChannel'},
+        url:      {field: 'formUrl',      container: 'suggestUrl'},
+        location: {field: 'formLocation', container: 'suggestLocation'},
+        message:  {field: 'formMessage',  container: 'suggestMessage'}
+      };
+
+      checkedCbs.forEach(cb => {
+        const candId = cb.value;
+        const cand = allSchedules.find(s => (s.id && s.id === candId) || s._originKey === candId || getScheduleKey(s) === candId);
+        if (!cand) return;
+
+        const srcName = cand.source === 'mnet' ? 'Mnet' : (cand.source === 'blip' ? 'Blip' : (cand._isCustom ? '수동' : '연관'));
+
+        const candData = {
+          title: cand.title,
+          date: cand.startTime ? formatDateYMD(getKstDate(cand.startTime)) : '',
+          time: (!cand.isAllday && cand.startTime) ? `${String(getKstDate(cand.startTime).getHours()).padStart(2, '0')}:${String(getKstDate(cand.startTime).getMinutes()).padStart(2, '0')}` : '',
+          type: cand.typeText || resolveScheduleType(cand) || '',
+          channel: cand.channel || '',
+          url: cand.url || cand.link || '',
+          location: cand.location || '',
+          message: cand.message || ''
+        };
+
+        Object.entries(map).forEach(([key, {field, container}]) => {
+          const val = candData[key];
+          if (!val) return;
+          const cnt = document.getElementById(container);
+          if (!cnt) return;
+
+          // 동일한 값이 이미 칩으로 있으면 중복 생성 방지
+          const existingChips = Array.from(cnt.querySelectorAll('.suggest-chip'));
+          if (existingChips.some(c => (c.dataset.val === val || c.textContent.includes(val)))) return;
+
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'suggest-chip linked-suggest-chip';
+          chip.dataset.val = val;
+          chip.style.cssText = 'background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8;';
+          chip.innerHTML = `<span style="font-size: 9.5px; opacity: 0.8; margin-right: 4px;">🔗[${srcName}]</span><span>${escapeHtml(val)}</span>`;
+          chip.addEventListener('click', (e) => {
+            e.preventDefault();
+            applyFieldSuggestion(field, val);
+          });
+          cnt.appendChild(chip);
+          cnt.style.display = '';
+        });
+      });
+    }
+    window.updateLinkedScheduleSuggestions = updateLinkedScheduleSuggestions;
+
+    function fillFromLinkedSchedule(candId, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const cand = allSchedules.find(s => (s.id && s.id === candId) || s._originKey === candId || getScheduleKey(s) === candId);
+      if (!cand) return;
+
+      if (cand.title) document.getElementById('formTitle').value = cand.title;
+      if (cand.startTime) {
+        const d = getKstDate(cand.startTime);
+        document.getElementById('formDate').value = formatDateYMD(d);
+        if (!cand.isAllday) {
+          const h = String(d.getHours()).padStart(2, '0');
+          const m = String(d.getMinutes()).padStart(2, '0');
+          document.getElementById('formTime').value = `${h}:${m}`;
+        } else {
+          document.getElementById('formTime').value = '';
+        }
+      }
+      const candType = cand.typeText || resolveScheduleType(cand);
+      if (candType) document.getElementById('formType').value = candType;
+      if (cand.channel) document.getElementById('formChannel').value = cand.channel;
+      if (cand.url || cand.link) document.getElementById('formUrl').value = cand.url || cand.link;
+      if (cand.location) document.getElementById('formLocation').value = cand.location;
+      if (cand.message) document.getElementById('formMessage').value = cand.message;
+
+      // 참석 멤버 동기화
+      if (Array.isArray(cand.starAttendees) && cand.starAttendees.length > 0) {
+        const names = cand.starAttendees.map(a => typeof a === 'string' ? a : a.name).filter(Boolean);
+        document.querySelectorAll('.attendee-cb').forEach(cb => {
+          cb.checked = names.includes(cb.value);
+        });
+      }
+
+      // 해당 후보 체크박스 자동 체크
+      const cb = document.querySelector(`.linked-cand-cb[value="${candId}"]`);
+      if (cb) cb.checked = true;
+
+      updateUrlMetaBtnState();
+      updateFormLivePreview();
+      updateLinkedScheduleSuggestions();
+      showToast(`'${cand.title}' 일정의 정보로 양식이 채워졌습니다.`);
+    }
+    window.fillFromLinkedSchedule = fillFromLinkedSchedule;
+
     function renderMetaPreviewPanel(meta) {
       const panel = document.getElementById('urlMetaPreviewPanel');
       if (!panel || !meta) return;
@@ -5839,6 +6078,151 @@
         });
 
         const finalFilterRules = pendingFilterRules || currentFilterRules;
+
+        // -------------------------------------------------------------
+        // 최신 마스터 스케줄 합성 (Zero Delay Sync: schedules.json & core.json 동시 발행)
+        // -------------------------------------------------------------
+        const tempActiveMap = new Map();
+        allSchedules.forEach(s => {
+          const sKey = s.id || getScheduleKey(s);
+          const rKey = getRawScheduleKey(s);
+          if (mergedDeleted.has(sKey) || mergedDeleted.has(rKey) || (s.id && mergedDeleted.has(s.id)) || s._isDeleted || s.isDeleted) {
+            return;
+          }
+          const itemClone = { ...s };
+          const mod = mergedModified[s.id] || mergedModified[sKey] || mergedModified[rKey];
+          if (mod) Object.assign(itemClone, mod);
+          tempActiveMap.set(itemClone.id || sKey, itemClone);
+        });
+
+        finalCreated.forEach(c => {
+          if (c.isDeleted || (c.id && mergedDeleted.has(c.id))) return;
+          const cId = c.id || getScheduleKey(c);
+          tempActiveMap.set(cId, { ...c, _isCustom: true });
+        });
+
+        const activeList = Array.from(tempActiveMap.values());
+        const adj = new Map();
+        activeList.forEach(item => {
+          const iId = item.id || getScheduleKey(item);
+          if (!adj.has(iId)) adj.set(iId, new Set());
+          const linked = item.linkedScheduleIds || [];
+          linked.forEach(targetId => {
+            adj.get(iId).add(targetId);
+            if (!adj.has(targetId)) adj.set(targetId, new Set());
+            adj.get(targetId).add(iId);
+          });
+        });
+
+        // 동일 유튜브 영상 ID 연계
+        const ytMap = new Map();
+        activeList.forEach(item => {
+          const u = item.url || item.link;
+          const m = u && u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/))([\w-]{11})/);
+          if (m) {
+            const vid = m[1];
+            if (!ytMap.has(vid)) ytMap.set(vid, []);
+            ytMap.get(vid).push(item.id || getScheduleKey(item));
+          }
+        });
+        ytMap.forEach(ids => {
+          if (ids.length > 1) {
+            for (let i = 0; i < ids.length; i++) {
+              for (let j = i + 1; j < ids.length; j++) {
+                if (adj.has(ids[i])) adj.get(ids[i]).add(ids[j]);
+                if (adj.has(ids[j])) adj.get(ids[j]).add(ids[i]);
+              }
+            }
+          }
+        });
+
+        const synthesizedMasterList = [];
+        const clusterVisited = new Set();
+
+        activeList.forEach(item => {
+          const iId = item.id || getScheduleKey(item);
+          if (clusterVisited.has(iId)) return;
+
+          const cluster = [];
+          const q = [iId];
+          clusterVisited.add(iId);
+
+          while (q.length > 0) {
+            const curId = q.shift();
+            const cur = activeList.find(x => (x.id && x.id === curId) || getScheduleKey(x) === curId);
+            if (cur) cluster.push(cur);
+
+            const nbrs = adj.get(curId) || new Set();
+            nbrs.forEach(nId => {
+              if (!clusterVisited.has(nId)) {
+                clusterVisited.add(nId);
+                q.push(nId);
+              }
+            });
+          }
+
+          if (cluster.length === 0) return;
+          if (cluster.length === 1) {
+            synthesizedMasterList.push(cluster[0]);
+          } else {
+            const primary = determineClusterPrimary(cluster);
+            const secondaries = cluster.filter(c => c !== primary);
+            const synthetic = { ...primary };
+            secondaries.forEach(sec => {
+              if (!synthetic.url && sec.url) synthetic.url = sec.url;
+              if (!synthetic.location && sec.location) synthetic.location = sec.location;
+              if (!synthetic.channel && sec.channel) synthetic.channel = sec.channel;
+              if (!synthetic.message && sec.message) synthetic.message = sec.message;
+              if (!synthetic.typeText && sec.typeText) synthetic.typeText = sec.typeText;
+              if (sec.starAttendees && sec.starAttendees.length > 0) {
+                if (!synthetic.starAttendees || synthetic.starAttendees.length === 0) {
+                  synthetic.starAttendees = [...sec.starAttendees];
+                } else {
+                  const existNames = new Set(synthetic.starAttendees.map(a => a.name));
+                  const newOnes = sec.starAttendees.filter(a => a.name && !existNames.has(a.name));
+                  synthetic.starAttendees = [...synthetic.starAttendees, ...newOnes];
+                }
+              }
+              if (!synthetic.extField && sec.extField) synthetic.extField = sec.extField;
+            });
+            synthetic.linkedScheduleIds = Array.from(new Set(cluster.flatMap(c => [c.id, ...(c.linkedScheduleIds || [])]).filter(Boolean)));
+            synthesizedMasterList.push(synthetic);
+          }
+        });
+
+        // 시간순 정렬
+        synthesizedMasterList.sort((a, b) => {
+          const tA = a.startTime ? new Date(a.startTime).getTime() : 0;
+          const tB = b.startTime ? new Date(b.startTime).getTime() : 0;
+          return tA - tB;
+        });
+
+        const schedulesFilePayload = {
+          version: "1.0.0",
+          updatedAt: new Date().toISOString(),
+          updatedAtTimestamp: Date.now(),
+          totalCount: synthesizedMasterList.length,
+          items: synthesizedMasterList
+        };
+
+        // core.json 동시 업로드 구성
+        let coreContent = null;
+        try {
+          let baseCore = window.latestGistCoreData || null;
+          if (!baseCore) {
+            const cRes = await fetch(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/core.json?_t=${Date.now()}`);
+            if (cRes.ok) baseCore = await cRes.json();
+          }
+          if (baseCore) {
+            baseCore.updatedAt = new Date().toISOString();
+            baseCore.updatedAtTimestamp = Date.now();
+            if (!baseCore.schedules) baseCore.schedules = {};
+            baseCore.schedules.masterUpdatedAt = new Date().toISOString();
+            baseCore.schedules.totalMasterCount = synthesizedMasterList.length;
+            coreContent = JSON.stringify(baseCore);
+          }
+        } catch (e) { }
+
         const payload = {
           files: {
             "schedule-overrides.json": {
@@ -5850,7 +6234,22 @@
                 sourceOverrides,
                 legacyAliases
               })
-            }
+            },
+            "schedules.json": {
+              content: JSON.stringify(schedulesFilePayload)
+            },
+            ...(coreContent ? { "core.json": { content: coreContent } } : {
+              "core.json": {
+                content: JSON.stringify({
+                  version: "1.0.0",
+                  updatedAt: new Date().toISOString(),
+                  schedules: {
+                    masterUpdatedAt: new Date().toISOString(),
+                    totalMasterCount: synthesizedMasterList.length
+                  }
+                })
+              }
+            })
           }
         };
 

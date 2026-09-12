@@ -57,8 +57,8 @@ export function filterAndDeduplicateSchedules(schedules) {
 
   for (const item of schedules) {
     if (!item) continue;
-    // 관리자가 직접 생성했거나 수정한 커스텀 일정은 키워드 매칭과 무관하게 100% 보존
-    if (!item._isCustom) {
+    // 관리자가 직접 생성했거나 수정한 일정은 키워드 매칭과 무관하게 100% 보존
+    if (!item._isCustom && !item._isModified) {
       const text = (item.title || "") + " " + (item.message || "") + " " + (item.url || "") + " " + (item.link || "");
       if (EXCLUDE_SCHEDULE_REGEX.test(text)) continue;
       if (item._isShorts || /youtube\.com\/shorts\//i.test(text) || /#shorts\b|#쇼츠\b/i.test(text) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(text)) continue;

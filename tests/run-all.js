@@ -37,6 +37,7 @@ import { run as runOpsLifecycleTest } from './docs/ops-lifecycle.test.js';
 import { run as runOpsLinkedCandidateNoOpTest } from './docs/ops-linked-candidate-no-op.test.js';
 import { run as runOpsCrossBrowserDatetimeTest } from './docs/ops-cross-browser-datetime.test.js';
 import { run as runOpsMobileResponsiveTest } from './docs/ops-mobile-responsive.test.js';
+import { run as runOpsSyncAndSuggestionsTest } from './docs/ops-sync-and-suggestions.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
 import { run as runManifestTest } from './cross/manifest.test.js';
@@ -142,6 +143,7 @@ async function main() {
     runOpsLinkedCandidateNoOpTest,
     runOpsCrossBrowserDatetimeTest,
     runOpsMobileResponsiveTest,
+    runOpsSyncAndSuggestionsTest,
     runSeoTest
   ];
 

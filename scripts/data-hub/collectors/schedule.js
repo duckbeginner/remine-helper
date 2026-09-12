@@ -979,6 +979,46 @@ export function isShortsSchedule(item) {
   return false;
 }
 
+// [클러스터 대표 일정 선출 알고리즘] Ops 포털 및 데이터 허브 공통 통일 규칙
+export function determineClusterPrimary(cluster) {
+  if (!cluster || cluster.length === 0) return null;
+  if (cluster.length === 1) return cluster[0];
+
+  // 1순위: 관리자 명시 대표 지정 (isPrimary: true)
+  const explicit = cluster.find(c => c && c.isPrimary);
+  if (explicit) return explicit;
+
+  // 2순위: 수동 커스텀 등록 일정 (_isCustom)
+  const custom = cluster.find(c => c && c._isCustom);
+  if (custom) return custom;
+
+  // 3순위: 관리자 수정 일정 (_isModified)
+  const modified = cluster.find(c => c && c._isModified);
+  if (modified) return modified;
+
+  // 4순위: 소스 우선순위 (blip > mnet > 기타) 및 세부 정보 충실도
+  const sourceScore = (src) => src === 'blip' ? 30 : src === 'mnet' ? 20 : 10;
+  const detailScore = (item) => {
+    let s = 0;
+    if (item.channel) s += 5;
+    if (item.location) s += 5;
+    if (item.url) s += 3;
+    if (item.thumbnail) s += 3;
+    if (item.starAttendees && item.starAttendees.length > 0) s += 4;
+    return s;
+  };
+
+  const sorted = [...cluster].sort((a, b) => {
+    const scoreA = (sourceScore(a.source) || 0) + detailScore(a);
+    const scoreB = (sourceScore(b.source) || 0) + detailScore(b);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    // 5순위: 고유 ID 결정론적 정렬
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  });
+
+  return sorted[0];
+}
+
 // [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
@@ -1172,8 +1212,8 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
       return;
     }
 
-    // 대표 선출 규칙: 커스텀(수동) 일정 우선 > 공식 소스
-    let primary = cluster.find(c => c._isCustom) || cluster[0];
+    // 대표 선출 규칙: determineClusterPrimary 알고리즘 통일
+    let primary = determineClusterPrimary(cluster);
     const secondaries = cluster.filter(c => c.id !== primary.id);
 
     // 필드별 합성: 대표가 빈 필드는 서브 공식 정보에서 채우고, 공식 메타데이터(멤버 등) 흡수
