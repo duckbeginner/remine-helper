@@ -135,6 +135,21 @@
       gap: 8px;
     }
 
+    .btn-user-preview {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(124, 92, 252, 0.16);
+      color: #c4b5fd;
+      border: 1px solid rgba(124, 92, 252, 0.35);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
     .btn-icon {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
@@ -1615,6 +1630,54 @@
 
     /* 📱 모바일 (폭 480px 이하) 소형 화면 반응형 최적화 */
     @media (max-width: 480px) {
+      /* 0. 상단 헤더 및 [➕ 새 일정] 버튼 컴팩트 최적화 */
+      .header-top-bar {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .brand-group {
+        gap: 6px;
+      }
+      .brand-logo {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+      }
+      .brand-title {
+        font-size: 13.5px;
+        letter-spacing: -0.4px;
+      }
+      .brand-badge {
+        display: none !important;
+      }
+      .header-actions {
+        gap: 4px;
+      }
+      .btn-user-preview {
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        justify-content: center;
+        font-size: 13px;
+        min-width: 30px;
+      }
+      .hide-mobile-text {
+        display: none;
+      }
+      .btn-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 12.5px;
+      }
+      .btn-add-schedule {
+        padding: 6px 9px;
+        font-size: 11.5px;
+        gap: 3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
       /* 1. 상단 신규 수집 알림 배너 */
       .new-schedule-banner {
         flex-direction: column;
@@ -1770,10 +1833,9 @@
         </div>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn-action" id="btnOpenUserPreview"
-          style="display: flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 12px; font-weight: 600; background: rgba(124, 92, 252, 0.16); color: #c4b5fd; border: 1px solid rgba(124, 92, 252, 0.35); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;"
+        <button type="button" class="btn-action btn-user-preview" id="btnOpenUserPreview"
           title="사용자에게 표시되는 일정 미리보기 (사이드패널 뷰)">
-          <span>📱</span> 사용자 뷰
+          <span>📱</span><span class="hide-mobile-text">사용자 뷰</span>
         </button>
         <button class="btn-icon" id="btnOpenFilterModal" title="제외 필터 설정 (투표/직캠 등)">⚙️</button>
         <button class="btn-icon" id="btnLogout" title="로그아웃 (다시 잠금)">🔒</button>

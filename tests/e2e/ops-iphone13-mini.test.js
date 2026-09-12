@@ -112,6 +112,14 @@ test.describe('Ops Management Tool - iPhone 13 mini Real UI Layout Test', () => 
       expect(box.height).toBeLessThanOrEqual(30);
     }
 
+    // 3. 상단 [➕ 새 일정] 버튼이 375px 뷰포트 내에 온전히 노출되는지 검증
+    const btnAdd = page.locator('#btnOpenAddModal');
+    await expect(btnAdd).toBeVisible();
+    const addBox = await btnAdd.boundingBox();
+    expect(addBox).not.toBeNull();
+    // 버튼의 우측 끝(x + width)이 뷰포트 너비(375px) 안에 완전히 들어와야 함 (잘림 방지)
+    expect(addBox.x + addBox.width).toBeLessThanOrEqual(375);
+
     // 메인 뷰 스크린샷 캡처
     const mainScreenshotPath = path.join(screenshotDir, 'iphone13-mini-main.png');
     await page.screenshot({ path: mainScreenshotPath, fullPage: false });

@@ -90,6 +90,24 @@ export async function run() {
     );
   });
 
+  // 7. 모바일 미디어 쿼리 내 상단 헤더(.header-top-bar, .brand-badge) 컴팩트 슬림화 검증
+  test('ops-m7k2x9.html: 모바일 미디어 쿼리에서 .header-top-bar 슬림화 및 .brand-badge 숨김 확인', () => {
+    const mobileMedia = getMobileMediaBlock();
+    assert.ok(
+      mobileMedia.includes('.header-top-bar') && mobileMedia.includes('.brand-badge'),
+      '모바일 미디어 쿼리에서 .header-top-bar 패딩 및 .brand-badge 숨김이 정의되어야 함'
+    );
+  });
+
+  // 8. 모바일 미디어 쿼리 내 [➕ 새 일정] 버튼(.btn-add-schedule) 최적화 검증
+  test('ops-m7k2x9.html: 모바일 미디어 쿼리에서 .btn-add-schedule 가로폭 최적화 및 노출 보장 확인', () => {
+    const mobileMedia = getMobileMediaBlock();
+    assert.ok(
+      mobileMedia.includes('.btn-add-schedule') && mobileMedia.includes('padding'),
+      '모바일 미디어 쿼리에서 .btn-add-schedule 패딩 및 폰트 최적화가 정의되어야 함'
+    );
+  });
+
   return { passed, failed };
 }
 
