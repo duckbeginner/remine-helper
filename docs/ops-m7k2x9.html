@@ -846,6 +846,7 @@
       justify-content: center;
       box-sizing: border-box;
       line-height: 1.2;
+      white-space: nowrap;
       transition: all 0.15s ease;
     }
 
@@ -1291,6 +1292,7 @@
       min-height: 0;
       overflow-y: auto;
       padding-right: 4px;
+      padding-bottom: 24px;
     }
 
     .sheet-buttons {
@@ -1312,6 +1314,7 @@
       font-weight: 600;
       cursor: pointer;
       flex: 1;
+      white-space: nowrap;
       transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
     .btn-sheet-restore-original:hover {
@@ -1330,6 +1333,7 @@
       font-weight: 600;
       cursor: pointer;
       flex: 1;
+      white-space: nowrap;
     }
 
     .btn-sheet-save {
@@ -1343,6 +1347,7 @@
       cursor: pointer;
       flex: 2;
       box-shadow: 0 4px 14px var(--accent-purple-glow);
+      white-space: nowrap;
     }
 
     .loading-spinner {
@@ -1604,6 +1609,102 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    /* 📱 모바일 (폭 480px 이하) 소형 화면 반응형 최적화 */
+    @media (max-width: 480px) {
+      /* 1. 상단 신규 수집 알림 배너 */
+      .new-schedule-banner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px;
+      }
+      .new-schedule-info {
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .new-schedule-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+      .btn-filter-new, .btn-mark-all-read {
+        padding: 5px 10px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      /* 2. 일정 카드 하단 액션 버튼 */
+      .card-bottom {
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .btn-action {
+        padding: 4px 7px;
+        font-size: 10.5px;
+      }
+
+      /* 3. 모달 바텀 시트 높이 및 여백 최적화 */
+      .bottom-sheet {
+        max-height: 92vh;
+        max-height: calc(100dvh - 16px);
+        padding: 14px 16px 16px;
+      }
+      .sheet-header {
+        margin-bottom: 12px;
+      }
+      .sheet-title {
+        font-size: 16px;
+      }
+      .sheet-form-body {
+        padding-bottom: 28px;
+      }
+
+      /* 4. 실시간 미리보기 섹션 컴팩트화 */
+      .form-live-preview-section {
+        margin-top: 8px;
+        padding: 8px 10px;
+      }
+
+      /* 5. 모달 하단 버튼: 2-Row 모바일 최적화 (보조 액션 행 + 메인 저장 CTA 행) */
+      .sheet-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+      }
+      .btn-sheet-restore-original {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 120px;
+        padding: 10px 8px;
+        font-size: 12.5px;
+        order: 1;
+        text-align: center;
+      }
+      .btn-sheet-del {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 100px;
+        padding: 10px 8px;
+        font-size: 12.5px;
+        order: 2;
+        text-align: center;
+      }
+      .btn-sheet-save {
+        flex: 1 1 100%;
+        width: 100%;
+        padding: 12px;
+        font-size: 14.5px;
+        order: 3;
+        text-align: center;
+      }
     }
   </style>
 </head>
