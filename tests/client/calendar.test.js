@@ -28,12 +28,12 @@ export async function run() {
     assert.strictEqual(d.getHours(), 0);
   });
 
-  runner.test('parseSafeDate: ISO 문자열 및 빈 값 폴백 처리', () => {
+  runner.test('parseSafeDate: ISO 문자열 및 빈 값 결측치 방어 (정책 1)', () => {
     const dIso = parseSafeDate('2026-09-10T14:30:00+09:00');
     assert(!isNaN(dIso.getTime()));
 
     const dEmpty = parseSafeDate('');
-    assert(dEmpty instanceof Date && !isNaN(dEmpty.getTime()));
+    assert.strictEqual(dEmpty, null, '빈 값 인입 시 정책 1에 따라 null 반환');
   });
 
   // 2. cleanScheduleText & normalizeTitle

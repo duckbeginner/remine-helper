@@ -1,7 +1,9 @@
 // common/modules/calendar.js - 스케줄 중복제거, 캘린더 매니저 및 뷰 렌더러
 import { MEMBER_ID_MAP, MEMBER_NICKNAME_MAP, MEMBER_AVATAR_MAP } from '../../constants.js';
-import { escapeHtml } from '../templates.js';
+import { parseSafeDate, cleanScheduleText, cleanDisplayTitle, escapeHtml, getKstDateString } from './utils.js';
 import { showScheduleModal } from './modals.js';
+
+export { parseSafeDate, cleanScheduleText, cleanDisplayTitle, getKstDateString };
 
 export function getMemberAttendeeBadgesHTML(attendees) {
   if (!Array.isArray(attendees) || attendees.length === 0) return '';
@@ -53,25 +55,7 @@ export function getMemberAttendeeBadgesHTML(attendees) {
   return `<span class="schedule-attendees-badges" style="display:inline-flex; align-items:center; gap:2px; margin-left:4px; vertical-align:middle;">${badges.join('')}</span>`;
 }
 
-export function parseSafeDate(startTimeStr) {
-  if (!startTimeStr) return new Date();
-  if (startTimeStr.length === 10 && !startTimeStr.includes('T')) {
-    const [y, m, d] = startTimeStr.split('-').map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0);
-  }
-  const d = new Date(startTimeStr);
-  return isNaN(d.getTime()) ? new Date() : d;
-}
-
-export function cleanScheduleText(text) {
-  if (!text) return "";
-  return text
-    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
-    .replace(/[<>[\]{}()_!?,.~`'"•\-/]/g, ' ')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+// parseSafeDate 및 cleanScheduleText는 utils.js (SSOT)에서 import하여 re-export합니다.
 
 export function normalizeTitle(title) {
   let clean = cleanScheduleText(title);
@@ -350,20 +334,7 @@ export async function enrichSchedulesWithYouTubeOEmbed(schedules) {
   }
 }
 
-export function cleanDisplayTitle(title, maxLength = 0) {
-  if (!title) return "";
-  // 시스템 카테고리 접두어 제거, 끝단 해시태그/채널 접미사 정돈 및 길이 조정
-  let clean = title
-    .replace(/^(\[(?:방송|영상|공식\s*영상|행사|팬이벤트|기념일|릴리즈|일정|🎬|📺|📻|🎉|🎤|💿)\]\s*)+/gi, '')
-    .replace(/(?:\s*#[^\s#]+)+$/g, '')
-    .replace(/\s*\|\s*(?:RESCENE|리센느|안녕하세요원이입니다잘부탁드립니다|안녕하세요\s*원이입니다|helloiamwoni)\s*$/i, '')
-    .trim();
-
-  if (maxLength > 0 && clean.length > maxLength) {
-    clean = clean.slice(0, maxLength).trim() + '...';
-  }
-  return clean;
-}
+// cleanDisplayTitle은 utils.js (SSOT)에서 import하여 사용 및 re-export합니다.
 
 export function getScheduleTypeInfo(item) {
   let typeText = item.typeText || "";
@@ -512,35 +483,36 @@ export function getChannelIconHTML(item, { isSmall = false } = {}) {
 }
 
 export function createScheduleItemHTML(item, globalIdx = 0, nextIndex = -1) {
+  if (!item || !item.title) return '';
+  const rawDate = item.startTime || item.date;
+  const d = parseSafeDate(rawDate);
+  if (!d) return '';
+
   let dateLabel = "일정";
   let timeStr = "";
-  const rawDate = item.startTime || item.date;
 
-  if (rawDate) {
-    const d = parseSafeDate(rawDate);
-    const currentYear = new Date().getFullYear();
-    const itemYear = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+  const currentYear = new Date().getFullYear();
+  const itemYear = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
 
-    if (itemYear !== currentYear) {
-      // 올해가 아니면 연도 표기 (예: '24.03/26)
-      const shortYear = String(itemYear).slice(2);
-      dateLabel = `'${shortYear}.${month}/${day}`;
-    } else {
-      dateLabel = `${month}/${day}`;
-    }
+  if (itemYear !== currentYear) {
+    // 올해가 아니면 연도 표기 (예: '24.03/26)
+    const shortYear = String(itemYear).slice(2);
+    dateLabel = `'${shortYear}.${month}/${day}`;
+  } else {
+    dateLabel = `${month}/${day}`;
+  }
 
-    let h = d.getHours();
-    const m = String(d.getMinutes()).padStart(2, '0');
-    const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
-    if (!isAllDay) {
-      const ap = h >= 12 ? '오후' : '오전';
-      const displayH = h % 12 || 12;
-      timeStr = ` ${ap} ${displayH}:${m}`;
-    } else {
-      timeStr = " 종일";
-    }
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
+  if (!isAllDay) {
+    const ap = h >= 12 ? '오후' : '오전';
+    const displayH = h % 12 || 12;
+    timeStr = ` ${ap} ${displayH}:${m}`;
+  } else {
+    timeStr = " 종일";
   }
 
   const { typeText, bg, color } = getScheduleTypeInfo(item);
@@ -591,15 +563,24 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   // 지능형 중복 병합 및 제외 필터 적용
   schedules = deduplicateScheduleList(schedules);
 
-  if (!schedules || schedules.length === 0) {
+  // 정책 1: 날짜 및 제목이 없는 비정상/결측 일정은 일반 화면 렌더링에서 100% 제외(스킵)
+  schedules = (schedules || []).filter(item => {
+    if (!item || !item.title) return false;
+    const d = parseSafeDate(item.startTime || item.date);
+    return d !== null;
+  });
+
+  if (schedules.length === 0) {
     container.innerHTML = '<div class="schedule-item">예정된 스케줄이 없습니다.</div>';
     return;
   }
 
   // 시작 시간 순 정렬 보장
   schedules.sort((a, b) => {
-    const tA = parseSafeDate(a.startTime || a.date).getTime();
-    const tB = parseSafeDate(b.startTime || b.date).getTime();
+    const dA = parseSafeDate(a.startTime || a.date);
+    const dB = parseSafeDate(b.startTime || b.date);
+    const tA = dA ? dA.getTime() : 0;
+    const tB = dB ? dB.getTime() : 0;
     return tA - tB;
   });
 
@@ -611,6 +592,7 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   let todayIndices = [];
   schedules.forEach((item, idx) => {
     const d = parseSafeDate(item.startTime || item.date);
+    if (!d) return;
     const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (dStr === todayStr) {
       todayIndices.push(idx);
@@ -621,7 +603,9 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
   if (todayIndices.length > 0) {
     const upcomingToday = todayIndices.find(idx => {
       const item = schedules[idx];
-      const endT = item.endTime ? parseSafeDate(item.endTime).getTime() : parseSafeDate(item.startTime || item.date).getTime();
+      const endD = item.endTime ? parseSafeDate(item.endTime) : null;
+      const startD = parseSafeDate(item.startTime || item.date);
+      const endT = endD ? endD.getTime() : (startD ? startD.getTime() : 0);
       return endT >= nowTime;
     });
     // 오늘 진행 중이거나 예정된 일정이 있으면 그 중 첫 번째, 오늘 일정이 모두 종료되었으면 현재 시점과 가장 가까운 오늘의 마지막 일정 선택
@@ -630,7 +614,10 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
 
   // 2순위: 오늘 일정이 없으면 오늘 이후 첫 번째 미래 일정
   if (nextIndex === -1) {
-    nextIndex = schedules.findIndex(item => parseSafeDate(item.startTime || item.date).getTime() >= nowTime);
+    nextIndex = schedules.findIndex(item => {
+      const d = parseSafeDate(item.startTime || item.date);
+      return d ? d.getTime() >= nowTime : false;
+    });
   }
 
   // 3순위: 미래 일정도 없으면 가장 최근 과거 일정 (마지막 항목)
@@ -752,6 +739,7 @@ export function renderScheduleList(container, schedules = [], isDark = false, on
     const item = schedules[idx];
     if (item) {
       const d = parseSafeDate(item.startTime || item.date);
+      if (!d) return;
       const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
       let h = d.getHours();
       const m = String(d.getMinutes()).padStart(2, '0');
@@ -831,10 +819,12 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
 
   // 1. 각 스케줄 항목 정규화 (시작일/종료일 및 multi-day 여부 판단)
   const normalizedSchedules = schedules.map((item, idx) => {
+    if (!item || !item.title) return null;
     const startRaw = item.startTime || item.date;
     const endRaw = item.endTime || item.startTime || item.date;
     const startD = parseSafeDate(startRaw);
     const endD = parseSafeDate(endRaw);
+    if (!startD || !endD) return null;
 
     const startY = startD.getFullYear();
     const startM = String(startD.getMonth() + 1).padStart(2, '0');
@@ -856,7 +846,7 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
       isMultiDay: isMulti,
       spanGroupId: isMulti ? `span-grp-${idx}-${startStr.replace(/\D/g, '')}` : null
     };
-  });
+  }).filter(Boolean);
 
   // 2. 주(Week)별 행 렌더링
   weeksArr.forEach((weekDays) => {
@@ -898,16 +888,18 @@ export function renderCalendar(gridEl, titleEl, currentDate, schedules = [], onS
 
           if (rawDate) {
             const d = parseSafeDate(rawDate);
-            let h = d.getHours();
-            const m = String(d.getMinutes()).padStart(2, '0');
-            const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
-            if (!isAllDay) {
-              const ap = h >= 12 ? '오후' : '오전';
-              const displayH = h % 12 || 12;
-              timeStrForHover = `${ap} ${displayH}:${m}`;
-              timeStrForModal = `${ap} ${displayH}:${m}`;
-            } else {
-              timeStrForModal = item.isMultiDay ? "연속 일정" : "종일 일정";
+            if (d) {
+              let h = d.getHours();
+              const m = String(d.getMinutes()).padStart(2, '0');
+              const isAllDay = Boolean(item.isAllday || (h === 0 && m === '00' && String(rawDate).includes('T15:00:00')));
+              if (!isAllDay) {
+                const ap = h >= 12 ? '오후' : '오전';
+                const displayH = h % 12 || 12;
+                timeStrForHover = `${ap} ${displayH}:${m}`;
+                timeStrForModal = `${ap} ${displayH}:${m}`;
+              } else {
+                timeStrForModal = item.isMultiDay ? "연속 일정" : "종일 일정";
+              }
             }
           }
 
