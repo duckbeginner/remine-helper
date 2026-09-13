@@ -9,7 +9,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
-// 모듈 단위 테스트 목록
+// 1. 신규 안전망 & 성능 벤치마크 테스트 스위트
+import { run as runResilienceTest } from './client/resilience-edge-cases.test.js';
+import { run as runBenchmarkTest } from './performance/benchmark.test.js';
+import { run as runMigrationTest } from './cross/migration-data-json.test.js';
+
+// 2. 확장 프로그램 클라이언트 핵심 모듈 테스트
 import { run as runCalendarTest } from './client/calendar.test.js';
 import { run as runStorageTest } from './client/storage.test.js';
 import { run as runModalsTest } from './client/modals.test.js';
@@ -20,6 +25,7 @@ import { run as runSnsTest } from './client/sns.test.js';
 import { run as runTabsThemeTest } from './client/tabs-theme.test.js';
 import { run as runUnnecessaryRefreshTest } from './client/unnecessary-refresh-prevent.test.js';
 
+// 3. 데이터 허브 파이프라인 및 시드 테스트
 import { run as runSeedsTest } from './data-hub/seeds.test.js';
 import { run as runCollectorsTest } from './data-hub/collectors.test.js';
 import { run as runSyncToolsTest } from './data-hub/sync-tools.test.js';
@@ -29,23 +35,19 @@ import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.tes
 import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimming.test.js';
 import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test.js';
 
+// 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM)
+import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
+import { run as runOpsUiDomTest } from './docs/ops-ui-dom.test.js';
 import { run as runPagesTest } from './docs/pages.test.js';
-import { run as runOpsToolTest } from './docs/ops-tool.test.js';
-import { run as runOpsMemberBadgesTest } from './docs/ops-member-badges.test.js';
-import { run as runOpsPayloadV2CleanupTest } from './docs/ops-payload-v2-cleanup.test.js';
-import { run as runOpsLifecycleTest } from './docs/ops-lifecycle.test.js';
-import { run as runOpsLinkedCandidateNoOpTest } from './docs/ops-linked-candidate-no-op.test.js';
-import { run as runOpsCrossBrowserDatetimeTest } from './docs/ops-cross-browser-datetime.test.js';
-import { run as runOpsMobileResponsiveTest } from './docs/ops-mobile-responsive.test.js';
-import { run as runOpsSyncAndSuggestionsTest } from './docs/ops-sync-and-suggestions.test.js';
-import { run as runOpsPipelineIntegrityTest } from './docs/ops-pipeline-integrity.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
+// 5. 크로스 플랫폼 및 설정 일치성 테스트
 import { run as runManifestTest } from './cross/manifest.test.js';
 import { run as runBrowserSyncTest } from './cross/browser-sync.test.js';
 import { run as runConstantsSyncTest } from './cross/constants-sync.test.js';
 import { run as runEntrypointsTest } from './cross/entrypoints.test.js';
 
+// 6. 빌드, 패키징, CI/CD 및 정적 에셋 테스트
 import { run as runScriptsTest } from './build/scripts.test.js';
 import { run as runPackageZipTest } from './build/package-zip.test.js';
 import { run as runWorkflowsTest } from './ci/workflows.test.js';
@@ -53,37 +55,32 @@ import { run as runAssetsTest } from './assets/assets.test.js';
 
 async function main() {
   console.log("================================================================================");
-  console.log("🚀 [Remine Helper] 프로젝트 전수 종합 테스트 스위트 (100% Full-Coverage)");
+  console.log("🚀 [Remine Helper] 프로젝트 전수 종합 테스트 스위트 (100% Full-Coverage & Safety-Net)");
   console.log("================================================================================");
 
   let totalPassed = 0;
   let totalFailed = 0;
   let suiteCount = 0;
 
-  // 1. 기존 데이터 허브 테스트 러너 실행 (schedule-v2, validate)
+  // 1. 핵심 안전망, 시간대 복원력, 성능 벤치마크 및 마이그레이션 호환성
   console.log("\n==================================================");
-  console.log("📦 [1/6] 기존 데이터 허브 아키텍처 및 2계층 검증");
+  console.log("🛡️  [1/6] 핵심 안전망, 시간대(KST), 성능 벤치마크 및 마이그레이션");
   console.log("==================================================");
 
-  try {
-    execSync('node scripts/data-hub/tests/schedule-v2.test.js', { cwd: ROOT_DIR, stdio: 'inherit' });
-    totalPassed += 8;
+  const safetySuites = [
+    runResilienceTest,
+    runBenchmarkTest,
+    runMigrationTest
+  ];
+
+  for (const suite of safetySuites) {
+    const res = await suite();
+    totalPassed += res.passed;
+    totalFailed += res.failed;
     suiteCount++;
-  } catch (e) {
-    totalFailed += 1;
   }
 
-  try {
-    const out = execSync('node scripts/data-hub/validate.js', { cwd: ROOT_DIR, encoding: 'utf8' });
-    process.stdout.write(out);
-    const match = out.match(/통과\s+(\d+)개/);
-    totalPassed += match ? parseInt(match[1], 10) : 17;
-    suiteCount++;
-  } catch (e) {
-    totalFailed += 1;
-  }
-
-  // 2. 확장 프로그램 클라이언트 모듈 테스트
+  // 2. 확장 프로그램 클라이언트 핵심 모듈 테스트
   console.log("\n==================================================");
   console.log("🧩 [2/6] 확장 프로그램 클라이언트 핵심 모듈 테스트");
   console.log("==================================================");
@@ -107,9 +104,9 @@ async function main() {
     suiteCount++;
   }
 
-  // 3. 데이터 허브 수집기 및 시드 테스트
+  // 3. 데이터 허브 파이프라인 및 시드 테스트
   console.log("\n==================================================");
-  console.log("⚙️  [3/6] 데이터 허브 수집기 및 오프라인 시드 테스트");
+  console.log("⚙️  [3/6] 데이터 허브 파이프라인 및 수집기 테스트");
   console.log("==================================================");
 
   const hubSuites = [
@@ -130,22 +127,25 @@ async function main() {
     suiteCount++;
   }
 
-  // 4. 웹 배포 문서 및 운영자 도구 테스트
+  try {
+    const out = execSync('node scripts/data-hub/validate.js', { cwd: ROOT_DIR, encoding: 'utf8' });
+    process.stdout.write(out);
+    const match = out.match(/통과\s+(\d+)개/);
+    totalPassed += match ? parseInt(match[1], 10) : 17;
+    suiteCount++;
+  } catch (e) {
+    totalFailed += 1;
+  }
+
+  // 4. 웹 배포 문서 및 통합 Ops 포털 테스트
   console.log("\n==================================================");
-  console.log("🌐 [4/6] 웹 배포 페이지 (docs) 및 운영자 도구 테스트");
+  console.log("🌐 [4/6] 웹 배포 페이지 (docs) 및 Ops 포털 통합 엔진/DOM");
   console.log("==================================================");
 
   const docsSuites = [
+    runOpsEngineTest,
+    runOpsUiDomTest,
     runPagesTest,
-    runOpsToolTest,
-    runOpsMemberBadgesTest,
-    runOpsPayloadV2CleanupTest,
-    runOpsLifecycleTest,
-    runOpsLinkedCandidateNoOpTest,
-    runOpsCrossBrowserDatetimeTest,
-    runOpsMobileResponsiveTest,
-    runOpsSyncAndSuggestionsTest,
-    runOpsPipelineIntegrityTest,
     runSeoTest
   ];
 

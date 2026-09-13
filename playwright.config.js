@@ -12,7 +12,10 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
-    video: 'off'
+    video: 'off',
+    launchOptions: {
+      args: ['--allow-file-access-from-files']
+    }
   },
   projects: [
     {

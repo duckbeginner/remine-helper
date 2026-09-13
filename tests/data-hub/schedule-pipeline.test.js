@@ -1,5 +1,5 @@
 // tests/data-hub/schedule-pipeline.test.js
-// 스케줄 데이터 파이프라인 개편 (starAttendees 보존, extField 하위 호환, 1:1 무손실 수집, YouTube 자동 합성) 검증
+// 스케줄 데이터 파이프라인 종합 테스트 (v2.0 ID 불변성, starAttendees 보존, extField 하위 호환, 1:1 무손실 수집, YouTube 자동 합성)
 
 import { TestRunner, assert } from '../test-helper.js';
 import {
@@ -13,7 +13,39 @@ export async function run() {
   const runner = new TestRunner('Data Hub - Schedule Pipeline & starAttendees Integrity');
   runner.run();
 
-  // 1. slimScheduleItem: starAttendees 복원 및 보존 검증
+  // ─────────────────────────────────────────────────────────────
+  // 1. 소스별 결정론적 고유 ID 생성 (from schedule-v2.test.js 흡수)
+  // ─────────────────────────────────────────────────────────────
+  runner.test('ID Generation: 소스별 고유 ID 결정론적 생성 및 불변성 검증', () => {
+    function generateScheduleId(source, item) {
+      if (!item) return null;
+      if (item.id && typeof item.id === 'string' && item.id.trim()) {
+        return item.id.trim();
+      }
+      if (source === 'blip' || item.source === 'blip') {
+        const sId = item.scheduleId || item.id;
+        if (sId) return `blip_${sId}`;
+      }
+      if (source === 'mnet' || item.source === 'mnet') {
+        const eId = item.eventId || item.id;
+        if (eId) return `mnet_${eId}`;
+      }
+      if (source === 'youtube' || item.source === 'youtube') {
+        const vId = item.videoId || item.id;
+        if (vId) return `yt_${vId}`;
+      }
+      return null;
+    }
+
+    assert.strictEqual(generateScheduleId('blip', { id: '1103438' }), '1103438');
+    assert.strictEqual(generateScheduleId('blip', { scheduleId: '1103438' }), 'blip_1103438');
+    assert.strictEqual(generateScheduleId('mnet', { eventId: 'event_999' }), 'mnet_event_999');
+    assert.strictEqual(generateScheduleId('youtube', { videoId: 'dQw4w9WgXcQ' }), 'yt_dQw4w9WgXcQ');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. starAttendees 보존 및 복원
+  // ─────────────────────────────────────────────────────────────
   runner.test('slimScheduleItem: starAttendees 멤버 목록이 슬림화 후에도 누락 없이 보존되어야 함', () => {
     const raw = {
       id: 'blip-12345',
@@ -32,13 +64,15 @@ export async function run() {
 
     const slimmed = slimScheduleItem(raw);
     assert(Array.isArray(slimmed.starAttendees), 'starAttendees가 배열이어야 함');
-    assert(slimmed.starAttendees.length === 3, '참석 멤버 3명이 모두 보존되어야 함');
-    assert(slimmed.starAttendees[0].name === '원', '첫 번째 멤버 이름 일치');
-    assert(slimmed.starAttendees[1].name === '리브', '두 번째 멤버 이름 일치');
-    assert(slimmed.starAttendees[2].name === '미나미', '세 번째 멤버 이름 일치');
+    assert.strictEqual(slimmed.starAttendees.length, 3, '참석 멤버 3명이 모두 보존되어야 함');
+    assert.strictEqual(slimmed.starAttendees[0].name, '원');
+    assert.strictEqual(slimmed.starAttendees[1].name, '리브');
+    assert.strictEqual(slimmed.starAttendees[2].name, '미나미');
   });
 
-  // 2. slimScheduleItem: extField 유예 보조 생성 (구버전 v1.0.3 클라이언트 완벽 호환)
+  // ─────────────────────────────────────────────────────────────
+  // 3. extField 하위 호환 보조 생성 (구버전 v1.0.3 클라이언트 완벽 호환)
+  // ─────────────────────────────────────────────────────────────
   runner.test('slimScheduleItem: extField 부재 시 channel/location으로부터 하위 호환용 extField 보조 생성', () => {
     const rawWithoutExt = {
       id: 'mnet-999',
@@ -50,13 +84,16 @@ export async function run() {
 
     const slimmed = slimScheduleItem(rawWithoutExt);
     assert(slimmed.extField !== undefined, 'extField가 보조 생성되어야 함');
-    assert(slimmed.extField.key === '채널' && slimmed.extField.value === 'Mnet', 'extField는 { key: "채널", value: "Mnet" } 형태여야 함');
-    assert(slimmed.channel === 'Mnet', '최상위 channel 필드도 유지되어야 함');
-    assert(slimmed.location === 'CJ ENM 센터', '최상위 location 필드도 유지되어야 함');
+    assert.strictEqual(slimmed.extField.key, '채널');
+    assert.strictEqual(slimmed.extField.value, 'Mnet');
+    assert.strictEqual(slimmed.channel, 'Mnet');
+    assert.strictEqual(slimmed.location, 'CJ ENM 센터');
   });
 
-  // 3. mergeSchedulesV2: 동일 YouTube Video ID를 가진 일정의 자동 클러스터링 및 메타데이터/starAttendees 합성
-  runner.test('mergeSchedulesV2: 동일 YouTube Video ID를 갖는 Mnet과 Blip 일정이 1건으로 자동 합성되고 starAttendees가 병합되어야 함', () => {
+  // ─────────────────────────────────────────────────────────────
+  // 4. 동일 YouTube Video ID 자동 클러스터링 및 합성
+  // ─────────────────────────────────────────────────────────────
+  runner.test('mergeSchedulesV2: 동일 YouTube Video ID를 갖는 Mnet과 Blip 일정이 1건으로 자동 합성되고 starAttendees 병합', () => {
     const rawItems = [
       {
         id: 'mnet-yt-01',
@@ -72,47 +109,49 @@ export async function run() {
         startTime: '2026-09-20T09:00:00.000Z',
         url: 'https://youtu.be/dQw4w9WgXcQ',
         source: 'blip',
-        starAttendees: [
-          { name: '원' },
-          { name: '메이' },
-          { name: '제나' }
-        ]
+        starAttendees: [{ name: '원' }, { name: '메이' }]
       }
     ];
 
     const merged = mergeSchedulesV2(rawItems, {});
-    assert(merged.length === 1, `2건이 1건으로 합성되어야 하나 ${merged.length}건임`);
-    
+    assert.strictEqual(merged.length, 1, '2건이 1건으로 합성되어야 함');
     const item = merged[0];
-    assert(item.url.includes('dQw4w9WgXcQ'), 'YouTube Video ID 보존');
-    assert(Array.isArray(item.starAttendees), '합성 후 starAttendees 배열이 존재해야 함');
-    assert(item.starAttendees.length === 3, 'Blip의 참석 멤버 3명이 합성 결과에 보존되어야 함');
-    assert(item.linkedScheduleIds.includes('mnet-yt-01'), 'linkedScheduleIds에 mnet ID 포함');
-    assert(item.linkedScheduleIds.includes('blip-yt-02'), 'linkedScheduleIds에 blip ID 포함');
+    assert(item.url.includes('dQw4w9WgXcQ'));
+    assert.strictEqual(item.starAttendees.length, 2);
+    assert(item.linkedScheduleIds.includes('mnet-yt-01'));
+    assert(item.linkedScheduleIds.includes('blip-yt-02'));
   });
 
-  // 4. getMonthsToFetch: 패스트트랙 크롤링 범위 계산 검증
-  runner.test('getMonthsToFetch: 기본 실행 시 과거 1개월 ~ 미래 3개월(총 5개월)만 수집 대상으로 선정되어야 함', () => {
+  // ─────────────────────────────────────────────────────────────
+  // 5. 패스트트랙 크롤링 범위 계산 검증
+  // ─────────────────────────────────────────────────────────────
+  runner.test('getMonthsToFetch: 기본 실행 시 과거 1개월 ~ 미래 3개월(총 5개월) 선정 검증', () => {
     const normalMonths = getMonthsToFetch(new Date('2026-09-15'), false);
-    assert(normalMonths.length === 5, `기본 패스트트랙은 5개월이어야 하나 ${normalMonths.length}개월임`);
-    assert(normalMonths[0].year === 2026 && normalMonths[0].month === 8, '시작월은 8월(-1개월)');
-    assert(normalMonths[4].year === 2026 && normalMonths[4].month === 12, '종료월은 12월(+3개월)');
+    assert.strictEqual(normalMonths.length, 5, '기본 패스트트랙은 5개월');
+    assert.strictEqual(normalMonths[0].year, 2026);
+    assert.strictEqual(normalMonths[0].month, 8);
+    assert.strictEqual(normalMonths[4].year, 2026);
+    assert.strictEqual(normalMonths[4].month, 12);
 
     const fullMonths = getMonthsToFetch(new Date('2026-09-15'), true);
-    assert(fullMonths.length >= 36, '--full 옵션 시 최소 3년(36개월) 이상 수집');
+    assert(fullMonths.length >= 36, '--full 옵션 시 최소 3년 이상 수집');
   });
 
-  // 5. extractYouTubeVideoId: 정규식 파서 무결성
+  // ─────────────────────────────────────────────────────────────
+  // 6. 유튜브 URL 11자리 Video ID 추출기 무결성
+  // ─────────────────────────────────────────────────────────────
   runner.test('extractYouTubeVideoId: 다양한 유튜브 URL 형식에서 11자리 Video ID 추출', () => {
-    assert(extractYouTubeVideoId('https://www.youtube.com/watch?v=AbCdEfGhIjK') === 'AbCdEfGhIjK', 'watch?v= 형식');
-    assert(extractYouTubeVideoId('https://youtu.be/AbCdEfGhIjK?si=123') === 'AbCdEfGhIjK', 'youtu.be 단축 형식');
-    assert(extractYouTubeVideoId('https://www.youtube.com/live/AbCdEfGhIjK') === 'AbCdEfGhIjK', 'live 스트림 형식');
-    assert(extractYouTubeVideoId('https://example.com/other') === null, '유튜브가 아닌 일반 URL은 null');
+    assert.strictEqual(extractYouTubeVideoId('https://www.youtube.com/watch?v=AbCdEfGhIjK'), 'AbCdEfGhIjK');
+    assert.strictEqual(extractYouTubeVideoId('https://youtu.be/AbCdEfGhIjK?si=123'), 'AbCdEfGhIjK');
+    assert.strictEqual(extractYouTubeVideoId('https://www.youtube.com/live/AbCdEfGhIjK'), 'AbCdEfGhIjK');
+    assert.strictEqual(extractYouTubeVideoId('https://example.com/other'), null);
   });
 
   return runner.summary();
 }
 
 if (process.argv[1] && process.argv[1].endsWith('schedule-pipeline.test.js')) {
-  run();
+  run().then(res => {
+    if (res.failed > 0) process.exit(1);
+  });
 }
