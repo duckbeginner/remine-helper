@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { collectYouTubeData } from './collectors/youtube.js';
 import { collectScheduleData } from './collectors/schedule.js';
 import { collectSnsData } from './collectors/sns.js';
+import { OFFICIAL_CHANNELS, FANPAGE_LIST, MEMBER_ID_MAP, MEMBER_NICKNAME_MAP } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,6 +111,14 @@ async function main() {
         activeCount: activeItems.length,
         totalMasterCount: schedule.totalCount,
         masterUpdatedAt: nowIso
+      },
+      metadata: {
+        channels: OFFICIAL_CHANNELS,
+        fanpages: FANPAGE_LIST,
+        members: {
+          idMap: MEMBER_ID_MAP,
+          nicknameMap: MEMBER_NICKNAME_MAP
+        }
       }
     };
 
