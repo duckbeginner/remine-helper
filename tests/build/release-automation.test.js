@@ -53,6 +53,13 @@ export async function run() {
 
     const releaseContent = fs.readFileSync(releaseWf, 'utf8');
     assert(releaseContent.includes('publish: false'), 'Chrome 웹스토어 업로드는 초안(publish: false)이어야 합니다.');
+    assert(releaseContent.includes("upload-chrome-draft:"), 'upload-chrome-draft 작업이 정의되어 있어야 합니다.');
+    const uploadJobMatch = releaseContent.match(/upload-chrome-draft:[\s\S]*?if:\s*([^\n]+)/);
+    assert(uploadJobMatch, 'upload-chrome-draft 작업에 if 조건문이 존재해야 합니다.');
+    assert(
+      uploadJobMatch[1].includes("github.event_name == 'workflow_dispatch'"),
+      'upload-chrome-draft 작업의 if 조건에 workflow_dispatch 지원이 포함되어야 합니다.'
+    );
 
     const checkContent = fs.readFileSync(checkWf, 'utf8');
     assert(checkContent.includes('check-chrome-store-version.mjs'), '버전 체크 스크립트가 호출되어야 합니다.');
