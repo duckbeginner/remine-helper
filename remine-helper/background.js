@@ -465,7 +465,9 @@ function checkUpcomingScheduleAlerts(schedules = []) {
       schedules.forEach(item => {
         // 영상 일정은 임박 알림에서도 제외 (신규 영상 업로드 알림에서 처리)
         if (!item.startTime || item.isAllday || isVideoScheduleItem(item)) return;
-        const startTimeMs = parseSafeDate(item.startTime).getTime();
+        const d = parseSafeDate(item.startTime);
+        if (!d) return;
+        const startTimeMs = d.getTime();
         const diffMs = startTimeMs - now;
 
         if (diffMs > 0 && diffMs <= thirtyMinutesMs) {
@@ -480,7 +482,7 @@ function checkUpcomingScheduleAlerts(schedules = []) {
             const cleanTitle = cleanDisplayTitle(item.title);
             sendNotification(
               `⏰ [스케줄 임박] ${minutesLeft}분 후 시작 예정!`,
-              `${cleanTitle}\n📅 시작 시간: ${parseSafeDate(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+              `${cleanTitle}\n📅 시작 시간: ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
               'schedule',
               null,
               `sched_upcoming_${id}`
