@@ -76,7 +76,7 @@ test.describe('Extension Package Integrity & Real Installation Test', () => {
     // 매니페스트 버전 및 권한 검증
     const manifest = JSON.parse(fs.readFileSync(path.join(installTempDir, 'manifest.json'), 'utf8'));
     expect(manifest.manifest_version).toBe(3);
-    expect(manifest.version).toBe('1.0.3');
+    expect(manifest.version).toBe(currentVersion);
     expect(manifest.permissions).toContain('sidePanel');
     expect(manifest.permissions).toContain('storage');
   });
@@ -157,7 +157,7 @@ test.describe('Extension Package Integrity & Real Installation Test', () => {
 
       const ffManifest = JSON.parse(fs.readFileSync(path.join(firefoxTempDir, 'manifest.json'), 'utf8'));
       expect(ffManifest.manifest_version).toBe(2);
-      expect(ffManifest.version).toBe('1.0.3');
+      expect(ffManifest.version).toBe(currentVersion);
       expect(ffManifest.sidebar_action.default_panel).toBe('sidepanel.html');
       expect(ffManifest.browser_specific_settings.gecko.id).toBeTruthy();
 
