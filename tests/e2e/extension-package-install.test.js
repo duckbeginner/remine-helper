@@ -7,8 +7,12 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 
 const rootDir = process.cwd();
-const chromeZipPath = path.resolve(rootDir, 'publish', 'remine-helper-chrome-v1.0.3.zip');
-const firefoxZipPath = path.resolve(rootDir, 'publish', 'remine-helper-firefox-v1.0.3.zip');
+const manifestPath = path.resolve(rootDir, 'remine-helper', 'manifest.json');
+const currentVersion = fs.existsSync(manifestPath)
+  ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version
+  : '1.0.3';
+const chromeZipPath = path.resolve(rootDir, 'publish', `remine-helper-chrome-v${currentVersion}.zip`);
+const firefoxZipPath = path.resolve(rootDir, 'publish', `remine-helper-firefox-v${currentVersion}.zip`);
 const installTempDir = path.resolve(rootDir, 'build', 'test-install-chrome');
 const userDataDir = path.resolve(rootDir, 'build', 'test-user-data');
 

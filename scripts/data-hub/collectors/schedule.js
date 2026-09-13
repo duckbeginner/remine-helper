@@ -197,6 +197,7 @@ async function fetchOfficialLiveStreams() {
   const cache = loadStreamsCache();
   try {
     const res = await fetch('https://www.youtube.com/@RESCENE_official/streams', {
+      signal: AbortSignal.timeout(10000),
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -750,6 +751,7 @@ async function fetchMonthRawSchedules(year, month) {
       const lastDay = new Date(year, month, 0).getDate();
       const mnetUrl = `https://artist.mnetplus.world/svc/stg/rescene-official/space/api/v1/calendar?endAt=${year}-${paddedMonth}-${lastDay}T23:59:59Z&endAtForAllDay=${year}-${paddedMonth}-${lastDay}&startAt=${year}-${paddedMonth}-01T00:00:00Z&startAtForAllDay=${year}-${paddedMonth}-01`;
       const res = await fetch(mnetUrl, {
+        signal: AbortSignal.timeout(10000),
         headers: {
           'accept': '*/*',
           'x-bmf-country': 'KR',
@@ -812,6 +814,7 @@ async function fetchMonthRawSchedules(year, month) {
     try {
       const blipUrl = `https://blip.kr/old-api/homepage/schedules?year=${year}&month=${month}&types=1&types=2&types=3&types=4&types=5&types=6&types=7&unitId=133`;
       const res = await fetch(blipUrl, {
+        signal: AbortSignal.timeout(10000),
         headers: {
           'accept': 'application/json',
           'x-blip-agent': 'BLIP WEB',
