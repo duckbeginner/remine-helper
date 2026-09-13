@@ -38,11 +38,11 @@ export async function run() {
     assert(fs.existsSync(shortsHtml), 'docs/shorts/index.html이 존재해야 합니다.');
   });
 
-  runner.test('v1.0.4 Updates & Screenshots: v1.0.4 버전 표기 및 사이드패널 스크린샷 실존성 검증', () => {
+  runner.test('v1.0.3 Updates & Screenshots: v1.0.3 버전 표기 및 사이드패널 스크린샷 실존성 검증', () => {
     const htmlPath = path.join(DOCS_DIR, 'index.html');
     const htmlContent = fs.readFileSync(htmlPath, 'utf8');
-    assert(htmlContent.includes('v1.0.4'), 'docs/index.html에 v1.0.4 버전 표기가 포함되어야 합니다.');
-    assert(htmlContent.includes('v1.0.4 업데이트 내역'), 'docs/index.html에 v1.0.4 업데이트 내역 제목이 포함되어야 합니다.');
+    assert(htmlContent.includes('v1.0.3'), 'docs/index.html에 v1.0.3 버전 표기가 포함되어야 합니다.');
+    assert(htmlContent.includes('v1.0.3 업데이트 내역'), 'docs/index.html에 v1.0.3 업데이트 내역 제목이 포함되어야 합니다.');
 
     const screenshots = [
       'sidepanel_01_light.png',

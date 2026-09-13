@@ -57,6 +57,7 @@ export async function run() {
     assert(isGitIgnored('TODO.md'), 'TODO*.md는 무시되어야 합니다.');
     assert(isGitIgnored('DRAFT_FEATURE.md'), 'DRAFT*.md는 무시되어야 합니다.');
     assert(isGitIgnored('NOTES.md'), 'NOTES*.md는 무시되어야 합니다.');
+    assert(isGitIgnored('docs/store-assets/store_description_v1.0.5.txt'), '스토어 설명 텍스트 가이드는 무시되어야 합니다.');
   });
 
   runner.test('아카이브(archive) 디렉터리 일체 배제 검증', () => {
@@ -74,13 +75,15 @@ export async function run() {
     assert(isGitIgnored('publish/package.zip'), 'publish/ 디렉터리는 무시되어야 합니다.');
     assert(isGitIgnored('dist/app.js'), 'dist/ 디렉터리는 무시되어야 합니다.');
     assert(isGitIgnored('extension.zip'), '*.zip 파일은 무시되어야 합니다.');
+    assert(isGitIgnored('docs/store-assets/small_promo_440x280.png'), 'docs/store-assets/는 무시되어야 합니다.');
+    assert(isGitIgnored('store-assets/screenshot_01.png'), 'store-assets/는 무시되어야 합니다.');
   });
 
   runner.test('필수 운영 및 명세 파일은 무시되지 않음(화이트리스트) 검증', () => {
     assert(!isGitIgnored('specs/DATA_SPECIFICATION.md'), 'specs/DATA_SPECIFICATION.md는 추적되어야 합니다.');
     assert(!isGitIgnored('docs/index.html'), 'docs/index.html은 추적되어야 합니다.');
     assert(!isGitIgnored('remine-helper/manifest.json'), 'remine-helper/manifest.json은 추적되어야 합니다.');
-    assert(!isGitIgnored('store-assets/screenshot_01.png'), 'store-assets/의 스크린샷은 추적되어야 합니다.');
+    assert(!isGitIgnored('docs/screenshots/sidepanel_01_light.png'), 'docs/screenshots/의 이미지는 추적되어야 합니다.');
     assert(!isGitIgnored('docs/assets/banner.png'), 'docs/assets/의 이미지는 추적되어야 합니다.');
     assert(!isGitIgnored('tests/build/git-ignore-artifacts.test.js'), 'tests/build/ 테스트 코드는 무시되면 안 됩니다.');
   });

@@ -1,6 +1,6 @@
 {
   "name": "remine-helper",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "private": true,
   "description": "RESCENE Remine Helper Extension & Data Hub",
@@ -12,6 +12,8 @@
     "test:e2e": "playwright test",
     "build:firefox": "bash scripts/build-firefox.sh",
     "package": "bash scripts/package.sh",
+    "metadata:generate": "node scripts/generate-store-metadata.mjs",
+    "assets:generate": "node scripts/generate_store_assets.mjs",
     "lint": "npx oxlint",
     "check": "node --check remine-helper/background.js remine-helper/sidepanel.js remine-helper/constants.js remine-helper/common/templates.js remine-helper/common/modules/*.js scripts/data-hub/*.js scripts/data-hub/collectors/*.js tests/**/*.js"
   },

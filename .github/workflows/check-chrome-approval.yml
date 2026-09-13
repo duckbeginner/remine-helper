@@ -1,0 +1,104 @@
+name: Check Chrome Approval & Deploy Firefox / Docs
+
+on:
+  schedule:
+    # 매 30분마다 크롬 웹스토어 라이브 상태 확인
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-status:
+    name: Check Chrome Web Store Live Status
+    runs-on: ubuntu-latest
+    outputs:
+      approved: ${{ steps.check_version.outputs.approved }}
+      version: ${{ steps.check_version.outputs.version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check Live Version
+        id: check_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' remine-helper/manifest.json | head -n 1 | cut -d'"' -f4)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if node scripts/check-chrome-store-version.mjs "$VERSION"; then
+            echo "approved=true" >> $GITHUB_OUTPUT
+            echo "🎉 Chrome Web Store v$VERSION has been approved and is LIVE!"
+          else
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "⏳ Chrome Web Store v$VERSION is still under review or waiting for submission."
+          fi
+
+  publish-firefox-and-docs:
+    name: Publish Firefox AMO & Update Landing Page
+    needs: check-status
+    if: needs.check-status.outputs.approved == 'true'
+    runs-on: ubuntu-latest
+    env:
+      TARGET_VERSION: ${{ needs.check-status.outputs.version }}
+      FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+      FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Make Scripts Executable & Package
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/package.sh
+
+      # 1. Firefox AMO 배포
+      - name: Upload & Sign on Firefox Add-ons (AMO)
+        if: env.FIREFOX_JWT_ISSUER != ''
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: '{8e25f021-4c94-49f8-91b7-18f5f3e5a810}'
+          xpi-path: publish/remine-helper-firefox-v${{ env.TARGET_VERSION }}.zip
+          jwt-issuer: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      # 2. 소개페이지(docs/index.html)에 v1.0.5 정식 반영 및 푸시
+      - name: Apply Release to Landing Page & Tests
+        run: |
+          node scripts/apply-release-docs.mjs "${{ env.TARGET_VERSION }}"
+
+      - name: Commit & Push Landing Page Update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git status --porcelain | grep -q 'docs/index.html'; then
+            git add docs/index.html tests/docs/pages.test.js
+            git commit -m "docs: release v${{ env.TARGET_VERSION }} updates after Chrome Web Store approval [skip ci]"
+            git push origin main
+            echo "✓ Landing page updated to v${{ env.TARGET_VERSION }} and pushed to main."
+          else
+            echo "Landing page already up to date."
+          fi
+
+      # 3. GitHub Release 공개 (Draft 해제)
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.TARGET_VERSION }}
+          name: Release v${{ env.TARGET_VERSION }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

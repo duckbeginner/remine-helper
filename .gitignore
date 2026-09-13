@@ -108,6 +108,9 @@ NOTES*.md
 *.draft.*
 !specs/*.md
 !README.md
+store_description_*.txt
+store-assets/
+docs/store-assets/
 
 # Root-level temporary screenshots and debug captures
 /screenshot*.png

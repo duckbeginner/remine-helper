@@ -54,6 +54,7 @@ import { run as runFirefoxE2ETest } from './firefox/firefox-e2e-sync.test.js';
 import { run as runScriptsTest } from './build/scripts.test.js';
 import { run as runPackageZipTest } from './build/package-zip.test.js';
 import { run as runGitIgnoreArtifactsTest } from './build/git-ignore-artifacts.test.js';
+import { run as runReleaseAutomationTest } from './build/release-automation.test.js';
 import { run as runWorkflowsTest } from './ci/workflows.test.js';
 import { run as runAssetsTest } from './assets/assets.test.js';
 
@@ -191,6 +192,7 @@ async function main() {
     runScriptsTest,
     runPackageZipTest,
     runGitIgnoreArtifactsTest,
+    runReleaseAutomationTest,
     runWorkflowsTest,
     runAssetsTest
   ];
