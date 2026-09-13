@@ -17,6 +17,7 @@
   ],
   "background": {
     "scripts": ["background.js"],
+    "type": "module",
     "persistent": false
   },
   "icons": {

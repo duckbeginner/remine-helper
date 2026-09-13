@@ -15,6 +15,7 @@ import { run as runBenchmarkTest } from './performance/benchmark.test.js';
 import { run as runMigrationTest } from './cross/migration-data-json.test.js';
 
 // 2. 확장 프로그램 클라이언트 핵심 모듈 테스트
+import { run as runUtilsTest } from './client/utils.test.js';
 import { run as runCalendarTest } from './client/calendar.test.js';
 import { run as runStorageTest } from './client/storage.test.js';
 import { run as runModalsTest } from './client/modals.test.js';
@@ -86,6 +87,7 @@ async function main() {
   console.log("==================================================");
 
   const clientSuites = [
+    runUtilsTest,
     runCalendarTest,
     runStorageTest,
     runModalsTest,

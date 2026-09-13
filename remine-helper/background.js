@@ -1,3 +1,5 @@
+import { parseSafeDate, cleanDisplayTitle, decodeHtmlEntities } from './common/modules/utils.js';
+
 // =========================================================================
 // 환경 감지 & 콘솔 로깅 제어 (로컬 개발/테스트 모드에서만 console.log 활성화)
 // =========================================================================
@@ -183,31 +185,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // =========================================================================
-// 공통 유틸리티 (스케줄 제목 정돈 및 날짜 파싱)
+// 공통 유틸리티는 common/modules/utils.js (SSOT)에서 import하여 사용합니다.
 // =========================================================================
-function parseSafeDate(startTimeStr) {
-  if (!startTimeStr) return new Date();
-  if (startTimeStr.length === 10 && !startTimeStr.includes('T')) {
-    const [y, m, d] = startTimeStr.split('-').map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0);
-  }
-  const d = new Date(startTimeStr);
-  return isNaN(d.getTime()) ? new Date() : d;
-}
-
-function cleanDisplayTitle(title, maxLength = 0) {
-  if (!title) return "";
-  let clean = title
-    .replace(/^(\[(?:방송|영상|공식\s*영상|행사|팬이벤트|기념일|릴리즈|일정|🎬|📺|📻|🎉|🎤|💿)\]\s*)+/gi, '')
-    .replace(/(?:\s*#[^\s#]+)+$/g, '')
-    .replace(/\s*\|\s*(?:RESCENE|리센느|안녕하세요원이입니다잘부탁드립니다|안녕하세요\s*원이입니다|helloiamwoni)\s*$/i, '')
-    .trim();
-
-  if (maxLength > 0 && clean.length > maxLength) {
-    clean = clean.slice(0, maxLength).trim() + '...';
-  }
-  return clean;
-}
 
 // =========================================================================
 // 알림 전송 및 알림 클릭 이벤트 라우팅
@@ -412,6 +391,7 @@ function checkDailyScheduleNotification(schedules) {
     const todaySchedules = schedules.filter(item => {
       if (isVideoScheduleItem(item)) return false;
       const d = parseSafeDate(item.startTime);
+      if (!d) return false;
       const itemDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       return itemDateStr === todayStr;
     });
@@ -419,8 +399,10 @@ function checkDailyScheduleNotification(schedules) {
     if (todaySchedules.length === 0) return;
 
     todaySchedules.sort((a, b) => {
-      const tA = a.startTime ? parseSafeDate(a.startTime).getTime() : 0;
-      const tB = b.startTime ? parseSafeDate(b.startTime).getTime() : 0;
+      const dA = a.startTime ? parseSafeDate(a.startTime) : null;
+      const dB = b.startTime ? parseSafeDate(b.startTime) : null;
+      const tA = dA ? dA.getTime() : 0;
+      const tB = dB ? dB.getTime() : 0;
       return tA - tB;
     });
 
@@ -432,7 +414,9 @@ function checkDailyScheduleNotification(schedules) {
       if (item.isAllday || !item.startTime || !item.startTime.includes('T')) {
         remainingSchedules.push(item);
       } else {
-        const itemTimeMs = parseSafeDate(item.startTime).getTime();
+        const d = parseSafeDate(item.startTime);
+        if (!d) return;
+        const itemTimeMs = d.getTime();
         if (itemTimeMs >= nowMs) {
           remainingSchedules.push(item);
         } else {
@@ -447,7 +431,8 @@ function checkDailyScheduleNotification(schedules) {
 
     if (remainingSchedules.length > 0) {
       const firstRem = remainingSchedules[0];
-      const timeStr = firstRem.isAllday || !firstRem.startTime.includes('T') ? '종일' : parseSafeDate(firstRem.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dFirst = parseSafeDate(firstRem.startTime);
+      const timeStr = firstRem.isAllday || !firstRem.startTime.includes('T') || !dFirst ? '종일' : dFirst.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       notiMessage = `다가오는 일정: [${timeStr}] ${cleanDisplayTitle(firstRem.title, 25)}`;
       if (remainingSchedules.length > 1) {
         notiMessage += ` 외 ${remainingSchedules.length - 1}건`;
@@ -589,16 +574,6 @@ function checkLiveAndNotify(liveInfo) {
   });
 }
 
-function decodeHtmlEntities(str) {
-  if (!str) return '';
-  return str
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
-}
 
 // 0초 딜레이 초고속 공식 유튜브 RSS & 라이브 직접 감지 엔진 (알림 전용)
 async function checkDirectYouTubeUpdates() {
@@ -691,8 +666,7 @@ async function checkDirectYouTubeUpdates() {
 // =========================================================================
 const CENTRAL_CORE_URLS = [
   "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/core.json",
-  "https://duckbeginner.github.io/remine-helper/api/v1/core.json",
-  "https://gist.githubusercontent.com/duckbeginner/44b49b328233ef6157499debe03f165c/raw/data.json"
+  "https://duckbeginner.github.io/remine-helper/api/v1/core.json"
 ];
 
 const CENTRAL_SCHEDULES_URLS = [
