@@ -202,7 +202,7 @@ function sendNotification(title, message, category = 'all', iconUrl = null, noti
         if (category === 'schedule' && noti.schedule === false) { if (callback) callback(false, "스케줄 알림 OFF"); return; }
       }
       if (chrome.notifications && chrome.notifications.create) {
-        const defaultLogo = 'icons/rescene-logo.png';
+        const defaultLogo = 'icons/logo128.png';
         const hasValidCustomImage = typeof iconUrl === 'string' && iconUrl.trim().length > 0 && iconUrl !== defaultLogo;
         const isDev = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest && !('update_url' in chrome.runtime.getManifest());
         const displayTitle = isDev ? `[DEV] ${title}` : title;

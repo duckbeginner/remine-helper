@@ -56,6 +56,7 @@ remine-helper/test.js
 
 scratch/
 CHROMEWEBSTORE.md
+RELEASE_GUIDE*.md
 shortcut_visual_guide.html
 test-results/
 playwright-report/

@@ -222,12 +222,7 @@ h1, h2, h3, h4 {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  transition: filter 0.3s ease;
-}
-
-body.dark-mode .brand-logo,
-[data-theme="dark"] .brand-logo {
-  filter: brightness(0) invert(1);
+  object-fit: contain;
 }
 
 .brand-title {

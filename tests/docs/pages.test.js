@@ -67,6 +67,27 @@ export async function run() {
     assert(htmlContent.includes('https://duckbeginner.github.io/remine-helper'), '공식 도메인 https://duckbeginner.github.io/remine-helper가 참조되어야 합니다.');
   });
 
+  runner.test('Brand Assets & Favicon Integrity: 파비콘 및 브랜드 로고 에셋/CSS 무결성 검증', () => {
+    const htmlPath = path.join(DOCS_DIR, 'index.html');
+    const cssPath = path.join(DOCS_DIR, 'style.css');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
+
+    // 1. docs/index.html 파비콘 검증
+    assert(htmlContent.includes('icons/svg/remine-helper-gradient.svg'), 'docs/index.html에 remine-helper-gradient.svg 파비콘 또는 아이콘이 지정되어야 합니다.');
+    assert(htmlContent.includes('type="image/svg+xml"'), 'docs/index.html에 SVG 파비콘 타입(image/svg+xml)이 지정되어야 합니다.');
+
+    // 2. docs/style.css 브랜드 로고 필터 버그 방지 검증 (다크 모드에서 하얗게 뭉개지는 현상 방지)
+    assert(!cssContent.includes('.brand-logo { filter: brightness(0) invert(1); }') &&
+           !cssContent.includes('invert(1)'), 'docs/style.css에 브랜드 로고를 하얗게 뭉개는 invert(1) 필터가 없어야 합니다.');
+
+    // 3. 확장 프로그램 본체(sidepanel.html, dashboard.html) 파비콘 무결성 검증
+    const sidepanelHtml = fs.readFileSync(path.join(ROOT_DIR, 'remine-helper/sidepanel.html'), 'utf8');
+    const dashboardHtml = fs.readFileSync(path.join(ROOT_DIR, 'remine-helper/dashboard.html'), 'utf8');
+    assert(sidepanelHtml.includes('icons/svg/remine-helper-gradient.svg'), 'sidepanel.html에 SVG 파비콘이 지정되어야 합니다.');
+    assert(dashboardHtml.includes('icons/svg/remine-helper-gradient.svg'), 'dashboard.html에 SVG 파비콘이 지정되어야 합니다.');
+  });
+
   return runner.summary();
 }
 
