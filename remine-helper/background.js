@@ -14,6 +14,44 @@ import { parseSafeDate, cleanDisplayTitle, decodeHtmlEntities } from './common/m
   }
 })();
 
+// =========================================================================
+// 크로스 브라우저 비동기 스토리지 래퍼 (Chrome MV3 Promise & Firefox MV2 Callback 호환)
+// =========================================================================
+async function safeStorageGet(keys) {
+  if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
+    try {
+      const res = await browser.storage.local.get(keys);
+      return res || {};
+    } catch (_e) { }
+  }
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(keys, (res) => {
+        resolve(res || {});
+      });
+    } else {
+      resolve({});
+    }
+  });
+}
+
+async function safeStorageSet(items) {
+  if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
+    try {
+      return await browser.storage.local.set(items);
+    } catch (_e) { }
+  }
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set(items, () => {
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
+}
+
 const OFFICIAL_CHANNEL_ID = "UCtKtCiaWRz-d3EZn2xd1mdA";
 
 // Firefox/older browsers에서 DNR 대신 webRequest로 CSP를 조정하는 처리
@@ -66,16 +104,20 @@ function updateRequestUserAgent(details) {
 }
 
 try {
-  if (chrome.webRequest && chrome.webRequest.onHeadersReceived) {
+  if (chrome.webRequest && chrome.webRequest.onHeadersReceived && CSP_URL_PATTERNS && CSP_URL_PATTERNS.length > 0) {
     chrome.webRequest.onHeadersReceived.addListener(
       updateResponseCspHeaders,
       { urls: CSP_URL_PATTERNS, types: ["sub_frame"] },
       ["blocking", "responseHeaders"]
     );
   }
+} catch (e) {
+  console.warn('onHeadersReceived listener registration failed:', e && e.message);
+}
 
-  if (chrome.webRequest && chrome.webRequest.onBeforeSendHeaders) {
-    const uaPatterns = USER_AGENT_RULES.map(r => r.urlPattern);
+try {
+  const uaPatterns = (USER_AGENT_RULES || []).map(r => r.urlPattern).filter(Boolean);
+  if (chrome.webRequest && chrome.webRequest.onBeforeSendHeaders && uaPatterns.length > 0) {
     chrome.webRequest.onBeforeSendHeaders.addListener(
       updateRequestUserAgent,
       { urls: uaPatterns, types: ["sub_frame"] },
@@ -83,7 +125,7 @@ try {
     );
   }
 } catch (e) {
-  console.warn('webRequest listener registration failed:', e && e.message);
+  console.warn('onBeforeSendHeaders listener registration failed:', e && e.message);
 }
 
 // 브라우저 툴바 액션 클릭 및 사이드바/사이드패널 동작 설정
@@ -158,6 +200,22 @@ function initBackgroundAlarms() {
 
 // 서비스 워커 기동 시 최상위 레벨에서 알람 상태 즉시 보장
 initBackgroundAlarms();
+
+// 초기 로컬 데이터 부재 시(설치 직후 또는 브라우저 재기동 시) 즉시 1회 백그라운드 데이터 동기화 보장
+(async function checkInitialDataOnStartup() {
+  try {
+    const data = await safeStorageGet(['latestVideos', 'blipSchedules', 'activeSchedules']);
+    const hasData = (data.latestVideos && data.latestVideos.length > 0) ||
+                    (data.blipSchedules && data.blipSchedules.length > 0) ||
+                    (data.activeSchedules && data.activeSchedules.length > 0);
+    if (!hasData) {
+      console.log("⚡ [Startup] 초기 로컬 데이터 없음 -> 즉시 백그라운드 데이터 동기화 시작");
+      executeAllBackgroundRefreshes(true);
+    }
+  } catch (_e) {
+    executeAllBackgroundRefreshes(true);
+  }
+})();
 
 chrome.runtime.onInstalled.addListener(() => {
   executeAllBackgroundRefreshes();
@@ -680,7 +738,7 @@ const CENTRAL_SCHEDULES_URLS = [
 async function fetchFromCentralDataHub(force = false) {
   let savedEtag = null;
   if (!force) {
-    const local = await chrome.storage.local.get(['centralCoreEtag']);
+    const local = await safeStorageGet(['centralCoreEtag']);
     savedEtag = local && local.centralCoreEtag;
   }
 
@@ -722,7 +780,7 @@ async function fetchFromCentralDataHub(force = false) {
 async function fetchMasterSchedules(force = false) {
   let savedEtag = null;
   if (!force) {
-    const local = await chrome.storage.local.get(['centralSchedulesEtag']);
+    const local = await safeStorageGet(['centralSchedulesEtag']);
     savedEtag = local && local.centralSchedulesEtag;
   }
 
@@ -799,11 +857,11 @@ async function applyCentralDataToStorage(data, force = false) {
     'xFeeds', 'instaFeeds', 'tiktokFeeds', 'serverMetadata'
   ];
 
-  const local = await chrome.storage.local.get([
+  const local = (await safeStorageGet([
     ...COMPARE_KEYS,
     'blipSchedules',
     'schedulesMasterUpdatedAt'
-  ]);
+  ])) || {};
 
   let needMasterSync = false;
   if (!local.blipSchedules || local.blipSchedules.length === 0) {
@@ -820,7 +878,7 @@ async function applyCentralDataToStorage(data, force = false) {
   if (!force && !hasDataChange && !needMasterSync) {
     // 실질적 데이터 변경 없음: ETag와 동기화 시간만 갱신하고 전체 UI 재렌더링 방지
     if (data._newEtag) {
-      await chrome.storage.local.set({
+      await safeStorageSet({
         centralCoreEtag: data._newEtag,
         lastCentralSyncTime: Date.now()
       });
@@ -844,7 +902,7 @@ async function applyCentralDataToStorage(data, force = false) {
         if (result._newEtag) {
           updatePayload.centralSchedulesEtag = result._newEtag;
         }
-        chrome.storage.local.set(updatePayload);
+        safeStorageSet(updatePayload);
         checkUpcomingScheduleAlerts(result.items);
         checkDailyScheduleNotification(result.items);
       }
@@ -859,7 +917,7 @@ async function applyCentralDataToStorage(data, force = false) {
     storagePayload.blipSchedules = activeSchedules;
   }
 
-  await chrome.storage.local.set(storagePayload);
+  await safeStorageSet(storagePayload);
 
   // 신규 VOD 업로드 알림 검사
   if (latestVideos.length > 0) {
@@ -896,7 +954,7 @@ async function executeAllBackgroundRefreshes(force = false) {
           console.log("⚡ [Central Hub] 304 Not Modified - 원격 변경 없음 (전송량 0B 유지)");
 
           // 데이터 변경이 없어도 시간이 경과함에 따른 스케줄 알림은 로컬 데이터로 점검
-          const local = await chrome.storage.local.get(['blipSchedules', 'activeSchedules']);
+          const local = (await safeStorageGet(['blipSchedules', 'activeSchedules'])) || {};
           const currentList = local.blipSchedules || local.activeSchedules || [];
           if (currentList.length > 0) {
             checkUpcomingScheduleAlerts(currentList);

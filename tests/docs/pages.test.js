@@ -33,11 +33,9 @@ export async function run() {
     assert(fs.existsSync(schedulesApi), 'docs/api/v1/schedules.json이 존재해야 합니다.');
   });
 
-  runner.test('Shorts & Geombang Subpages: 서브페이지 존재 및 아카이브 상태 확인', () => {
+  runner.test('Shorts Subpage: 서브페이지 존재 확인', () => {
     const shortsHtml = path.join(DOCS_DIR, 'shorts/index.html');
-    const geombangHtml = path.join(ROOT_DIR, 'archive/docs/geombang/index.html');
     assert(fs.existsSync(shortsHtml), 'docs/shorts/index.html이 존재해야 합니다.');
-    assert(fs.existsSync(geombangHtml), 'archive/docs/geombang/index.html이 존재해야 합니다.');
   });
 
   runner.test('v1.0.4 Updates & Screenshots: v1.0.4 버전 표기 및 사이드패널 스크린샷 실존성 검증', () => {

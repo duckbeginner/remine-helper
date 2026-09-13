@@ -7,12 +7,20 @@
 ehthumbs.db
 Thumbs.db
 
-# Build and archive outputs
-publish/
+# Build, package, and distribution outputs
+/build/
+/publish/
+/dist/
+/out/
 *.zip
+*.xpi
+*.crx
 _metadata/
 
-# Backup / temporary directories
+# Archives and legacy directories
+archive/
+guide/
+asssets/
 *복사본*
 *.bak
 *.tmp
@@ -20,28 +28,46 @@ _metadata/
 x_timeline.html
 *dc_tab*
 *dcinside*
-asssets/
-archive/*
-!archive/docs/
-archive/docs/*
-!archive/docs/geombang/
-guide/
-scripts/capture*
-scripts/sync*
+shortcut_visual_guide.html
 
 # IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Node / npm
+# Node / npm / logs
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
 .cache/
+.eslintcache
 
-# Development
-# Test sandbox & developer playground
+# Development intermediate scripts & scratch
+scratch/
+temp/
+tmp/
+*.scratch.*
+debug_*.js
+debug_*.mjs
+debug-*.js
+debug-*.mjs
+verify_*.js
+verify_*.mjs
+verify-*.js
+verify-*.mjs
+temp_*.js
+temp_*.mjs
+temp-*.js
+temp-*.mjs
+scripts/capture*
+scripts/sync*
+
+# Test sandboxes & developer playgrounds
 /test-sandbox.html
 /test-sandbox.js
 /test.html
@@ -54,10 +80,37 @@ remine-helper/test.html
 remine-helper/test.js
 !tests/test-helper.js
 
-scratch/
-CHROMEWEBSTORE.md
-RELEASE_GUIDE*.md
-shortcut_visual_guide.html
+# Test results, reports & coverage
 test-results/
 playwright-report/
+blob-report/
+coverage/
+.nyc_output/
+*.lcov
 
+# Profiling, memory snapshots & temp media
+*.heapsnapshot
+*.cpuprofile
+.tempmediaStorage/
+
+# Planning, guides, notes, and draft markdown documents
+CHROMEWEBSTORE.md
+RELEASE_GUIDE*.md
+*PLAN*.md
+*_PLAN*.md
+RELEASE_*.md
+TODO*.md
+*TODO*.md
+DRAFT*.md
+*DRAFT*.md
+NOTES*.md
+*NOTES*.md
+*.draft.*
+!specs/*.md
+!README.md
+
+# Root-level temporary screenshots and debug captures
+/screenshot*.png
+/*_screenshot*.png
+/capture*.png
+/*_test*.png

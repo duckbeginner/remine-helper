@@ -47,10 +47,13 @@ import { run as runManifestTest } from './cross/manifest.test.js';
 import { run as runBrowserSyncTest } from './cross/browser-sync.test.js';
 import { run as runConstantsSyncTest } from './cross/constants-sync.test.js';
 import { run as runEntrypointsTest } from './cross/entrypoints.test.js';
+import { run as runFirefoxRuntimeTest } from './firefox/firefox-runtime.test.js';
+import { run as runFirefoxE2ETest } from './firefox/firefox-e2e-sync.test.js';
 
 // 6. 빌드, 패키징, CI/CD 및 정적 에셋 테스트
 import { run as runScriptsTest } from './build/scripts.test.js';
 import { run as runPackageZipTest } from './build/package-zip.test.js';
+import { run as runGitIgnoreArtifactsTest } from './build/git-ignore-artifacts.test.js';
 import { run as runWorkflowsTest } from './ci/workflows.test.js';
 import { run as runAssetsTest } from './assets/assets.test.js';
 
@@ -167,7 +170,9 @@ async function main() {
     runManifestTest,
     runBrowserSyncTest,
     runConstantsSyncTest,
-    runEntrypointsTest
+    runEntrypointsTest,
+    runFirefoxRuntimeTest,
+    runFirefoxE2ETest
   ];
 
   for (const suite of crossSuites) {
@@ -185,6 +190,7 @@ async function main() {
   const buildSuites = [
     runScriptsTest,
     runPackageZipTest,
+    runGitIgnoreArtifactsTest,
     runWorkflowsTest,
     runAssetsTest
   ];
