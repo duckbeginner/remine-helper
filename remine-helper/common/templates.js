@@ -1,45 +1,10 @@
 // common/templates.js - 원자/분자/섹션 계층형 HTML 컴포넌트 팩토리
 import { TAB_CONFIG_LIST, OFFICIAL_CHANNELS, FANPAGE_LIST, CHANNEL_DATA_MAP, REFRESH_INTERVAL_OPTIONS, DAILY_SCHEDULE_TIME_OPTIONS, ICONS } from '../constants.js';
 
-// --- 유틸리티 ---
-export function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+import { escapeHtml, parseSafeDate, getTimeAgo } from './modules/utils.js';
 
-export function parseSafeDate(startTimeStr) {
-  if (!startTimeStr) return new Date();
-  if (startTimeStr.length === 10 && !startTimeStr.includes('T')) {
-    const [y, m, d] = startTimeStr.split('-').map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0);
-  }
-  const d = new Date(startTimeStr);
-  return isNaN(d.getTime()) ? new Date() : d;
-}
-
-export function getTimeAgo(dateString) {
-  if (!dateString) return '';
-  const now = new Date();
-  const past = parseSafeDate(dateString);
-  const diffMs = now - past;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return '방금 전';
-  if (diffMin < 60) return `${diffMin}분 전`;
-  if (diffHour < 24) return `${diffHour}시간 전`;
-  if (diffDay < 7) return `${diffDay}일 전`;
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)}주 전`;
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)}개월 전`;
-  return `${Math.floor(diffDay / 365)}년 전`;
-}
+// 하위 호환성을 위한 re-export (SSOT: common/modules/utils.js)
+export { escapeHtml, parseSafeDate, getTimeAgo };
 
 /* =========================================================================
    1. 원자 컴포넌트 (Atoms / UI Elements)

@@ -1,25 +1,13 @@
 // common/modules/modals.js - 설정 모달, 스케줄 상세 모달, 미디어 파서
 import { DEFAULT_USER_SETTINGS, FANPAGE_LIST, TAB_CONFIG_LIST, CHANNEL_DATA_MAP } from '../../constants.js';
-import { escapeHtml, createScheduleModalHTML, createSettingsModalHTML } from '../templates.js';
+import { createScheduleModalHTML, createSettingsModalHTML } from '../templates.js';
+import { decodeHtmlEntities, escapeHtml } from './utils.js';
 import { getChannelIconHTML } from './calendar.js';
 import { initNavPosition, enableIframeScrollGuard, stopAllIframeMedia } from './tabs.js';
 import { getMemberDisplayName, getMemberAvatarUrl } from './storage.js';
 import { setupIframeAutoHeight } from './sns-embeds.js';
 
-export function decodeHtmlEntities(str) {
-  if (!str) return '';
-  if (typeof document !== 'undefined') {
-    const txt = document.createElement('textarea');
-    txt.innerHTML = str;
-    return txt.value;
-  }
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
+export { decodeHtmlEntities };
 
 export function linkifyMessage(text) {
   if (!text) return '';
