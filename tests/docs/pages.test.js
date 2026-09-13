@@ -40,6 +40,33 @@ export async function run() {
     assert(fs.existsSync(geombangHtml), 'archive/docs/geombang/index.html이 존재해야 합니다.');
   });
 
+  runner.test('v1.0.4 Updates & Screenshots: v1.0.4 버전 표기 및 사이드패널 스크린샷 실존성 검증', () => {
+    const htmlPath = path.join(DOCS_DIR, 'index.html');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    assert(htmlContent.includes('v1.0.4'), 'docs/index.html에 v1.0.4 버전 표기가 포함되어야 합니다.');
+    assert(htmlContent.includes('v1.0.4 업데이트 내역'), 'docs/index.html에 v1.0.4 업데이트 내역 제목이 포함되어야 합니다.');
+
+    const screenshots = [
+      'sidepanel_01_light.png',
+      'sidepanel_02_dark.png',
+      'sidepanel_03_list.png',
+      'sidepanel_04_modal.png',
+      'sidepanel_10_calendar_nav.png',
+      'sidepanel_12_shorts_view.png'
+    ];
+
+    for (const file of screenshots) {
+      const filePath = path.join(DOCS_DIR, 'screenshots', file);
+      assert(fs.existsSync(filePath), `스크린샷 docs/screenshots/${file}이 존재해야 합니다.`);
+      assert(htmlContent.includes(file), `docs/index.html에 스크린샷 ${file} 참조가 포함되어야 합니다.`);
+    }
+
+    assert(!htmlContent.includes('sidepanel_09_member_badges.png'), '구조 불일치 sidepanel_09_member_badges.png는 참조되지 않아야 합니다.');
+    assert(!htmlContent.includes('sidepanel_11_sns_multitab.png'), '품질 불량인 sidepanel_11_sns_multitab.png는 참조되지 않아야 합니다.');
+    assert(!htmlContent.includes('rescene.kr'), '가상 도메인 rescene.kr은 docs/index.html에 참조되지 않아야 합니다.');
+    assert(htmlContent.includes('https://duckbeginner.github.io/remine-helper'), '공식 도메인 https://duckbeginner.github.io/remine-helper가 참조되어야 합니다.');
+  });
+
   return runner.summary();
 }
 

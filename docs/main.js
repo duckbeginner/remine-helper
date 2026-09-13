@@ -49,49 +49,49 @@ function initShowcaseTabs() {
     'sp-light': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_01_light.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'SIDEPANEL (LIGHT)'
     },
     'sp-dark': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_02_dark.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'SIDEPANEL (DARK)'
     },
     'sp-list': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_03_list.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'SCHEDULE LIST'
     },
     'sp-modal': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_04_modal.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'SCHEDULE MEDIA'
     },
     'sp-insta': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_05_insta.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'INSTAGRAM FEED'
     },
     'sp-x': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_06_x.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'X (TWITTER) FEED'
     },
     'sp-tiktok': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_07_tiktok.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'TIKTOK SHORTS'
     },
     'sp-sceneflix': {
       type: 'sidepanel',
       src: 'screenshots/sidepanel_08_sceneflix.png',
-      url: 'https://rescene.kr/remine-helper',
+      url: 'https://duckbeginner.github.io/remine-helper',
       badge: 'SCENE-FLIX'
     },
     'dash-light': {
