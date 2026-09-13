@@ -12,7 +12,6 @@ const OUTPUT_DIR = path.resolve(__dirname, '../../docs/api/v1');
 
 const CORE_FILE = path.join(OUTPUT_DIR, 'core.json');
 const SCHEDULES_FILE = path.join(OUTPUT_DIR, 'schedules.json');
-const DATA_FILE = path.join(OUTPUT_DIR, 'data.json');
 
 const CACHE_DIR = path.resolve(__dirname, '../../.cache');
 const HASH_FILE = path.join(CACHE_DIR, 'gist-hashes.json');
@@ -29,14 +28,8 @@ function calculateHash(data, type) {
       sns: data.sns,
       activeItems: data.schedules?.activeItems
     };
-  } else if (type === 'schedules') {
-    core = data.items;
   } else {
-    core = {
-      youtube: data.youtube,
-      sns: data.sns,
-      items: data.schedules?.items
-    };
+    core = data.items;
   }
   return crypto.createHash('sha256').update(JSON.stringify(core)).digest('hex');
 }
@@ -59,12 +52,10 @@ async function updateGist() {
 
   const coreObj = JSON.parse(fs.readFileSync(CORE_FILE, 'utf8'));
   const schedObj = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
-  const dataObj = fs.existsSync(DATA_FILE) ? JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) : null;
 
   const currentHashes = {
     core: calculateHash(coreObj, 'core'),
-    schedules: calculateHash(schedObj, 'schedules'),
-    data: dataObj ? calculateHash(dataObj, 'data') : ''
+    schedules: calculateHash(schedObj, 'schedules')
   };
 
   if (!fs.existsSync(CACHE_DIR)) {
@@ -98,18 +89,6 @@ async function updateGist() {
     console.log(`📦 [schedules.json] 변경 감지 -> 업로드 대상 포함 (${schedSizeKb} KB)`);
   } else {
     console.log(`⚡ [schedules.json] 변경 없음 (No Change, ${schedSizeKb} KB)`);
-  }
-
-  // data.json 변경 검사
-  if (dataObj) {
-    const dataMin = JSON.stringify(dataObj);
-    const dataSizeKb = (Buffer.byteLength(dataMin) / 1024).toFixed(2);
-    if (prevHashes.data !== currentHashes.data) {
-      filesPayload["data.json"] = { content: dataMin };
-      console.log(`📦 [data.json] 변경 감지 -> 업로드 대상 포함 (${dataSizeKb} KB)`);
-    } else {
-      console.log(`⚡ [data.json] 변경 없음 (No Change, ${dataSizeKb} KB)`);
-    }
   }
 
   // 변경된 파일이 하나도 없으면 스킵

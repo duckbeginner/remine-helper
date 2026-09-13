@@ -40,7 +40,7 @@ jobs:
       - name: Run Schema Validation Test
         run: node scripts/data-hub/validate.js
 
-      - name: Upload data.json to GitHub Gist
+      - name: Upload 2-Tier Data to GitHub Gist
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           GIST_ID: "44b49b328233ef6157499debe03f165c"
