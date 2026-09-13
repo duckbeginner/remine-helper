@@ -28,7 +28,8 @@ import {
   renderXEmbeds,
   renderTiktokEmbeds,
   pauseAllTiktokEmbeds,
-  requestBackgroundRefresh
+  requestBackgroundRefresh,
+  parseSafeDate
 } from './common/common.js';
 
 // --- 경량 마이크로 캐시 (Micro-SWR Cache: 5KB 미만으로 0.1ms 즉시 파싱) ---
@@ -48,13 +49,15 @@ function getRelevantSchedulesForCache(schedules) {
   const clean = filterAndDeduplicateSchedules(schedules);
   const now = new Date().getTime();
   const sorted = [...clean].sort((a, b) => {
-    const tA = (a.startTime || a.date) ? new Date(a.startTime || a.date).getTime() : 0;
-    const tB = (b.startTime || b.date) ? new Date(b.startTime || b.date).getTime() : 0;
+    const dA = parseSafeDate(a.startTime || a.date);
+    const dB = parseSafeDate(b.startTime || b.date);
+    const tA = dA ? dA.getTime() : 0;
+    const tB = dB ? dB.getTime() : 0;
     return tA - tB;
   });
   let nextIdx = sorted.findIndex(item => {
-    const t = (item.startTime || item.date) ? new Date(item.startTime || item.date).getTime() : 0;
-    return t >= now;
+    const d = parseSafeDate(item.startTime || item.date);
+    return d ? d.getTime() >= now : false;
   });
   if (nextIdx === -1) nextIdx = Math.max(0, sorted.length - 15);
   const start = Math.max(0, nextIdx - 5);

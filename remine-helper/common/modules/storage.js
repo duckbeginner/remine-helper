@@ -4,18 +4,32 @@ import { renderOfficialYoutubeList, renderWoniYoutubeList, extractAllShortsVideo
 import { setupHorizontalScroller, setupHubIconReordering } from './tabs.js';
 import { renderScheduleList } from './calendar.js';
 
+// 동적 서버 주도형 메타데이터 캐시 (오프라인/미수신 시 constants 기본값 사용)
+let dynamicMemberIdMap = { ...MEMBER_ID_MAP };
+let dynamicMemberNicknameMap = { ...MEMBER_NICKNAME_MAP };
+
+export function updateDynamicMetadata(serverMetadata) {
+  if (!serverMetadata) return;
+  if (serverMetadata.members?.idMap) {
+    dynamicMemberIdMap = { ...MEMBER_ID_MAP, ...serverMetadata.members.idMap };
+  }
+  if (serverMetadata.members?.nicknameMap) {
+    dynamicMemberNicknameMap = { ...MEMBER_NICKNAME_MAP, ...serverMetadata.members.nicknameMap };
+  }
+}
+
 export function getMemberDisplayName(attendeeOrNickname) {
   if (!attendeeOrNickname) return '멤버';
 
   // 1순위: 불변 고유 ID (ObjectId) 기반 1차 매핑
   if (typeof attendeeOrNickname === 'object' && attendeeOrNickname !== null) {
-    if (attendeeOrNickname.id && MEMBER_ID_MAP && MEMBER_ID_MAP[attendeeOrNickname.id]) {
-      return MEMBER_ID_MAP[attendeeOrNickname.id];
+    if (attendeeOrNickname.id && dynamicMemberIdMap && dynamicMemberIdMap[attendeeOrNickname.id]) {
+      return dynamicMemberIdMap[attendeeOrNickname.id];
     }
   } else if (typeof attendeeOrNickname === 'string') {
     const trimmedId = attendeeOrNickname.trim();
-    if (MEMBER_ID_MAP && MEMBER_ID_MAP[trimmedId]) {
-      return MEMBER_ID_MAP[trimmedId];
+    if (dynamicMemberIdMap && dynamicMemberIdMap[trimmedId]) {
+      return dynamicMemberIdMap[trimmedId];
     }
   }
 
@@ -26,9 +40,9 @@ export function getMemberDisplayName(attendeeOrNickname) {
   const trimmed = raw.trim();
   if (!trimmed) return '멤버';
 
-  if (MEMBER_NICKNAME_MAP && MEMBER_NICKNAME_MAP[trimmed]) return MEMBER_NICKNAME_MAP[trimmed];
-  if (MEMBER_NICKNAME_MAP) {
-    for (const [nick, realName] of Object.entries(MEMBER_NICKNAME_MAP)) {
+  if (dynamicMemberNicknameMap && dynamicMemberNicknameMap[trimmed]) return dynamicMemberNicknameMap[trimmed];
+  if (dynamicMemberNicknameMap) {
+    for (const [nick, realName] of Object.entries(dynamicMemberNicknameMap)) {
       if (trimmed.includes(nick) || nick.includes(trimmed)) return realName;
     }
   }
@@ -89,6 +103,9 @@ export function initAppStorageData({
 } = {}) {
   const processResult = (result) => {
     if (!result) return;
+    if (result.serverMetadata) {
+      updateDynamicMetadata(result.serverMetadata);
+    }
 
     // 1. 유튜브 비디오 렌더링 및 수평 스크롤러 적용
     const ytEl = typeof youtubeListId === 'string' ? document.getElementById(youtubeListId) : youtubeListId;
@@ -196,7 +213,8 @@ export function initAppStorageData({
       'isLiveStreaming',
       'liveVideoInfo',
       'themeMode',
-      'channelOrder'
+      'channelOrder',
+      'serverMetadata'
     ];
 
     // 캐시가 있었더라도 최신 스토리지 데이터로 재검증

@@ -782,6 +782,7 @@ async function applyCentralDataToStorage(data, force = false) {
     xFeeds: data.sns?.x || [],
     instaFeeds: data.sns?.instagram || [],
     tiktokFeeds: data.sns?.tiktok || [],
+    serverMetadata: data.metadata || null,
     lastCentralSyncTime: Date.now(),
     lastCentralSyncUpdatedAt: data.updatedAt || null
   };
@@ -793,7 +794,7 @@ async function applyCentralDataToStorage(data, force = false) {
   const COMPARE_KEYS = [
     'latestVideos', 'officialPlaylistVideos', 'woniVideos',
     'isLive', 'isLiveStreaming', 'liveVideoInfo', 'activeSchedules',
-    'xFeeds', 'instaFeeds', 'tiktokFeeds'
+    'xFeeds', 'instaFeeds', 'tiktokFeeds', 'serverMetadata'
   ];
 
   const local = await chrome.storage.local.get([

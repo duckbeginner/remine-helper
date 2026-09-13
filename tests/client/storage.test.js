@@ -5,7 +5,8 @@ import { TestRunner, assert } from '../test-helper.js';
 import {
   filterAndDeduplicateSchedules,
   getMemberDisplayName,
-  getMemberAvatarUrl
+  getMemberAvatarUrl,
+  updateDynamicMetadata
 } from '../../remine-helper/common/modules/storage.js';
 
 export async function run() {
@@ -23,6 +24,21 @@ export async function run() {
     assert.strictEqual(getMemberDisplayName('minami'), '미나미');
     assert.strictEqual(getMemberDisplayName('일반팬'), '일반팬');
     assert.strictEqual(getMemberDisplayName(''), '멤버');
+  });
+
+  runner.test('updateDynamicMetadata: 서버 주도형 신규 닉네임/ID 동적 업데이트 실시간 반영', () => {
+    // 1) 서버에서 새로운 멤버 닉네임과 ID 매핑이 내려온 상황 시뮬레이션
+    const mockServerMetadata = {
+      members: {
+        idMap: { 'new_future_id_123': '메이' },
+        nicknameMap: { '메이의새로운별명': '메이' }
+      }
+    };
+    updateDynamicMetadata(mockServerMetadata);
+
+    // 2) 업데이트 후 즉시 getMemberDisplayName에 반영 확인
+    assert.strictEqual(getMemberDisplayName({ id: 'new_future_id_123' }), '메이');
+    assert.strictEqual(getMemberDisplayName('메이의새로운별명'), '메이');
   });
 
   runner.test('getMemberDisplayName: 불변 고유 ID 기반 1차 매핑 (탈퇴회원/가변닉네임 복원)', () => {

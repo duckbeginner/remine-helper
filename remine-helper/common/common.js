@@ -20,3 +20,6 @@ export * from './modules/modals.js';
 
 // 7. 스토리지 연동, 닉네임/아바타 매핑 및 백그라운드 갱신 요청
 export * from './modules/storage.js';
+
+// 8. 공통 유틸리티 SSOT (날짜 파싱, KST 변환, XSS 방어, 타이틀 정제 등)
+export * from './modules/utils.js';
