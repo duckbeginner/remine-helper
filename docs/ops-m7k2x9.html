@@ -1890,6 +1890,7 @@
         <button class="chip" data-type="릴리즈">릴리즈</button>
         <button class="chip" data-type="공지">공지</button>
         <button class="chip" data-type="기타">기타</button>
+        <button class="chip" data-type="needs-review" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">⚠️ 검토 필요 (결측치)</button>
         <button class="chip" data-type="deleted" style="border-color: rgba(244, 63, 94, 0.4); color: #fb7185;">🗑️ 숨김 일정</button>
       </div>
     </section>
@@ -3077,8 +3078,12 @@
           (appliedOverrides && (appliedOverrides.deleted.has(itemKey) || appliedOverrides.deleted.has(itemRawKey) || (item.id && appliedOverrides.deleted.has(item.id))))
         );
 
+        const isCorrupted = !item.startTime || !item.title || isNaN(new Date(item.startTime).getTime()) || Boolean(item._isCorrupted);
+
         if (activeCategory === 'deleted') {
           if (!isItemDeleted) return false;
+        } else if (activeCategory === 'needs-review') {
+          if (!isCorrupted) return false;
         } else if (activeCategory !== 'all') {
           const itemCat = resolveScheduleType(item);
           if (itemCat !== activeCategory) return false;
@@ -3284,6 +3289,11 @@
           } else if (isCustom) {
             statusClass = 'status-custom';
             stateBadge = '<span class="state-badge badge-new">수동 등록</span>';
+          }
+
+          const isCardCorrupted = !primaryItem.startTime || !primaryItem.title || isNaN(new Date(primaryItem.startTime).getTime()) || Boolean(primaryItem._isCorrupted);
+          if (isCardCorrupted) {
+            stateBadge += '<span class="state-badge badge-warning" style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid rgba(245, 158, 11, 0.4); margin-left:4px;">⚠️ 검토 필요 (결측치)</span>';
           }
 
           const isNewCollected = !isDeleted && (isItemNewCollected(primaryItem) || subItems.some(isItemNewCollected));
@@ -5995,6 +6005,26 @@
         // 원격 최신본이 확인되면 appliedOverrides와 3-way 병합
         if (remoteOverrides) {
           const remoteMem = parseOverridesV2IntoMemory(remoteOverrides);
+
+          // [정책 5] 3-Way 지능형 충돌 해결: 내가 현재 수정한 내역(pendingOverrides.modified)과 원격 갱신 내역(remoteMem.modified)이 충돌할 때
+          const pendingKeys = Object.keys(pendingOverrides.modified || {});
+          const conflictingKeys = pendingKeys.filter(k => {
+            const remoteVal = remoteMem.modified[k];
+            const localVal = pendingOverrides.modified[k];
+            return remoteVal && localVal && JSON.stringify(remoteVal) !== JSON.stringify(localVal);
+          });
+
+          if (conflictingKeys.length > 0) {
+            const msg = `⚠️ [3-Way 편집 충돌 감지]\n원격에서 최근 수정된 ${conflictingKeys.length}건의 일정과 현재 편집 내역이 충돌합니다.\n\n[확인]: 내가 수정한 내역을 유지하여 Gist에 반영합니다.\n[취소]: 원격 최신본을 유지하고 내 수정본을 롤백합니다.`;
+            const keepLocal = typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm(msg) : true;
+            if (!keepLocal) {
+              // 관리자가 원격 최신본을 선택한 경우 로컬 충돌 수정본 폐기
+              conflictingKeys.forEach(k => {
+                delete pendingOverrides.modified[k];
+              });
+            }
+          }
+
           remoteMem.deleted.forEach(d => appliedOverrides.deleted.add(d));
           appliedOverrides.modified = { ...appliedOverrides.modified, ...remoteMem.modified };
           remoteMem.created.forEach(rc => {
