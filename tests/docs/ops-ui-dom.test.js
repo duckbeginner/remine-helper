@@ -99,6 +99,30 @@ export async function run() {
       '.staging-bar에 bottom: env(safe-area-inset-bottom)이 적용되어야 합니다.');
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 6. iOS / PWA 홈 화면 추가 아이콘 & Web App Manifest 검증
+  // ─────────────────────────────────────────────────────────────
+  runner.test('PWA Home Screen Icon & Manifest: apple-touch-icon, manifest, title 메타태그 및 아이콘 파일 실존성 검증', () => {
+    // 1. ops-m7k2x9.html 메타 태그 검증
+    assert(opsHtml.includes('rel="apple-touch-icon"') || opsHtml.includes("rel='apple-touch-icon'"),
+      'iOS 홈 화면 아이콘을 위한 apple-touch-icon 링크가 선언되어야 합니다.');
+    assert(opsHtml.includes('name="apple-mobile-web-app-title"') || opsHtml.includes("name='apple-mobile-web-app-title'"),
+      'iOS 홈 화면 앱 타이틀을 위한 apple-mobile-web-app-title 메타 태그가 선언되어야 합니다.');
+    assert(opsHtml.includes('rel="manifest"') || opsHtml.includes("rel='manifest'"),
+      'PWA 매니페스트 링크(ops.webmanifest)가 선언되어야 합니다.');
+
+    // 2. 아이콘 파일 실존성 검증
+    const touchIconPath = path.join(ROOT_DIR, 'docs/icons/apple-touch-icon.png');
+    const manifestPath = path.join(ROOT_DIR, 'docs/ops.webmanifest');
+    assert(fs.existsSync(touchIconPath), 'docs/icons/apple-touch-icon.png 파일이 존재해야 합니다.');
+    assert(fs.existsSync(manifestPath), 'docs/ops.webmanifest 파일이 존재해야 합니다.');
+
+    // 3. manifest 내용 유효성 검증
+    const manifestJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert(manifestJson.name && manifestJson.short_name, 'manifest에 name과 short_name이 정의되어야 합니다.');
+    assert(Array.isArray(manifestJson.icons) && manifestJson.icons.length > 0, 'manifest에 icons가 정의되어야 합니다.');
+  });
+
   return runner.summary();
 }
 

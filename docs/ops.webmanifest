@@ -1,0 +1,29 @@
+{
+  "name": "RESCENE Ops Portal",
+  "short_name": "Ops Portal",
+  "description": "RESCENE Remine Helper Management & Operations Portal",
+  "start_url": "ops-m7k2x9.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0e14",
+  "theme_color": "#0c0e14",
+  "icons": [
+    {
+      "src": "icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/ops-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/ops-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

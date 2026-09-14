@@ -106,6 +106,9 @@ DRAFT*.md
 NOTES*.md
 *NOTES*.md
 *.draft.*
+DEVELOPMENT_GUIDE*.md
+*GUIDE*.md
+CLAUDE*.md
 !specs/*.md
 !README.md
 store_description_*.txt
