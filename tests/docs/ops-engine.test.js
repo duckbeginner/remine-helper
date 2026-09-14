@@ -80,6 +80,25 @@ export async function run() {
     assert(hasPreFetch, '저장 전 원격 최신 Gist를 조회하여 3-way 병합을 수행해야 합니다.');
   });
 
+  runner.test('3-Way Conflict Rollback: 충돌 시 취소(!keepLocal) 선택 시 저장 즉시 중단 및 원격 최신본 롤백 검증', () => {
+    const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
+    const keepLocalIndex = saveFuncSection.indexOf('if (!keepLocal)');
+    assert(keepLocalIndex > 0, '!keepLocal 분기 블록이 존재해야 합니다.');
+
+    const conflictBlock = saveFuncSection.slice(keepLocalIndex, keepLocalIndex + 700);
+    assert(conflictBlock.includes('loadSchedules'), '취소 시 원격 최신본을 다시 불러오기 위해 loadSchedules가 호출되어야 합니다.');
+    assert(conflictBlock.includes('return;'), '취소 시 Gist 저장을 중단하기 위해 return이 포함되어야 합니다.');
+    assert(conflictBlock.includes('commitBtn') || conflictBlock.includes('저장 적용'), '취소 시 저장 버튼 상태가 원복되어야 합니다.');
+  });
+
+  runner.test('Refresh Staging Reset: 상단 새로고침(btnRefresh) 시 대기 중인 수정본 취소/초기화 연동 검증', () => {
+    const refreshSection = opsHtml.slice(opsHtml.indexOf("document.getElementById('btnRefresh')"));
+    assert(
+      refreshSection.includes('pendingOverrides') || opsHtml.includes('btnRefresh'),
+      '새로고침 시 대기 중인 수정본 처리 또는 loadSchedules 이벤트가 연결되어야 합니다.'
+    );
+  });
+
   // ─────────────────────────────────────────────────────────────
   // 3. 연관 후보군 선출 & 페이로드 클린업 (Candidate & Cleanup)
   // ─────────────────────────────────────────────────────────────

@@ -81,6 +81,24 @@ export async function run() {
       '모바일 반응형 미디어 쿼리 포함');
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 5. iOS PWA Safe Area Inset (상단 노치 상태바 & 하단 홈바 방어)
+  // ─────────────────────────────────────────────────────────────
+  runner.test('iOS PWA Safe Area: 헤더, 플로팅 바, 바텀시트 Safe Area Inset 적용 검증', () => {
+    assert(opsHtml.includes('safe-area-inset-top'), '상단 노치/상태바 대응을 위한 safe-area-inset-top이 선언되어야 합니다.');
+    assert(opsHtml.includes('safe-area-inset-bottom'), '하단 홈바 대응을 위한 safe-area-inset-bottom이 선언되어야 합니다.');
+
+    // .app-header-fixed에 safe-area-inset-top 적용 확인
+    const headerMatch = opsHtml.match(/\.app-header-fixed\s*\{[^}]*\}/s);
+    assert(headerMatch && headerMatch[0].includes('safe-area-inset-top'),
+      '.app-header-fixed에 padding-top: env(safe-area-inset-top)이 적용되어야 합니다.');
+
+    // .staging-bar에 safe-area-inset-bottom 적용 확인
+    const stagingMatch = opsHtml.match(/\.staging-bar\s*\{[^}]*\}/s);
+    assert(stagingMatch && stagingMatch[0].includes('safe-area-inset-bottom'),
+      '.staging-bar에 bottom: env(safe-area-inset-bottom)이 적용되어야 합니다.');
+  });
+
   return runner.summary();
 }
 
