@@ -2469,6 +2469,21 @@
       restoredModified: new Set()
     };
 
+    // 3-Way 병합 충돌 판별을 위한 초기 로드 시점의 기준 스냅샷 (Base State)
+    let baseOverridesSnapshot = null;
+
+    function updateBaseOverridesSnapshot(source) {
+      if (!source) {
+        baseOverridesSnapshot = { modified: {}, deleted: new Set(), created: [] };
+        return;
+      }
+      baseOverridesSnapshot = {
+        modified: JSON.parse(JSON.stringify(source.modified || {})),
+        deleted: new Set(source.deleted || []),
+        created: JSON.parse(JSON.stringify(source.created || []))
+      };
+    }
+
     const GIST_ID = '44b49b328233ef6157499debe03f165c';
     const GIST_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedules.json`;
     const GIST_OVERRIDES_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json`;
@@ -2859,8 +2874,9 @@
           } catch (e) { }
         }
 
-        // 2-1. v2.0 통합 파서로 appliedOverrides 확정
+        // 2-1. v2.0 통합 파서로 appliedOverrides 확정 및 기준 스냅샷 갱신
         appliedOverrides = parseOverridesV2IntoMemory(overridesJson);
+        updateBaseOverridesSnapshot(appliedOverrides);
 
         // 삭제 판별 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
         const checkIsDeleted = (item) => {
@@ -6008,11 +6024,16 @@
           const remoteMem = parseOverridesV2IntoMemory(remoteOverrides);
 
           // [정책 5] 3-Way 지능형 충돌 해결: 내가 현재 수정한 내역(pendingOverrides.modified)과 원격 갱신 내역(remoteMem.modified)이 충돌할 때
+          // (진짜 동시 편집 충돌: 내가 작업하는 동안 원격이 실제로 변경되었고, 동시에 내 수정본과도 다를 때만 핀포인트 감지!)
           const pendingKeys = Object.keys(pendingOverrides.modified || {});
           const conflictingKeys = pendingKeys.filter(k => {
             const remoteVal = remoteMem.modified[k];
             const localVal = pendingOverrides.modified[k];
-            return remoteVal && localVal && JSON.stringify(remoteVal) !== JSON.stringify(localVal);
+            const baseVal = (baseOverridesSnapshot && baseOverridesSnapshot.modified) ? baseOverridesSnapshot.modified[k] : undefined;
+
+            const isRemoteChanged = JSON.stringify(remoteVal) !== JSON.stringify(baseVal);
+            const isLocalDifferent = JSON.stringify(localVal) !== JSON.stringify(remoteVal);
+            return isRemoteChanged && isLocalDifferent;
           });
 
           if (conflictingKeys.length > 0) {
@@ -6354,8 +6375,9 @@
 
         const confirmedOverrides = JSON.parse(savedFile.content);
 
-        // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정 (v2.0 정규 파서 적용)
+        // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정 (v2.0 정규 파서 적용) 및 기준 스냅샷 동기화
         appliedOverrides = parseOverridesV2IntoMemory(confirmedOverrides);
+        updateBaseOverridesSnapshot(appliedOverrides);
 
         // 3. 대기열(pendingOverrides) 비우기 & 필터 규칙 확정
         pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };

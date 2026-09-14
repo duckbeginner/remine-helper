@@ -99,6 +99,55 @@ export async function run() {
     );
   });
 
+  runner.test('Base Snapshot & 3-Way Conflict: baseOverridesSnapshot 기준 비교 및 오탐 방지 검증', () => {
+    assert(opsHtml.includes('baseOverridesSnapshot'), 'baseOverridesSnapshot 변수가 선언되어야 합니다.');
+    const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
+    assert(
+      saveFuncSection.includes('baseOverridesSnapshot') || saveFuncSection.includes('baseVal'),
+      '3-Way 충돌 검사 시 baseOverridesSnapshot 또는 baseVal과 비교해야 합니다.'
+    );
+    assert(
+      saveFuncSection.includes('isRemoteChanged') || (saveFuncSection.includes('remoteVal') && saveFuncSection.includes('baseVal')),
+      '원격의 변경 여부를 baseVal과 비교하여 판별해야 합니다.'
+    );
+  });
+
+  runner.test('Simulation: 3-Way 충돌 판별기 단위 시뮬레이션 (원격 미변경 시 충돌 0건, 동시 수정 시 충돌 감지)', () => {
+    function detect3WayConflicts(pendingModified, remoteModified, baseModified) {
+      const pendingKeys = Object.keys(pendingModified || {});
+      return pendingKeys.filter(k => {
+        const remoteVal = remoteModified[k];
+        const localVal = pendingModified[k];
+        const baseVal = baseModified ? baseModified[k] : undefined;
+
+        const isRemoteChanged = JSON.stringify(remoteVal) !== JSON.stringify(baseVal);
+        const isLocalDifferent = JSON.stringify(localVal) !== JSON.stringify(remoteVal);
+        return isRemoteChanged && isLocalDifferent;
+      });
+    }
+
+    // 시나리오 1: 원격 일정을 내가 로컬에서 수정함. 원격은 변경되지 않음. (정상 수정 시나리오)
+    const baseModified = {
+      'blip_1103467': { title: '2026 K-WORLD DREAM AWARDS', linkedScheduleIds: ['6a3c83fb0b7c92615f50b57c'] }
+    };
+    const remoteModified = {
+      'blip_1103467': { title: '2026 K-WORLD DREAM AWARDS', linkedScheduleIds: ['6a3c83fb0b7c92615f50b57c'] }
+    };
+    const localModified = {
+      'blip_1103467': { title: '2026 K-WORLD DREAM AWARDS', linkedScheduleIds: ['6a3c83fb0b7c92615f50b57c', '2026-08-27_award'] }
+    };
+
+    const conflicts1 = detect3WayConflicts(localModified, remoteModified, baseModified);
+    assert.strictEqual(conflicts1.length, 0, '원격이 변경되지 않은 정상 수정 상태에서는 충돌이 0건이어야 합니다.');
+
+    // 시나리오 2: 내가 수정하는 사이에 원격에서도 누군가 다른 링크로 수정함. (동시 수정 충돌 시나리오)
+    const remoteModifiedConcurrent = {
+      'blip_1103467': { title: '2026 K-WORLD DREAM AWARDS (수정됨)', linkedScheduleIds: ['diff_id'] }
+    };
+    const conflicts2 = detect3WayConflicts(localModified, remoteModifiedConcurrent, baseModified);
+    assert.strictEqual(conflicts2.length, 1, '원격이 변경되고 로컬과도 다를 때만 1건의 충돌이 감지되어야 합니다.');
+  });
+
   // ─────────────────────────────────────────────────────────────
   // 3. 연관 후보군 선출 & 페이로드 클린업 (Candidate & Cleanup)
   // ─────────────────────────────────────────────────────────────
