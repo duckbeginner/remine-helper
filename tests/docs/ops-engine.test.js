@@ -186,6 +186,59 @@ export async function run() {
     assert.notStrictEqual(rawItems[0].id, rawItems[1].id, '두 일정은 각각 고유 ID 유지');
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 5. Base Snapshot 수명주기 및 오버라이드 영구 보존 시뮬레이션
+  // ─────────────────────────────────────────────────────────────
+  runner.test('Base Snapshot Lifecycle: loadSchedules 및 onSaveToGistClick에서 updateBaseOverridesSnapshot 호출 확인', () => {
+    const loadFuncSection = opsHtml.slice(opsHtml.indexOf('async function loadSchedules('), opsHtml.indexOf('async function onSaveToGistClick'));
+    assert(loadFuncSection.includes('updateBaseOverridesSnapshot'),
+      'loadSchedules 완료 시점에 updateBaseOverridesSnapshot이 호출되어 기준 스냅샷을 갱신해야 합니다.');
+
+    const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
+    assert(saveFuncSection.includes('updateBaseOverridesSnapshot'),
+      'Gist 저장 완료 시점에 updateBaseOverridesSnapshot이 호출되어 기준 스냅샷을 최신본으로 갱신해야 합니다.');
+  });
+
+  runner.test('Simulation: sourceOverrides 영구 보존 및 블립 원본 덮어쓰기 방지 파이프라인 시뮬레이션', () => {
+    // 블립 원본에서 수집된 기본 데이터 (URL 없음, 블립 원본 제목)
+    const rawCollectorItem = {
+      id: 'blip_1110557',
+      title: '<안원잘부>',
+      startTime: '2026-08-11T11:00:00.000Z',
+      source: 'blip',
+      channel: '안녕하세요원이입니다잘부탁드립니다',
+      url: undefined
+    };
+
+    // schedule-overrides.json에 보존된 정식 오버라이드 데이터
+    const sourceOverrides = {
+      'blip_1110557': {
+        title: '제나야 말 좀 해라!!!!!!!!!!!!!!',
+        url: 'https://www.youtube.com/watch?v=WTdyA5N4K0k',
+        typeText: '영상',
+        isOfficialYoutube: true
+      }
+    };
+
+    // 파이프라인 오버라이드 적용 함수 시뮬레이션
+    function applyOverrides(item, overrides) {
+      const ov = overrides[item.id];
+      if (!ov) return { ...item };
+      return {
+        ...item,
+        ...ov,
+        id: item.id, // 불변 ID
+        source: item.source // 원본 소스 식별자 유지
+      };
+    }
+
+    const resolvedItem = applyOverrides(rawCollectorItem, sourceOverrides);
+    assert.strictEqual(resolvedItem.title, '제나야 말 좀 해라!!!!!!!!!!!!!!', '오버라이드된 유튜브 제목이 반영되어야 합니다.');
+    assert.strictEqual(resolvedItem.url, 'https://www.youtube.com/watch?v=WTdyA5N4K0k', '오버라이드된 유튜브 URL이 보존되어야 합니다.');
+    assert.strictEqual(resolvedItem.id, 'blip_1110557', 'ID가 불변으로 유지되어야 합니다.');
+    assert.strictEqual(resolvedItem.source, 'blip', '출처가 유지되어야 합니다.');
+  });
+
   return runner.summary();
 }
 
