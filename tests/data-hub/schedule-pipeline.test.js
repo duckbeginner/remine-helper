@@ -6,7 +6,8 @@ import {
   mergeSchedulesV2,
   slimScheduleItem,
   getMonthsToFetch,
-  extractYouTubeVideoId
+  extractYouTubeVideoId,
+  generateScheduleId
 } from '../../scripts/data-hub/collectors/schedule.js';
 
 export async function run() {
@@ -14,33 +15,26 @@ export async function run() {
   runner.run();
 
   // ─────────────────────────────────────────────────────────────
-  // 1. 소스별 결정론적 고유 ID 생성 (from schedule-v2.test.js 흡수)
+  // 1. 소스별 결정론적 고유 ID 생성 및 불변성 (실제 모듈 계약 검증)
   // ─────────────────────────────────────────────────────────────
-  runner.test('ID Generation: 소스별 고유 ID 결정론적 생성 및 불변성 검증', () => {
-    function generateScheduleId(source, item) {
-      if (!item) return null;
-      if (item.id && typeof item.id === 'string' && item.id.trim()) {
-        return item.id.trim();
-      }
-      if (source === 'blip' || item.source === 'blip') {
-        const sId = item.scheduleId || item.id;
-        if (sId) return `blip_${sId}`;
-      }
-      if (source === 'mnet' || item.source === 'mnet') {
-        const eId = item.eventId || item.id;
-        if (eId) return `mnet_${eId}`;
-      }
-      if (source === 'youtube' || item.source === 'youtube') {
-        const vId = item.videoId || item.id;
-        if (vId) return `yt_${vId}`;
-      }
-      return null;
-    }
+  runner.test('ID Generation: 소스별 고유 ID 결정론적 생성 및 최초 수집 ID 영구 불변성 검증', () => {
+    // 1) 기존 ID가 이미 부여된 경우, 어떤 소스나 속성이 와도 기존 ID가 100% 영구 불변이어야 함
+    const existingIds = ['1103438', 'blip_custom_999', 'yt_vid_abc', 'custom_240803_123456'];
+    existingIds.forEach(id => {
+      assert.strictEqual(generateScheduleId('blip', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
+      assert.strictEqual(generateScheduleId('mnet', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
+      assert.strictEqual(generateScheduleId('youtube', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
+      assert.strictEqual(generateScheduleId('custom', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
+    });
 
-    assert.strictEqual(generateScheduleId('blip', { id: '1103438' }), '1103438');
+    // 2) 신규 수집 시 각 소스별 결정론적 ID 생성 규칙
     assert.strictEqual(generateScheduleId('blip', { scheduleId: '1103438' }), 'blip_1103438');
     assert.strictEqual(generateScheduleId('mnet', { eventId: 'event_999' }), 'mnet_event_999');
     assert.strictEqual(generateScheduleId('youtube', { videoId: 'dQw4w9WgXcQ' }), 'yt_dQw4w9WgXcQ');
+
+    // 3) 커스텀/수동 일정의 고유 ID 형식 검증 (custom_YYMMDD_xxxxxx)
+    const customId = generateScheduleId('custom', { startTime: '2026-09-15T00:00:00+09:00', title: 'Special Festival' });
+    assert(customId.startsWith('custom_260915_'), `커스텀 ID는 날짜 기반 접두사로 시작해야 함: ${customId}`);
   });
 
   // ─────────────────────────────────────────────────────────────

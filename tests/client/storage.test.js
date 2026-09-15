@@ -75,32 +75,38 @@ export async function run() {
     assert.strictEqual(emptyAvatar, fallback);
   });
 
-  // 2. filterAndDeduplicateSchedules
-  runner.test('filterAndDeduplicateSchedules: 중복 제거 및 고유 ID/날짜제목 안전망 검증', () => {
+  // 2. filterAndDeduplicateSchedules (순수 뷰어 무손실 보존 및 중복 제거)
+  runner.test('filterAndDeduplicateSchedules: 고유 ID 기반 중복 제거 및 무손실 보존', () => {
+    // 다양한 소스(blip, mnet, youtube, custom)와 노이즈(쇼츠, 태그)가 섞인 데이터셋
     const rawItems = [
-      { id: '1', title: '뮤직뱅크 본방', startTime: '2026-09-15T17:00:00+09:00' },
-      { id: '1', title: '뮤직뱅크 본방', startTime: '2026-09-15T17:00:00+09:00' }, // ID 중복 -> 1건만 유지
-      { id: '2', title: '인기가요 본방', startTime: '2026-09-15T18:00:00+09:00', message: '관련 영상: https://youtu.be/xxx, https://www.youtube.com/shorts/yyy' },
-      { id: '3', title: '엠넷플러스 방송', startTime: '2026-09-16T12:00:00+09:00' },
-      { id: '4', title: '팬사인회 공지', startTime: '2026-09-17T14:00:00+09:00' }
+      { id: 'sched_src_a_001', title: 'Event Alpha', startTime: '2026-09-15T17:00:00+09:00' },
+      { id: 'sched_src_a_001', title: 'Event Alpha (Duplicated)', startTime: '2026-09-15T17:00:00+09:00' }, // ID 중복 -> 1건만 유지
+      { id: 'sched_src_b_002', title: 'Broadcast Beta', startTime: '2026-09-15T18:00:00+09:00', message: 'Contains shorts: https://youtube.com/shorts/test_id' },
+      { id: 'sched_src_c_003', title: 'Live Stream Gamma', startTime: '2026-09-16T12:00:00+09:00', message: '@official_tag #hashtag' },
+      { id: 'sched_src_d_004', title: 'Festival Delta', startTime: '2026-09-17T14:00:00+09:00' }
     ];
 
     const result = filterAndDeduplicateSchedules(rawItems);
-    assert.strictEqual(result.length, 4, '중복 1건만 제거되고 나머지 4건은 온전히 보존되어야 합니다.');
-    assert.strictEqual(result[0].id, '1');
-    assert.strictEqual(result[1].id, '2');
-    assert.strictEqual(result[2].id, '3');
-    assert.strictEqual(result[3].id, '4');
+    assert.strictEqual(result.length, 4, '동일 ID 1건만 제거되고 나머지 4건은 온전히 보존되어야 함');
+    assert.strictEqual(result[0].id, 'sched_src_a_001');
+    assert.strictEqual(result[1].id, 'sched_src_b_002');
+    assert.strictEqual(result[2].id, 'sched_src_c_003');
+    assert.strictEqual(result[3].id, 'sched_src_d_004');
   });
 
-  runner.test('filterAndDeduplicateSchedules: 커스텀/수정 일정 및 공식 행사 100% 보존', () => {
-    const rawItems = [
-      { id: 'custom_1', title: '삼성 라이온즈 시구/공연', startTime: '2024-08-03T00:00:00+09:00', message: 'https://www.youtube.com/shorts/FOVjOMyKFPg' }
+  runner.test('filterAndDeduplicateSchedules: 다양한 접두사(custom/manual/legacy/external) 및 미디어 링크 포함 일정 100% 보존', () => {
+    const testCases = [
+      { id: `custom_${Date.now()}_a1`, title: 'Manual Festival Entry', startTime: '2026-10-01T00:00:00+09:00', message: 'https://www.youtube.com/shorts/sample1' },
+      { id: `blip_${Date.now()}_b2`, title: 'Official Broadcast Entry', startTime: '2026-10-02T10:00:00+09:00', message: 'https://youtube.com/watch?v=sample2' },
+      { id: `mnet_${Date.now()}_c3`, title: 'Community Post Entry', startTime: '2026-10-03T15:00:00+09:00', message: 'https://instagram.com/p/sample3' }
     ];
 
-    const result = filterAndDeduplicateSchedules(rawItems);
-    assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].id, 'custom_1');
+    const result = filterAndDeduplicateSchedules(testCases);
+    assert.strictEqual(result.length, testCases.length, '모든 소스의 일정이 클라이언트에서 누락 없이 100% 보존되어야 함');
+    testCases.forEach((tc, idx) => {
+      assert.strictEqual(result[idx].id, tc.id);
+      assert.strictEqual(result[idx].title, tc.title);
+    });
   });
 
   runner.test('filterAndDeduplicateSchedules: 빈 배열 및 비정상 입력 방어', () => {

@@ -40,6 +40,7 @@ import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test
 import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
 import { run as runOpsUiDomTest } from './docs/ops-ui-dom.test.js';
 import { run as runOpsUserInspectorTest } from './docs/ops-user-inspector.test.js';
+import { run as runOpsPortalUiEnhancementsTest } from './docs/ops-portal-ui-enhancements.test.js';
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
@@ -153,6 +154,7 @@ async function main() {
     runOpsEngineTest,
     runOpsUiDomTest,
     runOpsUserInspectorTest,
+    runOpsPortalUiEnhancementsTest,
     runPagesTest,
     runSeoTest
   ];

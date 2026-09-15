@@ -1308,10 +1308,14 @@ export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
 
     const matchedRaw = sampleRawItems.find(r => {
       const rKey = `${(r.startTime || '').slice(0, 10)}_${r.title}`;
-      return rKey === mKey || r.title === mVal.title;
+      return (mVal && mVal.id && r.id === mVal.id) || rKey === mKey || r.title === (mVal && mVal.title);
     });
 
-    const targetId = matchedRaw ? matchedRaw.id : `mod_${crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8)}`;
+    // ID 불변성 원칙: 기존 고유 ID 최우선 보존 (신규 mod_ 파편 발급 방지)
+    const targetId = (mVal && mVal.id && typeof mVal.id === 'string' && mVal.id.trim())
+      ? mVal.id.trim()
+      : (matchedRaw ? matchedRaw.id : (v2.legacyAliases[mKey] || `mod_${crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8)}`));
+
     v2.sourceOverrides[targetId] = {
       ...v2.sourceOverrides[targetId],
       ...mVal,

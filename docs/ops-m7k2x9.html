@@ -558,8 +558,48 @@
     .schedule-card.status-new-collected {
       border-left: 3.5px solid #10b981;
       border-color: rgba(16, 185, 129, 0.4);
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(20, 24, 33, 0.95) 35%);
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.12);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+
+    /* 컴팩트 1줄 카드 (숨김 일정 및 자동 필터 제외 일정) */
+    .schedule-card-compact {
+      min-height: unset;
+      transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .schedule-card-compact:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .schedule-card-compact-deleted {
+      background: rgba(15, 17, 23, 0.5);
+      border: 1px dashed rgba(239, 68, 68, 0.3);
+      opacity: 0.65;
+    }
+
+    .schedule-card-compact-deleted:hover {
+      opacity: 0.95;
+    }
+
+    .schedule-card-compact-filtered {
+      background: rgba(30, 20, 25, 0.6);
+      border: 1px dashed rgba(248, 113, 113, 0.35);
+      opacity: 0.75;
+    }
+
+    .schedule-card-compact-filtered:hover {
+      opacity: 1;
+    }
+
+    .linked-sub-stack-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .linked-sub-stack-accordion[open] .linked-accordion-summary {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-bottom: none;
     }
 
     .card-top {
@@ -3108,46 +3148,50 @@
         // 4. 제외 필터 규칙 적용 (수정 중, 커스텀 일정, 삭제/숨김된 일정은 보호)
         const isProtected = isItemDeleted || item._isCustom || (pendingOverrides && pendingOverrides.modified && (pendingOverrides.modified[item.id] || pendingOverrides.modified[itemKey])) || (appliedOverrides && appliedOverrides.modified && (appliedOverrides.modified[item.id] || appliedOverrides.modified[itemKey]));
 
+        item._filterReason = null;
         if (!isProtected) {
           // 4-1. 쇼츠 제외
           if (excludeShorts) {
             const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
             if (item._isShorts || /youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) {
-              return false;
+              item._filterReason = '쇼츠/숏폼 영상';
             }
           }
 
           // 4-2. 종류별 제외
-          if (excludeTypes.length > 0) {
+          if (!item._filterReason && excludeTypes.length > 0) {
             const resolvedType = resolveScheduleType(item);
             if (excludeTypes.includes(resolvedType) || (item.typeText && excludeTypes.includes(item.typeText))) {
-              return false;
+              item._filterReason = `카테고리 제외 (${resolvedType || item.typeText})`;
             }
           }
 
           // 4-3. 채널별 제외
-          if (excludeChannels.length > 0) {
+          if (!item._filterReason && excludeChannels.length > 0) {
             const channelValues = [
               item.channel,
               (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)
             ].filter(Boolean).map(s => s.trim().toLowerCase());
 
-            const isChannelExcluded = excludeChannels.some(ex => {
+            const matchedCh = excludeChannels.find(ex => {
               const cleanEx = ex.trim().toLowerCase();
-              if (!cleanEx) return false;
-              return channelValues.some(c => c === cleanEx || c.includes(cleanEx));
+              return cleanEx && channelValues.some(c => c === cleanEx || c.includes(cleanEx));
             });
-            if (isChannelExcluded) return false;
+            if (matchedCh) {
+              item._filterReason = `제외 채널: ${matchedCh}`;
+            }
           }
 
           // 4-4. 키워드 제외
-          if (filterEnabled && excludeKeywords.length > 0) {
+          if (!item._filterReason && filterEnabled && excludeKeywords.length > 0) {
             const fullText = [item.title, item.message, item.url, item.link, item.channel, item.location, (item.extField && item.extField.value)].filter(Boolean).join(' ').toLowerCase();
-            const hasBlockedKw = excludeKeywords.some(kw => {
+            const matchedKw = excludeKeywords.find(kw => {
               const cleanKw = kw.trim().toLowerCase();
               return cleanKw && fullText.includes(cleanKw);
             });
-            if (hasBlockedKw) return false;
+            if (matchedKw) {
+              item._filterReason = `키워드: ${matchedKw}`;
+            }
           }
         }
 
@@ -3359,6 +3403,49 @@
           const safeKey = escapeHtml(key);
           const safeKeyJs = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
+          // ① [UI 개선 1] 숨김(삭제) 처리된 일정: 1줄 얇은 컴팩트 카드로 표시
+          if (isDeleted) {
+            html += `
+              <div class="schedule-card schedule-card-compact schedule-card-compact-deleted status-excluded" data-key="${safeKey}" onclick="openDetailModalByKey('${safeKeyJs}')" style="cursor: pointer; padding: 6px 12px; margin-bottom: 6px;">
+                <div class="compact-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px;">
+                  <div class="compact-main" style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow: hidden;">
+                    <span class="state-badge badge-del" style="flex-shrink: 0;">숨김됨</span>
+                    <span class="type-badge ${typeBadgeClass}" style="flex-shrink: 0; font-size: 10px; padding: 1px 6px;">${escapeHtml(type)}</span>
+                    <span class="compact-title" style="font-size: 12.5px; font-weight: 500; color: var(--text-muted); text-decoration: line-through; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(primaryItem.title)}</span>
+                    ${primaryItem.location ? `<span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">📍 ${escapeHtml(primaryItem.location)}</span>` : ''}
+                    <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${timeStr}</span>
+                  </div>
+                  <div class="compact-actions" style="flex-shrink: 0; display: flex; align-items: center; gap: 4px;" onclick="event.stopPropagation()">
+                    ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
+                    <button class="btn-action btn-restore" style="padding: 2px 8px; font-size: 11px;" onclick="restoreItem('${safeKeyJs}')">복구</button>
+                  </div>
+                </div>
+              </div>
+            `;
+            return;
+          }
+
+          // ⑤ [UI 개선 5] 자동 제외 필터된 일정: 숨김 일정처럼 1줄 컴팩트 표시 + [🚫 필터: 사유] 뱃지 (복구 대신 사유 표시)
+          if (primaryItem._filterReason) {
+            html += `
+              <div class="schedule-card schedule-card-compact schedule-card-compact-filtered status-filtered" data-key="${safeKey}" onclick="openDetailModalByKey('${safeKeyJs}')" style="cursor: pointer; padding: 6px 12px; margin-bottom: 6px; opacity: 0.85;">
+                <div class="compact-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px;">
+                  <div class="compact-main" style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow: hidden;">
+                    <span class="state-badge badge-filtered" style="flex-shrink: 0; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;">🚫 필터: ${escapeHtml(primaryItem._filterReason)}</span>
+                    <span class="type-badge ${typeBadgeClass}" style="flex-shrink: 0; font-size: 10px; padding: 1px 6px;">${escapeHtml(type)}</span>
+                    <span class="compact-title" style="font-size: 12.5px; font-weight: 500; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(primaryItem.title)}</span>
+                    <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${timeStr}</span>
+                  </div>
+                  <div class="compact-actions" style="flex-shrink: 0; display: flex; align-items: center; gap: 4px;" onclick="event.stopPropagation()">
+                    ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
+                    <button class="btn-action" style="padding: 2px 8px; font-size: 11px;" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
+                  </div>
+                </div>
+              </div>
+            `;
+            return;
+          }
+
           let subStackHtml = '';
           if (subItems.length > 0) {
             let subRowsHtml = '';
@@ -3412,19 +3499,23 @@
               `;
             });
 
+            // ② [UI 개선 2] 연관 일정 접어두기 (기본 접힌 아코디언 토글)
             subStackHtml = `
-              <div class="linked-sub-stack" style="margin-top: 10px; padding: 8px 10px; background: rgba(56, 189, 248, 0.04); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
-                <div style="font-size: 10.5px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; justify-content: space-between;">
+              <details class="linked-sub-stack-accordion" style="margin-top: 10px;" onclick="event.stopPropagation()">
+                <summary class="linked-accordion-summary" style="cursor: pointer; font-size: 11px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(56, 189, 248, 0.06); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 6px; user-select: none;">
                   <span>🔗 함께 합성된 연관 일정 (${subItems.length}건)</span>
-                  <span style="font-size: 10px; font-weight: normal; color: var(--text-muted);">사용자 화면엔 1개로 통합 노출</span>
+                  <span style="font-size: 10px; font-weight: normal; color: var(--text-muted);">클릭하여 접기/펼치기 ▾</span>
+                </summary>
+                <div class="linked-sub-stack-content" style="padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                  ${subRowsHtml}
                 </div>
-                ${subRowsHtml}
-              </div>
+              </details>
             `;
           }
 
+          // ③ [UI 개선 3] 카드 본체 클릭 시 세부 모달 열기 (onclick="openDetailModalByKey")
           html += `
-            <div class="schedule-card ${statusClass}" data-key="${safeKey}">
+            <div class="schedule-card ${statusClass}" data-key="${safeKey}" onclick="openDetailModalByKey('${safeKeyJs}')" style="cursor: pointer;">
               <div class="card-top">
                 <div class="thumb-box">
                   ${primaryItem.thumbnail ? `<img src="${escapeHtml(primaryItem.thumbnail)}" class="thumb-img" alt="">` : `<div class="thumb-placeholder">${placeholderIcon}</div>`}
@@ -3444,15 +3535,12 @@
 
               <div class="card-bottom">
                 <div class="card-time">⏰ ${timeStr}</div>
-                <div class="card-actions">
+                <div class="card-actions" onclick="event.stopPropagation()">
                   ${isNewCollected ? `<button type="button" class="btn-action btn-confirm-new" onclick="markNewScheduleAsRead('${safeKeyJs}', event)" title="확인 완료 처리">✓ 확인</button>` : ''}
                   ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
-                  ${isDeleted ?
-              `<button class="btn-action btn-restore" onclick="restoreItem('${safeKeyJs}')">복구</button>` :
-              `${(isPendingMod || isSavedMod) && hasRawOriginal ? `<button type="button" class="btn-action btn-restore-mod" onclick="restoreModifiedItem('${safeKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
-               <button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
-                     <button class="btn-action btn-del" onclick="toggleDeleteItem('${safeKeyJs}')">🗑️ 숨김</button>`
-            }
+                  ${(isPendingMod || isSavedMod) && hasRawOriginal ? `<button type="button" class="btn-action btn-restore-mod" onclick="restoreModifiedItem('${safeKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
+                  <button class="btn-action" onclick="openEditModalByKey('${safeKeyJs}')">✏️ 수정</button>
+                  <button class="btn-action btn-del" onclick="toggleDeleteItem('${safeKeyJs}')">🗑️ 숨김</button>
                 </div>
               </div>
               ${subStackHtml}
@@ -3474,16 +3562,13 @@
 
       const itemsInMonth = filterScheduleItems(allSchedules, { monthStart, monthEnd, isSearching: false });
 
-      let contentHtml = '';
+      // ④ [UI 개선 4] 일정이 없는 달은 표시하지 않음 (빈 박스/플레이스홀더 생략으로 스크롤 낭비 제거)
       if (itemsInMonth.length === 0) {
-        contentHtml = `
-          <div class="empty-month-placeholder">
-            <span>📅 ${year}년 ${month + 1}월에 등록된 일정이 없습니다.</span>
-          </div>
-        `;
-      } else {
-        contentHtml = renderScheduleGroupsHTML(itemsInMonth);
+        return '';
       }
+
+      const contentHtml = renderScheduleGroupsHTML(itemsInMonth);
+      if (!contentHtml || !contentHtml.trim()) return '';
 
       return `
         <div class="month-section" id="month-section-${ym}" data-month="${ym}">
@@ -3840,6 +3925,17 @@
       }, 80);
     }
     window.renderSchedules = renderSchedules;
+
+    // ③ [UI 개선 3] 카드 본체 클릭 시 세부 내용 모달 표시 헬퍼
+    function openDetailModalByKey(key) {
+      if (!key) return;
+      const allList = (Array.isArray(allSchedules) && allSchedules.length > 0) ? allSchedules : (window.allSchedules || []);
+      const item = allList.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      if (item && typeof showUserPreviewDetail === 'function') {
+        showUserPreviewDetail(item);
+      }
+    }
+    window.openDetailModalByKey = openDetailModalByKey;
 
 
     // 모달 열기

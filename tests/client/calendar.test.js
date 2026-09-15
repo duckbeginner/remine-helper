@@ -5,11 +5,7 @@ import { TestRunner, assert } from '../test-helper.js';
 import {
   parseSafeDate,
   cleanScheduleText,
-  normalizeTitle,
-  parseTitleStructure,
-  areSchedulesDuplicate,
   deduplicateScheduleList,
-  pickBestTitle,
   getScheduleTypeInfo,
   getMemberAttendeeBadgesHTML,
   createScheduleItemHTML
@@ -36,93 +32,75 @@ export async function run() {
     assert.strictEqual(dEmpty, null, '빈 값 인입 시 정책 1에 따라 null 반환');
   });
 
-  // 2. cleanScheduleText & normalizeTitle
+  // 2. cleanScheduleText
   runner.test('cleanScheduleText: 특수문자, 이모지, 중복 공백 제거', () => {
     const raw = '🎉 [방송] 리센느(RESCENE) - 인기가요! 🎬';
     const cleaned = cleanScheduleText(raw);
     assert.strictEqual(cleaned, '방송 리센느 rescene 인기가요');
   });
 
-  runner.test('normalizeTitle: 동의어(m countdown -> 엠카운트다운 등) 표준화 및 공백 압축', () => {
-    const t1 = normalizeTitle('M Countdown 생방송');
-    assert(t1.includes('엠카운트다운'));
-
-    const t2 = normalizeTitle('Music Bank');
-    assert(t2.includes('뮤직뱅크'));
-
-    const t3 = normalizeTitle('Inkigayo');
-    assert(t3.includes('인기가요'));
-  });
-
-  // 3. parseTitleStructure
-  runner.test('parseTitleStructure: <메인> 서브 또는 [메인] 서브 정밀 분해', () => {
-    const res1 = parseTitleStructure('<더쇼> 리센느 출연');
-    assert(res1.main.includes('더쇼'));
-    assert(res1.sub.includes('리센느출연'));
-
-    const res2 = parseTitleStructure('[뮤직뱅크] 생방송 본방');
-    assert(res2.main.includes('뮤직뱅크'));
-    assert(res2.sub.includes('생방송본방'));
-  });
-
-  runner.test('parseTitleStructure: 하이픈 및 콜론 구분자(메인 - 서브) 분해', () => {
-    const res = parseTitleStructure('인기가요 - 리센느 무대');
-    assert(res.main.includes('인기가요'));
-    assert(res.sub.includes('리센느무대'));
-  });
-
-  // 4. areSchedulesDuplicate & deduplicateScheduleList
-  runner.test('areSchedulesDuplicate: 구조적 타이틀 및 부제에 따른 중복/개별 판정', () => {
-    const item1 = { title: 'KBS2 뮤직뱅크 본방', channel: 'KBS2' };
-    const item2 = { title: '뮤직뱅크', channel: 'KBS2' };
-    assert(areSchedulesDuplicate(item1, item2) === true);
-
-    const eventMain1 = { title: '<케이콘> 레드카펫' };
-    const eventMain2 = { title: '<케이콘> 본공연' };
-    assert(areSchedulesDuplicate(eventMain1, eventMain2) === false);
-
-    const diff1 = { title: '쇼챔피언' };
-    const diff2 = { title: '인기가요' };
-    assert(areSchedulesDuplicate(diff1, diff2) === false);
-  });
-
+  // 3. deduplicateScheduleList: 순수 패스스루 검증
   runner.test('deduplicateScheduleList: v2.0 스케줄 패스스루 및 배열 무결성 검증', () => {
     const list = [
-      { id: '1', title: '뮤직뱅크' },
-      { id: '2', title: '인기가요' }
+      { id: 'item_1', title: '스케줄 A' },
+      { id: 'item_2', title: '스케줄 B' }
     ];
     const result = deduplicateScheduleList(list);
     assert.strictEqual(result.length, 2);
     assert.deepStrictEqual(deduplicateScheduleList([]), []);
   });
 
-  // 6. pickBestTitle
-  runner.test('pickBestTitle: 괄호 유무 및 길이 기반 최적 제목 판별', () => {
-    assert.strictEqual(pickBestTitle('인기가요 (생방송)', '인기가요'), '인기가요 (생방송)');
-    assert.strictEqual(pickBestTitle('뮤직뱅크', '뮤직뱅크 (본방)'), '뮤직뱅크 (본방)');
-    assert.strictEqual(pickBestTitle('더쇼 생방송 리센느', '더쇼'), '더쇼 생방송 리센느');
-    assert.strictEqual(pickBestTitle('', '음악중심'), '음악중심');
-    assert.strictEqual(pickBestTitle('음악중심', ''), '음악중심');
+  // 4. getScheduleTypeInfo: 순수 뷰어 보존 원칙 검증 (하드코딩 배제, 일반화된 속성 매트릭스)
+  runner.test('getScheduleTypeInfo [Pure Viewer]: 본문/URL 키워드와 무관하게 서버의 typeText 100% 보존', () => {
+    // 다양한 공식 카테고리
+    const testCategories = ['행사', '공연', '방송', '팬이벤트', '기념일', '릴리즈', '화보', '공지'];
+    
+    // 본문에 포함될 수 있는 유혹적인(오인 유발) 다양한 노이즈 키워드 패턴들
+    const noisePatterns = [
+      '@rescene_official 인스타 공지',
+      '공식 유튜브 영상 공개: https://www.youtube.com/watch?v=mock123',
+      '비하인드 vlog 및 쇼츠: https://www.youtube.com/shorts/mockShorts',
+      '자체콘텐츠 ep.01 풀버전 릴스: https://www.instagram.com/reel/mockReel',
+      '안녕하세요원이입니다잘부탁드립니다 채널 업로드'
+    ];
+
+    testCategories.forEach(cat => {
+      noisePatterns.forEach(noise => {
+        const mockItem = {
+          id: `mock_${cat}_${Math.random().toString(36).slice(2, 7)}`,
+          title: `모의 일정 (${cat})`,
+          typeText: cat,
+          message: noise,
+          url: 'https://youtu.be/mockVid',
+          location: '모의 장소'
+        };
+
+        const result = getScheduleTypeInfo(mockItem);
+        // 클라이언트는 본문 노이즈에 휘둘리지 않고 서버가 준 typeText를 100% 보존해야 함!
+        assert.strictEqual(
+          result.typeText,
+          cat,
+          `본문에 "${noise}"가 포함되어 있어도 원본 카테고리 [${cat}]이 [${result.typeText}]로 변조되지 않고 온전히 보존되어야 합니다.`
+        );
+        assert(result.bg, '배경색 스타일이 지정되어야 합니다.');
+        assert(result.color, '글자색 스타일이 지정되어야 합니다.');
+      });
+    });
   });
 
-  // 7. 클라이언트 방어 코드: extField 없는 순수 최상위 필드 처리 (TDD)
-  runner.test('getScheduleTypeInfo: extField 없이 channel 및 location 최상위 필드만으로 타입 분류', () => {
-    // 7-1. channel 필드로 방송 분류
-    const broadcastItem = { title: '특별 생방송', channel: 'SBS' };
-    const broadcastType = getScheduleTypeInfo(broadcastItem);
-    assert.strictEqual(broadcastType.typeText, '방송');
+  // 5. getScheduleTypeInfo: typeText 미지정 시 안전한 최소 fallback (channel -> 방송, location -> 행사)
+  runner.test('getScheduleTypeInfo [Fallback]: typeText 부재 시 channel/location 기반 기본 분류', () => {
+    // channel 필드로 방송 분류
+    const broadcastItem = { title: '모의 방송 프로그램', channel: '방송국 채널' };
+    assert.strictEqual(getScheduleTypeInfo(broadcastItem).typeText, '방송');
 
-    // 7-2. location 필드로 행사 분류
-    const eventItem = { title: '야외 공연', location: '올림픽공원' };
-    const eventType = getScheduleTypeInfo(eventItem);
-    assert.strictEqual(eventType.typeText, '행사');
-  });
+    // location 필드로 행사 분류
+    const eventItem = { title: '모의 현장 공연', location: '야외 공연장' };
+    assert.strictEqual(getScheduleTypeInfo(eventItem).typeText, '행사');
 
-  runner.test('areSchedulesDuplicate: extField 없이 channel vs location 최상위 필드만으로 방송과 공연 분리 보존', () => {
-    const item1 = { title: '리센느 스페셜', channel: 'SBS' };
-    const item2 = { title: '리센느 스페셜', location: '올림픽공원 체조경기장' };
-    // 동일한 제목이라도 하나는 방송이고 하나는 현장 행사이므로 절대 병합되지 않아야 함
-    assert.strictEqual(areSchedulesDuplicate(item1, item2), false);
+    // 둘 다 없을 시 기본 '일정'
+    const defaultItem = { title: '일반 미분류 일정' };
+    assert.strictEqual(getScheduleTypeInfo(defaultItem).typeText, '일정');
   });
 
   // 8. 참석 멤버(starAttendees) 미니 아바타 뱃지(14px) 렌더링 (TDD)
