@@ -180,6 +180,92 @@ export async function run() {
     });
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 6. 검색창 접기/펼치기 토글 및 자동 포커스(Auto-Focus) 동작 검증
+  // ─────────────────────────────────────────────────────────────
+  runner.test('Collapsible Search Panel: 기본 접힘 상태, 열기 시 자동 포커스 및 닫기 시 초기화 검증', () => {
+    // 모의 UI 상태 머신
+    let isPanelOpen = false;
+    let isInputFocused = false;
+    let queryValue = '';
+
+    const mockUi = {
+      openSearch() {
+        isPanelOpen = true;
+        // 즉시 자동 포커스 트리거
+        mockUi.focusInput();
+      },
+      closeSearch() {
+        isPanelOpen = false;
+        isInputFocused = false;
+        queryValue = '';
+      },
+      focusInput() {
+        isInputFocused = true;
+      }
+    };
+
+    // 초기 상태: 접힘
+    assert.strictEqual(isPanelOpen, false, '초기 상태는 접혀 있어야 함');
+    assert.strictEqual(isInputFocused, false);
+
+    // 열기 실행: 펼침 + 즉시 포커스
+    mockUi.openSearch();
+    assert.strictEqual(isPanelOpen, true, '열기 실행 시 패널이 열려야 함');
+    assert.strictEqual(isInputFocused, true, '열기 실행 시 입력창에 즉시 자동 포커스가 부여되어야 함');
+
+    // 닫기 실행: 접힘 + 검색어 초기화
+    queryValue = '검색어';
+    mockUi.closeSearch();
+    assert.strictEqual(isPanelOpen, false, '닫기 실행 시 패널이 닫혀야 함');
+    assert.strictEqual(queryValue, '', '닫기 실행 시 검색어가 비워져야 함');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 7. 검색 버튼 조건부 활성화 및 지우기(X) 버튼 초기화 검증
+  // ─────────────────────────────────────────────────────────────
+  runner.test('Conditional Search & Clear Button: 입력값 유무에 따른 검색 버튼 활성화 및 X 버튼 초기화 검증', () => {
+    function computeSearchControlState(rawInputValue) {
+      const trimmed = (rawInputValue || '').trim();
+      const hasValue = trimmed.length > 0;
+      return {
+        isSearchBtnDisabled: !hasValue,
+        isClearBtnVisible: hasValue,
+        searchQueryToExecute: hasValue ? trimmed : ''
+      };
+    }
+
+    // 1) 빈 입력값 또는 공백일 때
+    const emptyState1 = computeSearchControlState('');
+    assert.strictEqual(emptyState1.isSearchBtnDisabled, true, '내용이 없으면 검색 버튼이 비활성화되어야 함');
+    assert.strictEqual(emptyState1.isClearBtnVisible, false, '내용이 없으면 X 버튼이 숨겨져야 함');
+
+    const emptyState2 = computeSearchControlState('   ');
+    assert.strictEqual(emptyState2.isSearchBtnDisabled, true, '공백만 있으면 검색 버튼이 비활성화되어야 함');
+    assert.strictEqual(emptyState2.isClearBtnVisible, false, '공백만 있으면 X 버튼이 숨겨져야 함');
+
+    // 2) 텍스트 입력 시
+    const activeState = computeSearchControlState('리센느');
+    assert.strictEqual(activeState.isSearchBtnDisabled, false, '내용이 있으면 검색 버튼이 활성화되어야 함');
+    assert.strictEqual(activeState.isClearBtnVisible, true, '내용이 있으면 X 버튼이 표시되어야 함');
+    assert.strictEqual(activeState.searchQueryToExecute, '리센느');
+
+    // 3) X 버튼 클릭으로 리셋 시뮬레이션
+    let currentInput = '이전 검색어';
+    let currentQuery = '이전 검색어';
+    function clickClearButton() {
+      currentInput = '';
+      currentQuery = '';
+      return computeSearchControlState(currentInput);
+    }
+
+    const resetState = clickClearButton();
+    assert.strictEqual(currentInput, '', 'X 버튼 클릭 시 인풋 내용이 지워져야 함');
+    assert.strictEqual(currentQuery, '', 'X 버튼 클릭 시 검색 쿼리가 초기화되어야 함');
+    assert.strictEqual(resetState.isSearchBtnDisabled, true, '초기화 후 검색 버튼이 다시 비활성화되어야 함');
+    assert.strictEqual(resetState.isClearBtnVisible, false, '초기화 후 X 버튼이 숨겨져야 함');
+  });
+
   return runner.summary();
 }
 

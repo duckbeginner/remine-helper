@@ -257,14 +257,58 @@
       cursor: pointer;
     }
 
-    /* 검색 & 카테고리 필터 */
+    /* 검색 토글 & 카테고리 필터 */
     .filter-section {
       padding: 4px 18px 10px;
     }
 
+    .btn-search-toggle {
+      margin-left: auto;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-search-toggle:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--border-focus);
+    }
+
+    .btn-search-toggle.active {
+      background: rgba(124, 92, 252, 0.2);
+      border-color: #7c5cfc;
+      color: #c4b5fd;
+    }
+
+    .search-panel {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 6px 8px;
+      animation: searchSlideDown 0.2s ease;
+    }
+
+    @keyframes searchSlideDown {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .search-box {
       position: relative;
-      margin-bottom: 8px;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      flex: 1;
     }
 
     .search-input {
@@ -272,7 +316,7 @@
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 9px 14px 9px 36px;
+      padding: 8px 32px 8px 36px;
       color: var(--text-main);
       font-size: 13px;
       outline: none;
@@ -285,12 +329,80 @@
 
     .search-icon {
       position: absolute;
-      left: 12px;
+      left: 11px;
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 13px;
       pointer-events: none;
+    }
+
+    .btn-clear-search {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s ease;
+    }
+
+    .btn-clear-search:hover {
+      background: rgba(239, 68, 68, 0.35);
+      color: #fff;
+    }
+
+    .btn-search-submit {
+      padding: 8px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: #7c5cfc;
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .btn-search-submit:hover:not(:disabled) {
+      background: #6d4be0;
+      box-shadow: 0 0 10px rgba(124, 92, 252, 0.4);
+    }
+
+    .btn-search-submit:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+
+    .btn-search-close {
+      padding: 8px 10px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .btn-search-close:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
     }
 
     .filter-chips {
@@ -1885,13 +1997,27 @@
         <button class="month-arrow" id="btnNextMonth">▶</button>
       </div>
       <button class="today-btn" id="btnToday">오늘로</button>
+      <button class="btn-search-toggle" id="btnToggleSearch" title="검색창 열기/접기">
+        <span>🔍</span><span id="btnToggleSearchText">검색</span>
+      </button>
     </section>
 
     <!-- 검색 & 카테고리 필터 -->
     <section class="filter-section">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색...">
+      <div class="search-panel" id="searchPanel" style="display: none; margin-bottom: 8px;">
+        <div class="search-box" style="display: flex; gap: 6px; align-items: center;">
+          <div class="search-input-wrapper" style="position: relative; flex: 1;">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="일정 제목, 채널, 장소 검색 (Enter 입력)..." style="padding-right: 32px;">
+            <button type="button" class="btn-clear-search" id="btnClearSearch" title="검색어 지우기" style="display: none;">✕</button>
+          </div>
+          <button type="button" class="btn-search-submit" id="btnSearch" disabled title="검색 실행">
+            검색
+          </button>
+          <button type="button" class="btn-search-close" id="btnCloseSearch" title="검색창 접기">
+            접기 ▴
+          </button>
+        </div>
       </div>
       <div class="filter-chips">
         <button class="chip active" data-type="all">전체</button>
@@ -3874,7 +4000,7 @@
         const searchBanner = `
           <div style="background: rgba(124, 92, 252, 0.15); border: 1px solid rgba(124, 92, 252, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #c4b5fd; display:flex; justify-content:space-between; align-items:center;">
             <span>🔍 전체 기간 검색 결과: <strong>${filtered.length}건</strong> (검색어: "${escapeHtml(searchQuery)}")</span>
-            <button onclick="document.getElementById('searchInput').value=''; searchQuery=''; renderSchedules();" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">✕ 검색 닫기</button>
+            <button onclick="if(window.clearSearchState) window.clearSearchState(false); if(window.toggleSearchPanel) window.toggleSearchPanel(false);" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">✕ 검색 닫기</button>
           </div>
         `;
 
@@ -6429,10 +6555,90 @@
       document.getElementById('currentMonthText').textContent = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
 
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      searchQuery = e.target.value.trim();
+    // ─────────────────────────────────────────────────────────────
+    // 검색창 접기/펼치기, 자동 포커스, 조건부 검색 및 지우기(X) 핸들러
+    // ─────────────────────────────────────────────────────────────
+    const searchPanel = document.getElementById('searchPanel');
+    const searchInput = document.getElementById('searchInput');
+    const btnSearch = document.getElementById('btnSearch');
+    const btnClearSearch = document.getElementById('btnClearSearch');
+    const btnToggleSearch = document.getElementById('btnToggleSearch');
+    const btnToggleSearchText = document.getElementById('btnToggleSearchText');
+    const btnCloseSearch = document.getElementById('btnCloseSearch');
+
+    function toggleSearchPanel(forceOpen) {
+      if (!searchPanel) return;
+      const isOpen = searchPanel.style.display !== 'none';
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isOpen;
+
+      if (shouldOpen) {
+        searchPanel.style.display = 'block';
+        if (btnToggleSearch) btnToggleSearch.classList.add('active');
+        if (btnToggleSearchText) btnToggleSearchText.textContent = '검색 닫기';
+        // 즉시 검색창 자동 포커스 (Auto-Focus)
+        setTimeout(() => {
+          if (searchInput) searchInput.focus();
+        }, 30);
+      } else {
+        searchPanel.style.display = 'none';
+        if (btnToggleSearch) btnToggleSearch.classList.remove('active');
+        if (btnToggleSearchText) btnToggleSearchText.textContent = '검색';
+        if (searchQuery || (searchInput && searchInput.value)) {
+          clearSearchState(false);
+        }
+      }
+    }
+
+    function updateSearchButtonState() {
+      if (!searchInput) return;
+      const val = searchInput.value.trim();
+      const hasVal = val.length > 0;
+      if (btnSearch) btnSearch.disabled = !hasVal;
+      if (btnClearSearch) btnClearSearch.style.display = hasVal ? 'flex' : 'none';
+    }
+
+    function executeSearch() {
+      if (!searchInput) return;
+      const q = searchInput.value.trim();
+      if (!q) return;
+      searchQuery = q;
       renderSchedules();
-    });
+    }
+
+    function clearSearchState(shouldFocus = true) {
+      if (searchInput) searchInput.value = '';
+      updateSearchButtonState();
+      if (searchQuery) {
+        searchQuery = '';
+        renderSchedules();
+      }
+      if (shouldFocus && searchInput && searchPanel && searchPanel.style.display !== 'none') {
+        searchInput.focus();
+      }
+    }
+
+    if (btnToggleSearch) btnToggleSearch.addEventListener('click', () => toggleSearchPanel());
+    if (btnCloseSearch) btnCloseSearch.addEventListener('click', () => toggleSearchPanel(false));
+    if (btnSearch) btnSearch.addEventListener('click', executeSearch);
+    if (btnClearSearch) btnClearSearch.addEventListener('click', () => clearSearchState(true));
+
+    // 타이핑 시에는 무거운 전체 재렌더링을 일절 하지 않고 버튼 상태만 가볍게 갱신 (렉 0%)
+    if (searchInput) {
+      searchInput.addEventListener('input', updateSearchButtonState);
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSearch();
+        } else if (e.key === 'Escape') {
+          toggleSearchPanel(false);
+        }
+      });
+    }
+
+    // 전역 바인딩
+    window.toggleSearchPanel = toggleSearchPanel;
+    window.executeSearch = executeSearch;
+    window.clearSearchState = clearSearchState;
 
     document.querySelectorAll('.chip').forEach(chip => {
       chip.addEventListener('click', () => {
