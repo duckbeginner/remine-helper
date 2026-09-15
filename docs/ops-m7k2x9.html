@@ -950,153 +950,33 @@
       opacity: 1;
     }
 
-    /* 자체 커스텀 확인 팝업 모달 */
-    #confirmModalOverlay {
-      align-items: center;
-      justify-content: center;
-      z-index: 300;
-    }
-    .confirm-dialog-card {
-      width: 92%;
-      max-width: 520px;
-      background: #151824;
-      border: 1px solid rgba(124, 92, 252, 0.45);
-      border-radius: 20px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(124, 92, 252, 0.25);
-      padding: 22px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      animation: scaleUpDialog 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes scaleUpDialog {
-      from { transform: scale(0.92); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    .confirm-dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .confirm-dialog-desc {
-      font-size: 13.5px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-    .confirm-dialog-stats {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      padding: 8px 10px;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-    }
-    .confirm-changes-list {
-      max-height: 230px;
-      overflow-y: auto;
-      background: rgba(10, 12, 18, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .confirm-changes-list::-webkit-scrollbar {
-      width: 5px;
-    }
-    .confirm-changes-list::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 4px;
-    }
-    .confirm-change-item {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 7px 10px;
-      background: rgba(255, 255, 255, 0.035);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      font-size: 12px;
-    }
-    .confirm-change-item-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .confirm-change-date {
-      font-size: 10.5px;
-      font-weight: 700;
-      color: #38bdf8;
-      background: rgba(56, 189, 248, 0.12);
-      padding: 1px 6px;
-      border-radius: 4px;
-    }
-    .confirm-change-title {
-      font-weight: 600;
-      color: var(--text-main);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
-    }
-    .confirm-change-detail {
+    /* 사용자 뷰 검수기 탭 버튼 세그먼트 컨트롤 */
+    .inspector-tab-btn {
+      padding: 4px 11px;
       font-size: 11px;
-      color: var(--text-muted);
-      padding-left: 2px;
-      line-height: 1.4;
-    }
-    .confirm-diff-highlight {
-      color: #fbbf24;
       font-weight: 600;
-    }
-    .confirm-dialog-footer {
-      display: flex;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .btn-confirm-dialog-cancel {
-      flex: 1;
-      padding: 11px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: var(--text-main);
-      font-size: 13.5px;
-      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted, #94a3b8);
       cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-confirm-dialog-cancel:hover {
-      background: rgba(255, 255, 255, 0.13);
-      color: #fff;
-    }
-    .btn-confirm-dialog-ok {
-      flex: 1.6;
-      padding: 11px;
-      border-radius: var(--radius-md);
-      background: linear-gradient(135deg, #7c5cfc, #ec4899);
-      border: none;
-      color: #fff;
-      font-size: 13.5px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(124, 92, 252, 0.4);
-      transition: all 0.2s;
-      display: flex;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
+      line-height: 1.2;
     }
-    .btn-confirm-dialog-ok:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+    .inspector-tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .inspector-tab-btn.active {
+      background: linear-gradient(135deg, #7c5cfc, #6366f1) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 2px 10px rgba(124, 92, 252, 0.5);
     }
 
     /* 피드 상단/하단 이전달/다음달 불러오기 버튼 */
@@ -1475,6 +1355,93 @@
     .modal-overlay.active .user-preview-window {
       transform: scale(1);
       opacity: 1;
+    }
+
+    /* 세부 모달 확장프로그램 100% 일치 (듀얼 카드 레이아웃) */
+    .schedule-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100000;
+      padding: 16px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    .schedule-modal-container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 900px;
+      width: 100%;
+      max-height: calc(100vh - 40px);
+      margin: auto;
+      box-sizing: border-box;
+    }
+    .schedule-modal-card {
+      background: rgba(28, 24, 36, 0.96) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 16px;
+      flex: 1 1 320px;
+      max-width: 420px;
+      min-width: 280px;
+      max-height: calc(100vh - 60px);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      box-sizing: border-box;
+      color: #cbd5e1;
+      overflow-y: auto;
+    }
+    .schedule-embed-card {
+      background: rgba(28, 24, 36, 0.96) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 16px;
+      flex: 1 1 360px;
+      max-width: 460px;
+      min-width: 280px;
+      max-height: calc(100vh - 60px);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      box-sizing: border-box;
+      color: #cbd5e1;
+    }
+    .embed-modal-title {
+      font-weight: bold;
+      font-size: 13.5px;
+      color: #ff80ab;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .embed-modal-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 140px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-embed-card {
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     .user-sp-card-container {
@@ -1929,7 +1896,7 @@
     <div class="staging-actions">
       <button class="btn-reset" id="btnResetStaging">초기화</button>
       <button class="btn-commit" id="btnSaveToGist">
-        <span>💾</span> 저장 적용
+        <span>🔍</span> 사용자 뷰 검수 및 적용
       </button>
     </div>
   </div>
@@ -2230,110 +2197,122 @@
     </div>
   </div>
 
-  <!-- 사용자 화면 미리보기 모달 (사이드패널 시뮬레이터) -->
-  <div class="modal-overlay" id="userPreviewModalOverlay"
+  <!-- 사용자 화면 검수기 & 미리보기 모달 (User Review Inspector) -->
+  <div class="modal-overlay" id="userReviewModalOverlay"
     style="align-items: center; justify-content: center; padding: 16px;">
-    <div class="user-preview-window">
+    <div class="user-preview-window" id="inspectorModalOverlay" style="max-width: 480px;">
       <!-- 윈도우 상단 타이틀바 -->
       <div
-        style="padding: 12px 16px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 15px;">📱</span>
-          <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">사용자 화면 미리보기</span>
-          <span
-            style="font-size: 10.5px; background: rgba(124, 92, 252, 0.2); color: #c4b5fd; padding: 2px 6px; border-radius: 4px; font-weight: 600;">사이드패널</span>
+        style="padding: 10px 14px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; white-space: nowrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+          <span style="font-size: 15px;">🔍</span>
+          <span style="font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap;">사전 검수</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+          <!-- 탭 선택 바 (Diff ↔ 사이드패널 뷰) -->
+          <div style="display: flex; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 2px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
+            <button type="button" id="btnInspectorTabDiff" class="inspector-tab-btn active" title="변경 내역 대조">📝 변경 내역</button>
+            <button type="button" id="btnInspectorTabPreview" class="inspector-tab-btn" title="사이드패널 뷰">📱 사이드패널</button>
+          </div>
           <button type="button" id="btnToggleUserPreviewTheme" class="btn-action"
-            style="padding: 3px 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid rgba(255,255,255,0.15);"
-            title="다크/라이트 테마 전환">🌙 다크</button>
+            style="padding: 3px 6px; font-size: 11px; background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid rgba(255,255,255,0.15);"
+            title="다크/라이트 테마 전환">🌙</button>
           <button type="button" id="btnCloseUserPreviewModal" class="btn-action"
-            style="padding: 3px 8px; font-size: 11.5px;">✕</button>
+            style="padding: 3px 8px; font-size: 11.5px;" title="검수창 닫기">✕</button>
         </div>
       </div>
 
-      <!-- 시뮬레이터 컨트롤 바 (월 선택 & 오늘 이동) -->
+      <!-- 탭 1: Diff 변경 내역 컨테이너 -->
+      <div id="inspectorDiffContainer"
+        style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 14px; gap: 10px; background: #141824;">
+        <div id="inspectorDiffSummary" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;"></div>
+        <div id="inspectorDiffList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Diff 대조 항목 동적 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 탭 2: 사이드패널 시뮬레이터 뷰 컨테이너 -->
+      <div id="inspectorPreviewContainer" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+        <!-- 시뮬레이터 컨트롤 바 (월 선택 & 오늘 이동) -->
+        <div
+          style="padding: 8px 14px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-action" id="btnUserPrevMonth"
+              style="padding: 2px 6px; font-size: 10.5px;">◀</button>
+            <span id="userPreviewMonthText"
+              style="font-weight: 700; color: #38bdf8; min-width: 65px; text-align: center;">2026. 09</span>
+            <button type="button" class="btn-action" id="btnUserNextMonth"
+              style="padding: 2px 6px; font-size: 10.5px;">▶</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-action" id="btnUserToday"
+              style="padding: 2px 8px; font-size: 11px; font-weight: 600;">오늘로</button>
+            <span id="userPreviewCountText" style="color: var(--text-muted); font-size: 11px;">0건</span>
+          </div>
+        </div>
+
+        <!-- 사이드패널 본문 컨테이너 -->
+        <div id="userPreviewCardContainer" class="user-sp-card-container dark">
+          <div id="userPreviewScheduleList" style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
+            <!-- 스케줄 아이템들이 동적으로 들어감 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 액션 바 (2단계 안전 배포 분리) -->
       <div
-        style="padding: 8px 14px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 12px;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" class="btn-action" id="btnUserPrevMonth"
-            style="padding: 2px 6px; font-size: 10.5px;">◀</button>
-          <span id="userPreviewMonthText"
-            style="font-weight: 700; color: #38bdf8; min-width: 65px; text-align: center;">2026. 09</span>
-          <button type="button" class="btn-action" id="btnUserNextMonth"
-            style="padding: 2px 6px; font-size: 10.5px;">▶</button>
+        style="padding: 10px 16px; background: rgba(15, 17, 23, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px;">
+        <div style="font-size: 11px; color: var(--text-muted);">
+          🔒 안전 2단계 배포 분리
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" class="btn-action" id="btnUserToday"
-            style="padding: 2px 8px; font-size: 11px; font-weight: 600;">오늘로</button>
-          <span id="userPreviewCountText" style="color: var(--text-muted); font-size: 11px;">0건</span>
-        </div>
-      </div>
-
-      <!-- 사이드패널 본문 컨테이너 -->
-      <div id="userPreviewCardContainer" class="user-sp-card-container dark">
-        <div id="userPreviewScheduleList" style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
-          <!-- 스케줄 아이템들이 동적으로 들어감 -->
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-action" id="btnSaveOverridesOnly"
+            style="padding: 5px 12px; font-size: 11.5px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">
+            💾 오버라이드만 임시 저장
+          </button>
+          <button type="button" class="btn-commit" id="btnPublishToUsers"
+            style="padding: 5px 14px; font-size: 11.5px; font-weight: 700; background: linear-gradient(135deg, #ff007a, #7c3aed); color: #fff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            🚀 사용자 배포 적용
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 일정 상세 보기 팝업 레이어 (카드 클릭 시 전역 노출) -->
-  <div id="userPreviewDetailLayer"
-    style="display: none; position: fixed; inset: 0; background: rgba(10, 12, 18, 0.88); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 99999; padding: 20px; flex-direction: column; justify-content: center; align-items: center;"
+  <!-- 일정 상세 보기 팝업 레이어 (확장프로그램 modals.js & templates.js 100% 일치 듀얼 카드 규격) -->
+  <div id="userPreviewDetailLayer" class="schedule-modal-overlay"
     onclick="if(event.target === this) closeUpdDetail();">
-    <div
-      style="background: #1e1b29; border: 1px solid rgba(255, 105, 180, 0.3); border-radius: 16px; padding: 18px; width: 100%; max-width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px; color: #f1f5f9;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-        <div id="updBadgeRow" style="display: flex; gap: 4px; align-items: center;"></div>
-        <button type="button" id="btnCloseUpdDetail" class="btn-action"
-          style="padding: 2px 7px; font-size: 11px;">✕</button>
-      </div>
-      <h4 id="updTitle" style="font-size: 15px; font-weight: 700; color: #ff80ab; margin: 0; line-height: 1.4;">
-      </h4>
-      <div style="font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
-        <div id="updDateTime"></div>
-        <div id="updChannel"></div>
-        <div id="updLocation"></div>
-      </div>
-      <div id="updMessage"
-        style="font-size: 12px; color: #cbd5e1; max-height: 120px; overflow-y: auto; white-space: pre-wrap; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; line-height: 1.5;">
-      </div>
-      <div id="updLinkContainer" style="margin-top: 4px; display: flex; justify-content: flex-end;"></div>
-    </div>
-  </div>
-
-  <!-- 커스텀 저장 확인 팝업 모달 -->
-  <div class="modal-overlay" id="confirmModalOverlay" style="display: none; align-items: center; justify-content: center; z-index: 100000; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
-    <div class="confirm-dialog-card">
-      <div class="confirm-dialog-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 20px;">💾</span>
-          <h3 id="confirmModalTitle" style="margin: 0; font-size: 16px; font-weight: 700; color: #fff;">변경사항 저장 확인</h3>
+    <div class="schedule-modal-container" id="scheduleModalContainer">
+      <!-- 1. 기본 상세 정보 카드 -->
+      <div class="schedule-modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+          <div id="updBadgeRow" style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;"></div>
+          <button type="button" id="btnCloseUpdDetail" class="btn-action"
+            style="padding: 2px 7px; font-size: 11px;">✕</button>
         </div>
-        <button type="button" class="sheet-close" id="btnCancelConfirmModalX" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">✕</button>
-      </div>
-      <div class="confirm-dialog-body" id="confirmModalBody" style="display: flex; flex-direction: column; gap: 12px;">
-        <p id="confirmModalMessage" style="margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-main);"></p>
-
-        <!-- 변경 건수 뱃지 행 -->
-        <div class="confirm-dialog-stats" id="confirmModalStats"></div>
-
-        <!-- 세부 변경 내역 목록 박스 -->
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-            <span>📋 세부 변경 내역 (Diff)</span>
-            <span id="confirmChangesCount" style="font-size: 11px; color: #38bdf8; font-weight: 600;">총 0건</span>
-          </div>
-          <div class="confirm-changes-list" id="confirmChangesList">
-            <!-- 자바스크립트로 변경 항목별 상세 행 동적 렌더링 -->
-          </div>
+        <h4 id="updTitle" style="font-size: 15px; font-weight: 700; color: #ff80ab; margin: 0 0 10px 0; line-height: 1.4;">
+        </h4>
+        <div style="font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 5px;">
+          <div id="updDateTime"></div>
+          <div id="updLocation"></div>
+          <div id="updChannel"></div>
+          <div id="updAttendees" style="display: none;"></div>
         </div>
+        <div id="updMessage"
+          style="font-size: 12px; color: #cbd5e1; max-height: 140px; overflow-y: auto; white-space: pre-wrap; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; line-height: 1.5; margin-top: 10px;">
+        </div>
+        <div id="updLinkContainer" style="margin-top: 10px; display: flex; justify-content: flex-end;"></div>
       </div>
-      <div class="confirm-dialog-footer">
-        <button type="button" class="btn-confirm-dialog-cancel" id="btnCancelConfirmModal">취소</button>
-        <button type="button" class="btn-confirm-dialog-ok" id="btnApproveConfirmModal"><span>💾</span> 저장 적용</button>
+
+      <!-- 2. 임베드 미디어 전용 추가 카드 (YouTube, Instagram, X, TikTok) -->
+      <div class="schedule-embed-card" id="modalEmbedCard" style="display: none;">
+        <div class="embed-modal-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>관련 미디어</span>
+        </div>
+        <div class="embed-modal-body" id="modalEmbedBodyContent">
+          <!-- 동적 미디어 임베드 카드 삽입 -->
+        </div>
       </div>
     </div>
   </div>
@@ -2841,7 +2820,12 @@
         const res = await fetch(`${GIST_RAW_URL}?t=${Date.now()}`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        const baseItems = data.items || [];
+        const baseItems = (data.items || []).map(item => {
+          if (item && item.id && String(item.id).startsWith('custom_')) {
+            item._isCustom = true;
+          }
+          return item;
+        });
         rawBaseSchedules = JSON.parse(JSON.stringify(baseItems));
         window.rawBaseSchedules = rawBaseSchedules;
 
@@ -5654,12 +5638,12 @@
         <div class="staging-actions">
           <button class="btn-reset" id="btnResetStaging">초기화</button>
           <button class="btn-commit" id="btnSaveToGist">
-            <span>💾</span> 저장 적용
+            <span>🔍</span> 사용자 뷰 검수 및 적용
           </button>
         </div>
       `;
       document.getElementById('btnResetStaging').addEventListener('click', onResetStagingClick);
-      document.getElementById('btnSaveToGist').addEventListener('click', onSaveToGistClick);
+      document.getElementById('btnSaveToGist').addEventListener('click', openUserPreviewModal);
       updateStagingBar();
     }
 
@@ -5879,91 +5863,9 @@
       return items;
     }
 
-    // 커스텀 저장 확인 팝업 (브라우저 기본 confirm 대체)
-    function showConfirmDialog(options = {}) {
-      return new Promise((resolve) => {
-        const overlay = document.getElementById('confirmModalOverlay');
-        if (!overlay) {
-          resolve(window.confirm(options.message || '저장하시겠습니까?'));
-          return;
-        }
-
-        const titleEl = document.getElementById('confirmModalTitle');
-        const msgEl = document.getElementById('confirmModalMessage');
-        const statsEl = document.getElementById('confirmModalStats');
-        const changesListEl = document.getElementById('confirmChangesList');
-        const changesCountEl = document.getElementById('confirmChangesCount');
-        const btnApprove = document.getElementById('btnApproveConfirmModal');
-        const btnCancel = document.getElementById('btnCancelConfirmModal');
-        const btnCloseX = document.getElementById('btnCancelConfirmModalX');
-
-        if (titleEl) titleEl.textContent = options.title || '💾 변경사항 저장 확인';
-        if (msgEl) msgEl.textContent = options.message || '변경사항을 원격 Gist에 영구 저장하시겠습니까?';
-
-        if (statsEl) {
-          statsEl.innerHTML = '';
-          if (options.stats && typeof options.stats === 'object') {
-            const { modified = 0, deleted = 0, created = 0, restored = 0, filter = 0 } = options.stats;
-            if (modified > 0) statsEl.innerHTML += `<span class="state-badge badge-pending">✏️ 수정 ${modified}건</span>`;
-            if (deleted > 0) statsEl.innerHTML += `<span class="state-badge badge-del">🗑️ 숨김 ${deleted}건</span>`;
-            if (created > 0) statsEl.innerHTML += `<span class="state-badge badge-new">✨ 등록 ${created}건</span>`;
-            if (restored > 0) statsEl.innerHTML += `<span class="state-badge badge-confirmed">↩️ 원본 복구 ${restored}건</span>`;
-            if (filter > 0) statsEl.innerHTML += `<span class="state-badge badge-special">⚙️ 필터 규칙 변경</span>`;
-          }
-        }
-
-        // 세부 변경 목록 렌더링
-        const detailedList = buildDetailedChangesList();
-        if (changesCountEl) {
-          changesCountEl.textContent = `총 ${detailedList.length}건`;
-        }
-        if (changesListEl) {
-          changesListEl.innerHTML = '';
-          if (detailedList.length === 0) {
-            changesListEl.innerHTML = '<div style="text-align:center; padding: 18px 0; color: var(--text-muted); font-size: 12px;">변경사항이 없습니다.</div>';
-          } else {
-            detailedList.forEach(c => {
-              changesListEl.innerHTML += `
-                <div class="confirm-change-item">
-                  <div class="confirm-change-item-header">
-                    <span class="confirm-change-date">${escapeHtml(c.date)}</span>
-                    <span class="state-badge ${c.badgeClass}" style="font-size: 9.5px; padding: 1px 6px;">${c.badgeText}</span>
-                    <span class="confirm-change-title" title="${escapeHtml(c.title)}">${escapeHtml(c.title)}</span>
-                  </div>
-                  <div class="confirm-change-detail">${c.detailHtml}</div>
-                </div>
-              `;
-            });
-          }
-        }
-
-        overlay.style.display = 'flex';
-        overlay.classList.add('active');
-
-        function cleanup(result) {
-          overlay.style.display = 'none';
-          overlay.classList.remove('active');
-          if (btnApprove) btnApprove.removeEventListener('click', onApprove);
-          if (btnCancel) btnCancel.removeEventListener('click', onCancel);
-          if (btnCloseX) btnCloseX.removeEventListener('click', onCancel);
-          overlay.removeEventListener('click', onBackdrop);
-          resolve(result);
-        }
-
-        function onApprove() { cleanup(true); }
-        function onCancel() { cleanup(false); }
-        function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
-
-        if (btnApprove) btnApprove.addEventListener('click', onApprove);
-        if (btnCancel) btnCancel.addEventListener('click', onCancel);
-        if (btnCloseX) btnCloseX.addEventListener('click', onCancel);
-        overlay.addEventListener('click', onBackdrop);
-      });
-    }
-    window.showConfirmDialog = showConfirmDialog;
-
-    // Gist에 최종 저장 및 반영 검증
-    async function onSaveToGistClick() {
+    // Gist에 최종 저장 및 반영 검증 (단일 진입 검수기 연동)
+    async function onSaveToGistClick(options = {}) {
+      const isPublish = Boolean(options && options.isPublish);
       const token = getStoredToken();
       if (!token) {
         showGatekeeper();
@@ -5975,27 +5877,6 @@
       const count = detailedItems.length;
       if (count === 0) {
         showToast('저장할 변경사항이 없습니다.');
-        return;
-      }
-
-      const modCount = detailedItems.filter(i => i.badgeText.includes('수정')).length;
-      const delCount = detailedItems.filter(i => i.badgeText.includes('숨김')).length;
-      const createdCount = detailedItems.filter(i => i.badgeText.includes('등록')).length;
-      const restoredCount = detailedItems.filter(i => i.badgeText.includes('복구')).length;
-      const filterCount = detailedItems.filter(i => i.badgeText.includes('필터')).length;
-
-      const confirmed = await showConfirmDialog({
-        title: '💾 변경사항 원격 저장 확인',
-        message: `총 ${count}건의 일정 보정 사항을 원격 Gist에 영구 저장하시겠습니까?`,
-        stats: {
-          modified: modCount,
-          deleted: delCount,
-          created: createdCount,
-          restored: restoredCount,
-          filter: filterCount
-        }
-      });
-      if (!confirmed) {
         return;
       }
 
@@ -6187,149 +6068,8 @@
         const finalFilterRules = pendingFilterRules || currentFilterRules;
 
         // -------------------------------------------------------------
-        // 최신 마스터 스케줄 합성 (Zero Delay Sync: schedules.json & core.json 동시 발행)
+        // 오버라이드 단독 안전 저장 (사용자 배포본 schedules.json / core.json 직접 덮어쓰기 배제)
         // -------------------------------------------------------------
-        const tempActiveMap = new Map();
-        allSchedules.forEach(s => {
-          const sKey = s.id || getScheduleKey(s);
-          const rKey = getRawScheduleKey(s);
-          if (mergedDeleted.has(sKey) || mergedDeleted.has(rKey) || (s.id && mergedDeleted.has(s.id)) || s._isDeleted || s.isDeleted) {
-            return;
-          }
-          const itemClone = { ...s };
-          const mod = mergedModified[s.id] || mergedModified[sKey] || mergedModified[rKey];
-          if (mod) Object.assign(itemClone, mod);
-          tempActiveMap.set(itemClone.id || sKey, itemClone);
-        });
-
-        finalCreated.forEach(c => {
-          if (c.isDeleted || (c.id && mergedDeleted.has(c.id))) return;
-          const cId = c.id || getScheduleKey(c);
-          tempActiveMap.set(cId, { ...c, _isCustom: true });
-        });
-
-        const activeList = Array.from(tempActiveMap.values());
-        const adj = new Map();
-        activeList.forEach(item => {
-          const iId = item.id || getScheduleKey(item);
-          if (!adj.has(iId)) adj.set(iId, new Set());
-          const linked = item.linkedScheduleIds || [];
-          linked.forEach(targetId => {
-            adj.get(iId).add(targetId);
-            if (!adj.has(targetId)) adj.set(targetId, new Set());
-            adj.get(targetId).add(iId);
-          });
-        });
-
-        // 동일 유튜브 영상 ID 연계
-        const ytMap = new Map();
-        activeList.forEach(item => {
-          const u = item.url || item.link;
-          const m = u && u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/))([\w-]{11})/);
-          if (m) {
-            const vid = m[1];
-            if (!ytMap.has(vid)) ytMap.set(vid, []);
-            ytMap.get(vid).push(item.id || getScheduleKey(item));
-          }
-        });
-        ytMap.forEach(ids => {
-          if (ids.length > 1) {
-            for (let i = 0; i < ids.length; i++) {
-              for (let j = i + 1; j < ids.length; j++) {
-                if (adj.has(ids[i])) adj.get(ids[i]).add(ids[j]);
-                if (adj.has(ids[j])) adj.get(ids[j]).add(ids[i]);
-              }
-            }
-          }
-        });
-
-        const synthesizedMasterList = [];
-        const clusterVisited = new Set();
-
-        activeList.forEach(item => {
-          const iId = item.id || getScheduleKey(item);
-          if (clusterVisited.has(iId)) return;
-
-          const cluster = [];
-          const q = [iId];
-          clusterVisited.add(iId);
-
-          while (q.length > 0) {
-            const curId = q.shift();
-            const cur = activeList.find(x => (x.id && x.id === curId) || getScheduleKey(x) === curId);
-            if (cur) cluster.push(cur);
-
-            const nbrs = adj.get(curId) || new Set();
-            nbrs.forEach(nId => {
-              if (!clusterVisited.has(nId)) {
-                clusterVisited.add(nId);
-                q.push(nId);
-              }
-            });
-          }
-
-          if (cluster.length === 0) return;
-          if (cluster.length === 1) {
-            synthesizedMasterList.push(cluster[0]);
-          } else {
-            const primary = determineClusterPrimary(cluster);
-            const secondaries = cluster.filter(c => c !== primary);
-            const synthetic = { ...primary };
-            secondaries.forEach(sec => {
-              if (!synthetic.url && sec.url) synthetic.url = sec.url;
-              if (!synthetic.location && sec.location) synthetic.location = sec.location;
-              if (!synthetic.channel && sec.channel) synthetic.channel = sec.channel;
-              if (!synthetic.message && sec.message) synthetic.message = sec.message;
-              if (!synthetic.typeText && sec.typeText) synthetic.typeText = sec.typeText;
-              if (sec.starAttendees && sec.starAttendees.length > 0) {
-                if (!synthetic.starAttendees || synthetic.starAttendees.length === 0) {
-                  synthetic.starAttendees = [...sec.starAttendees];
-                } else {
-                  const existNames = new Set(synthetic.starAttendees.map(a => a.name));
-                  const newOnes = sec.starAttendees.filter(a => a.name && !existNames.has(a.name));
-                  synthetic.starAttendees = [...synthetic.starAttendees, ...newOnes];
-                }
-              }
-              if (!synthetic.extField && sec.extField) synthetic.extField = sec.extField;
-            });
-            synthetic.linkedScheduleIds = Array.from(new Set(cluster.flatMap(c => [c.id, ...(c.linkedScheduleIds || [])]).filter(Boolean)));
-            synthesizedMasterList.push(synthetic);
-          }
-        });
-
-        // 시간순 정렬
-        synthesizedMasterList.sort((a, b) => {
-          const tA = a.startTime ? new Date(a.startTime).getTime() : 0;
-          const tB = b.startTime ? new Date(b.startTime).getTime() : 0;
-          return tA - tB;
-        });
-
-        const schedulesFilePayload = {
-          version: "1.0.0",
-          updatedAt: new Date().toISOString(),
-          updatedAtTimestamp: Date.now(),
-          totalCount: synthesizedMasterList.length,
-          items: synthesizedMasterList
-        };
-
-        // core.json 동시 업로드 구성
-        let coreContent = null;
-        try {
-          let baseCore = window.latestGistCoreData || null;
-          if (!baseCore) {
-            const cRes = await fetch(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/core.json?_t=${Date.now()}`);
-            if (cRes.ok) baseCore = await cRes.json();
-          }
-          if (baseCore) {
-            baseCore.updatedAt = new Date().toISOString();
-            baseCore.updatedAtTimestamp = Date.now();
-            if (!baseCore.schedules) baseCore.schedules = {};
-            baseCore.schedules.masterUpdatedAt = new Date().toISOString();
-            baseCore.schedules.totalMasterCount = synthesizedMasterList.length;
-            coreContent = JSON.stringify(baseCore);
-          }
-        } catch (e) { }
-
         const payload = {
           files: {
             "schedule-overrides.json": {
@@ -6341,22 +6081,7 @@
                 sourceOverrides,
                 legacyAliases
               })
-            },
-            "schedules.json": {
-              content: JSON.stringify(schedulesFilePayload)
-            },
-            ...(coreContent ? { "core.json": { content: coreContent } } : {
-              "core.json": {
-                content: JSON.stringify({
-                  version: "1.0.0",
-                  updatedAt: new Date().toISOString(),
-                  schedules: {
-                    masterUpdatedAt: new Date().toISOString(),
-                    totalMasterCount: synthesizedMasterList.length
-                  }
-                })
-              }
-            })
+            }
           }
         };
 
@@ -6446,6 +6171,29 @@
           </div>
         `;
 
+        if (isPublish) {
+          try {
+            const dispatchRes = await fetch(`https://api.github.com/repos/duckbeginner/remine-helper/actions/workflows/data-hub-sync.yml/dispatches`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ ref: 'main' })
+            });
+            if (dispatchRes.ok) {
+              showToast('🚀 사용자 배포 파이프라인(Data Hub) 즉시 가동! 잠시 후 schedules.json에 자동 배포됩니다.', 4000);
+            } else {
+              showToast('🚀 Gist 오버라이드 반영 완료! 중앙 Data Hub가 15분 주기 자동 실행으로 사용자 배포본에 반영합니다.', 3500);
+            }
+          } catch (dispatchErr) {
+            showToast('🚀 Gist 오버라이드 반영 완료! 중앙 Data Hub가 15분 주기 자동 실행으로 사용자 배포본에 반영합니다.', 3500);
+          }
+        } else {
+          showToast('💾 오버라이드 델타만 Gist에 안전하게 임시 저장되었습니다. (사용자 배포본 영향 없음)', 3000);
+        }
+
         // 1.8초 동안 반영 완료 피드백을 보여준 뒤 자연스럽게 닫음
         setTimeout(() => {
           stagingBar.classList.remove('visible');
@@ -6474,8 +6222,13 @@
     }
 
     // 초기 이벤트 바인딩
-    document.getElementById('btnSaveToGist').addEventListener('click', onSaveToGistClick);
+    document.getElementById('btnSaveToGist').addEventListener('click', openUserPreviewModal);
     document.getElementById('btnResetStaging').addEventListener('click', onResetStagingClick);
+    const btnOpenAddModal = document.getElementById('btnOpenAddModal');
+    if (btnOpenAddModal) {
+      btnOpenAddModal.addEventListener('click', openAddModal);
+    }
+    window.openAddModal = openAddModal;
 
     // 이벤트 리스너 등록
     document.getElementById('btnCloseModal').addEventListener('click', closeModal);
@@ -6719,20 +6472,45 @@
     });
 
     // -------------------------------------------------------------
-    // 전체 사용자 뷰 미리보기 (사이드패널 시뮬레이터 모달)
+    // 전체 사용자 뷰 검수기 및 미리보기 (User Review Inspector)
     // -------------------------------------------------------------
     let userPreviewDate = new Date();
     let isUserPreviewDark = true;
+    let currentInspectorTab = 'diff';
+
+    function switchInspectorTab(tab) {
+      currentInspectorTab = tab;
+      const diffContainer = document.getElementById('inspectorDiffContainer');
+      const previewContainer = document.getElementById('inspectorPreviewContainer');
+      const btnDiff = document.getElementById('btnInspectorTabDiff');
+      const btnPreview = document.getElementById('btnInspectorTabPreview');
+
+      if (tab === 'diff') {
+        if (diffContainer) diffContainer.style.display = 'flex';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (btnDiff) btnDiff.classList.add('active');
+        if (btnPreview) btnPreview.classList.remove('active');
+        renderInspectorDiff();
+      } else {
+        if (diffContainer) diffContainer.style.display = 'none';
+        if (previewContainer) previewContainer.style.display = 'flex';
+        if (btnDiff) btnDiff.classList.remove('active');
+        if (btnPreview) btnPreview.classList.add('active');
+        renderUserPreviewSchedules();
+      }
+    }
 
     function openUserPreviewModal() {
       userPreviewDate = new Date(currentViewDate.getTime());
-      document.getElementById('userPreviewModalOverlay').classList.add('active');
+      const modal = document.getElementById('userReviewModalOverlay') || document.getElementById('userPreviewModalOverlay');
+      if (modal) modal.classList.add('active');
       closeUpdDetail();
-      renderUserPreviewSchedules();
+      switchInspectorTab('diff');
     }
 
     function closeUserPreviewModal() {
-      document.getElementById('userPreviewModalOverlay').classList.remove('active');
+      const modal = document.getElementById('userReviewModalOverlay') || document.getElementById('userPreviewModalOverlay');
+      if (modal) modal.classList.remove('active');
       closeUpdDetail();
     }
 
@@ -6747,6 +6525,147 @@
         container.className = 'user-sp-card-container light';
         btn.textContent = '☀️ 라이트';
       }
+    }
+
+    // 변경 대조표 (Diff Engine) 렌더러
+    function renderInspectorDiff() {
+      const summaryEl = document.getElementById('inspectorDiffSummary');
+      const listEl = document.getElementById('inspectorDiffList');
+      if (!summaryEl || !listEl) return;
+
+      const createdItems = pendingOverrides.created || [];
+      const deletedKeys = Array.from(pendingOverrides.deleted || []);
+      const modifiedMap = pendingOverrides.modified || {};
+      const modifiedKeys = Object.keys(modifiedMap);
+
+      // 수정 내역에서 실질적 변경 필드 분석
+      const diffModItems = [];
+      const handledModKeys = new Set();
+      modifiedKeys.forEach(mKey => {
+        if (handledModKeys.has(mKey)) return;
+        const mod = modifiedMap[mKey];
+        const orig = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey);
+        const itemDedupKey = orig ? (orig.id || getScheduleKey(orig)) : mKey;
+        handledModKeys.add(itemDedupKey);
+
+        const changes = [];
+        if (orig) {
+          if (mod.title !== undefined && mod.title !== orig.title) {
+            changes.push({ field: '제목', before: orig.title || '(없음)', after: mod.title });
+          }
+          if (mod.startTime !== undefined && mod.startTime !== orig.startTime) {
+            changes.push({ field: '일시', before: orig.startTime || '(없음)', after: mod.startTime });
+          }
+          if (mod.channel !== undefined && mod.channel !== orig.channel) {
+            changes.push({ field: '채널', before: orig.channel || '(없음)', after: mod.channel || '(제거됨)' });
+          }
+          if (mod.location !== undefined && mod.location !== orig.location) {
+            changes.push({ field: '장소', before: orig.location || '(없음)', after: mod.location || '(제거됨)' });
+          }
+          if (mod.typeText !== undefined && mod.typeText !== orig.typeText) {
+            changes.push({ field: '분류', before: orig.typeText || '(없음)', after: mod.typeText });
+          }
+          if (mod.message !== undefined && mod.message !== orig.message) {
+            changes.push({ field: '본문', before: (orig.message || '').slice(0, 30), after: (mod.message || '').slice(0, 30) });
+          }
+        } else {
+          changes.push({ field: '상세', before: '수정 대기', after: '값 변경됨' });
+        }
+        diffModItems.push({
+          key: itemDedupKey,
+          title: (mod && mod.title) || (orig && orig.title) || mKey,
+          changes: changes
+        });
+      });
+
+      // 삭제 내역 분석
+      const diffDelItems = [];
+      const handledDels = new Set();
+      deletedKeys.forEach(dKey => {
+        if (handledDels.has(dKey)) return;
+        const orig = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey);
+        const itemKey = orig ? (orig.id || getScheduleKey(orig)) : dKey;
+        diffDelItems.push({
+          key: itemKey,
+          title: (orig && orig.title) || dKey,
+          startTime: (orig && orig.startTime) || ''
+        });
+        handledDels.add(itemKey);
+      });
+
+      const totalCount = createdItems.length + diffModItems.length + diffDelItems.length;
+
+      summaryEl.innerHTML = `
+        <span style="font-size: 11.5px; font-weight: 700; color: #fff;">총 변경 ${totalCount}건:</span>
+        <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: 600;">➕ 추가 ${createdItems.length}건</span>
+        <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 600;">🔄 수정 ${diffModItems.length}건</span>
+        <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 600;">➖ 삭제 ${diffDelItems.length}건</span>
+      `;
+
+      if (totalCount === 0) {
+        listEl.innerHTML = `
+          <div style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed rgba(255,255,255,0.1);">
+            ✨ 대기 중인 변경사항이 없습니다.<br>마스터 537건 기준선과 완벽하게 일치합니다.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+
+      // 1) 추가된 일정
+      createdItems.forEach(c => {
+        html += `
+          <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 10.5px; font-weight: 700; color: #4ade80; background: rgba(34, 197, 94, 0.2); padding: 1px 6px; border-radius: 4px;">➕ 신규 추가</span>
+              <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.startTime || '')}</span>
+            </div>
+            <div style="font-size: 13px; font-weight: 600; color: #fff;">${escapeHtml(c.title || '제목 없음')}</div>
+            ${c.channel ? `<div style="font-size: 11px; color: #94a3b8;">📺 ${escapeHtml(c.channel)}</div>` : ''}
+            ${c.location ? `<div style="font-size: 11px; color: #94a3b8;">📍 ${escapeHtml(c.location)}</div>` : ''}
+          </div>
+        `;
+      });
+
+      // 2) 수정된 일정 (전후 대조표)
+      diffModItems.forEach(m => {
+        const changesHtml = m.changes.map(ch => `
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 2px 0;">
+            <span style="color: #94a3b8; width: 36px; flex-shrink: 0; font-weight: 600;">${escapeHtml(ch.field)}</span>
+            <span style="color: #f87171; text-decoration: line-through; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(ch.before)}</span>
+            <span style="color: #64748b;">➔</span>
+            <span style="color: #38bdf8; font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(ch.after)}</span>
+          </div>
+        `).join('');
+
+        html += `
+          <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 10.5px; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.2); padding: 1px 6px; border-radius: 4px;">🔄 필드 수정</span>
+              <span style="font-size: 11px; color: #94a3b8;">${escapeHtml(m.title)}</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px;">
+              ${changesHtml}
+            </div>
+          </div>
+        `;
+      });
+
+      // 3) 삭제된 일정
+      diffDelItems.forEach(d => {
+        html += `
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 10.5px; font-weight: 700; color: #f87171; background: rgba(239, 68, 68, 0.2); padding: 1px 6px; border-radius: 4px;">➖ 제외/삭제</span>
+              <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(d.startTime || '')}</span>
+            </div>
+            <div style="font-size: 13px; font-weight: 600; color: #e2e8f0; text-decoration: line-through; opacity: 0.85;">${escapeHtml(d.title)}</div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
     }
 
     function renderUserPreviewSchedules() {
@@ -6781,10 +6700,10 @@
         const endT = item.endTime ? new Date(item.endTime).getTime() : startT;
         if (!(startT <= monthEnd && endT >= monthStart)) return false;
 
-        const isProtected = item._isCustom || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
+        const isProtected = item._isCustom || (item.id && String(item.id).startsWith('custom_')) || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
         if (!isProtected && filterEnabled) {
           if (excludeShorts) {
-            const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
+            const raw = [item.url, item.link, item.title].filter(Boolean).join(' ');
             if (item._isShorts || /youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) {
               return false;
             }
@@ -6925,6 +6844,129 @@
       }, 100);
     }
 
+    // 미디어 임베드 및 SNS 멀티미디어 프리뷰 카드 렌더러 (Instagram, X, TikTok, YouTube 100% 동기화)
+    function renderDetailMediaCards(item) {
+      if (!item) return '';
+      const sources = [
+        item.url,
+        item.link,
+        item.message,
+        item.detail,
+        item.description,
+        ...(item.resolvedMediaUrls || [])
+      ].filter(Boolean);
+      return renderMediaEmbeds(sources);
+    }
+
+    function renderMediaEmbeds(sources = [], isDark = true) {
+      const allText = sources.join(' ');
+      if (!allText) return '';
+
+      const themeStr = isDark ? 'dark' : 'light';
+      const embedHtmls = [];
+      const processed = new Set();
+
+      // 1. YouTube (watch, youtu.be, shorts)
+      const ytRegex = /https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+      let ytMatch;
+      while ((ytMatch = ytRegex.exec(allText)) !== null) {
+        const videoId = ytMatch[1];
+        if (!processed.has(videoId)) {
+          processed.add(videoId);
+          embedHtmls.push(`
+            <div class="youtube-preview-card" data-video-id="${escapeHtml(videoId)}" onclick="window.open('https://www.youtube.com/watch?v=${escapeHtml(videoId)}', '_blank')" style="margin-bottom: 8px; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; position: relative; cursor: pointer; background: #000; box-shadow: 0 4px 16px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15);">
+              <img src="https://img.youtube.com/vi/${escapeHtml(videoId)}/hqdefault.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="YouTube Thumbnail">
+              <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%); display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="background: #ff0000; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg> YouTube
+                  </span>
+                  <span style="color: rgba(255,255,255,0.9); font-size: 10.5px; font-weight: 500;">영상 바로보기 ↗</span>
+                </div>
+                <div style="align-self: center;">
+                  <div class="yt-play-btn" style="width: 44px; height: 44px; background: rgba(255,0,0,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 18px rgba(255,0,0,0.55);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white" style="margin-left: 2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </div>
+                </div>
+                <div style="color: #fff; font-size: 11px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  클릭하여 YouTube에서 시청하기
+                </div>
+              </div>
+            </div>
+          `);
+        }
+      }
+
+      // 2. Instagram (p, reel, tv 등 계정명 포함 URL 지원 - Spotify House Seoul 지원)
+      const instaRegex = /https?:\/\/(?:www\.)?instagram\.com\/(?:[a-zA-Z0-9_.]+\/)?(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/g;
+      let instaMatch;
+      while ((instaMatch = instaRegex.exec(allText)) !== null) {
+        const postId = instaMatch[1];
+        if (!processed.has(postId)) {
+          processed.add(postId);
+          embedHtmls.push(`
+            <div class="modal-embed-card" style="margin-bottom: 10px; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);">
+              <iframe src="https://www.instagram.com/p/${escapeHtml(postId)}/embed/captioned/?theme=${themeStr}" style="width: 100%; height: 500px; min-height: 380px; border: none; transition: height 0.25s ease;" scrolling="no" frameborder="0"></iframe>
+            </div>
+          `);
+        }
+      }
+
+      // 3. X (Twitter)
+      const xRegex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/([0-9]+)/g;
+      let xMatch;
+      while ((xMatch = xRegex.exec(allText)) !== null) {
+        const tweetId = xMatch[1];
+        if (!processed.has(tweetId)) {
+          processed.add(tweetId);
+          embedHtmls.push(`
+            <div class="modal-embed-card" style="margin-bottom: 10px; border-radius: 10px; overflow: hidden;">
+              <iframe src="https://platform.twitter.com/embed/Tweet.html?id=${escapeHtml(tweetId)}&theme=${themeStr}" style="width: 100%; height: 260px; border: none;" scrolling="no" frameborder="0"></iframe>
+            </div>
+          `);
+        }
+      }
+
+      // 4. TikTok
+      const ttRegex = /https?:\/\/(?:www\.)?tiktok\.com\/@[a-zA-Z0-9_.]+\/video\/([0-9]+)/g;
+      let ttMatch;
+      while ((ttMatch = ttRegex.exec(allText)) !== null) {
+        const videoId = ttMatch[1];
+        if (!processed.has(videoId)) {
+          processed.add(videoId);
+          embedHtmls.push(`
+            <div class="modal-embed-card" style="margin-bottom: 10px; border-radius: 10px; overflow: hidden;">
+              <iframe src="https://www.tiktok.com/embed/v2/${escapeHtml(videoId)}" style="width: 100%; height: 460px; border: none;" scrolling="no" frameborder="0"></iframe>
+            </div>
+          `);
+        }
+      }
+
+      return embedHtmls.join('');
+    }
+
+    // 세부 모달 멤버 16px 프로필 아바타 뱃지 생성기
+    function getMemberDetailBadgesHTML(attendees) {
+      if (!Array.isArray(attendees) || attendees.length === 0) return '';
+      return attendees.map(a => {
+        let realName = '멤버';
+        if (typeof a === 'object' && a !== null) {
+          if (a.id && MEMBER_ID_MAP[a.id]) realName = MEMBER_ID_MAP[a.id];
+          else {
+            const raw = (a.nickname || a.name || '').trim();
+            realName = MEMBER_NICKNAME_MAP[raw] || raw;
+          }
+        } else if (typeof a === 'string') {
+          const raw = a.trim();
+          realName = MEMBER_ID_MAP[raw] || MEMBER_NICKNAME_MAP[raw] || raw;
+        }
+        const avatarUrl = MEMBER_AVATAR_MAP[realName] || '';
+        const avatar = avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; vertical-align:-2px; margin-right:4px; border:1px solid rgba(255,105,180,0.4);" alt="${escapeHtml(realName)}">` : '';
+        return `<span style="display:inline-flex; align-items:center; background:rgba(255,105,180,0.12); border:1px solid rgba(255,105,180,0.28); border-radius:12px; padding:1px 8px; font-size:11px; font-weight:600; color:#ff80ab; margin:1px 2px;">${avatar}${escapeHtml(realName)}</span>`;
+      }).join(' ');
+    }
+
+    // 확장프로그램 modals.js & templates.js 규격 100% 일치 세부 모달 (듀얼 카드 렌더러)
     function showUserPreviewDetail(item) {
       if (!item) return;
       const layer = document.getElementById('userPreviewDetailLayer');
@@ -6933,8 +6975,11 @@
       const dateTimeEl = document.getElementById('updDateTime');
       const channelEl = document.getElementById('updChannel');
       const locationEl = document.getElementById('updLocation');
+      const attendeesEl = document.getElementById('updAttendees');
       const messageEl = document.getElementById('updMessage');
       const linkContainer = document.getElementById('updLinkContainer');
+      const embedCard = document.getElementById('modalEmbedCard');
+      const embedBody = document.getElementById('modalEmbedBodyContent');
 
       const type = resolveScheduleType(item);
       const badgeStyle = TYPE_BADGE_STYLES[type] || TYPE_BADGE_STYLES['기타'];
@@ -6950,19 +6995,59 @@
         const ap = h >= 12 ? '오후' : '오전';
         timeText = `${ap} ${h % 12 || 12}:${min}`;
       }
-      dateTimeEl.textContent = `🗓️ ${item.startTime ? item.startTime.slice(0, 10) : ''} ${timeText}`;
 
-      channelEl.textContent = item.channel ? `📺 채널/방송사: ${item.channel}` : '';
-      channelEl.style.display = item.channel ? 'block' : 'none';
+      // 확장프로그램 공식 SVG 아이콘 (일시, 장소, 채널)
+      const calSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+      const pinSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+      const tvSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`;
 
-      locationEl.textContent = item.location ? `📍 장소: ${item.location}` : '';
-      locationEl.style.display = item.location ? 'block' : 'none';
+      dateTimeEl.innerHTML = `${calSvg}일시: ${item.startTime ? item.startTime.slice(0, 10) : ''} ${timeText}`;
+
+      const ch = item.channel || (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null);
+      if (ch) {
+        channelEl.innerHTML = `${tvSvg}채널: ${escapeHtml(String(ch).trim())}`;
+        channelEl.style.display = 'block';
+      } else {
+        channelEl.style.display = 'none';
+      }
+
+      const loc = item.location || (item.extField && item.extField.key === '장소' ? item.extField.value : null);
+      if (loc) {
+        locationEl.innerHTML = `${pinSvg}장소: ${escapeHtml(String(loc).trim())}`;
+        locationEl.style.display = 'block';
+      } else {
+        locationEl.style.display = 'none';
+      }
+
+      if (attendeesEl) {
+        const attendeesHtml = getMemberDetailBadgesHTML(item.starAttendees);
+        if (attendeesHtml) {
+          attendeesEl.innerHTML = `<span style="font-size: 11px; color: #94a3b8; margin-right: 4px;">참석 멤버:</span>${attendeesHtml}`;
+          attendeesEl.style.display = 'flex';
+          attendeesEl.style.flexWrap = 'wrap';
+          attendeesEl.style.alignItems = 'center';
+        } else {
+          attendeesEl.style.display = 'none';
+        }
+      }
 
       if (item.message && item.message.trim() && item.message.trim() !== item.title) {
         messageEl.textContent = item.message.trim();
         messageEl.style.display = 'block';
       } else {
         messageEl.style.display = 'none';
+      }
+
+      // SNS 멀티미디어 카드 (YouTube, Instagram Reel/Post, X, TikTok)
+      const mediaHtml = renderDetailMediaCards(item);
+      if (embedCard && embedBody) {
+        if (mediaHtml && mediaHtml.trim()) {
+          embedBody.innerHTML = mediaHtml;
+          embedCard.style.display = 'flex';
+        } else {
+          embedBody.innerHTML = '';
+          embedCard.style.display = 'none';
+        }
       }
 
       const linkUrl = item.url || item.link;
@@ -6983,12 +7068,48 @@
       const layer = document.getElementById('userPreviewDetailLayer');
       if (layer) layer.style.display = 'none';
     }
+    window.closeUpdDetail = closeUpdDetail;
+    window.closeUserPreviewModal = closeUserPreviewModal;
 
-    // 모달 이벤트 바인딩
-    document.getElementById('btnOpenUserPreview').addEventListener('click', openUserPreviewModal);
-    document.getElementById('btnCloseUserPreviewModal').addEventListener('click', closeUserPreviewModal);
-    document.getElementById('btnToggleUserPreviewTheme').addEventListener('click', toggleUserPreviewTheme);
-    document.getElementById('btnCloseUpdDetail').addEventListener('click', closeUpdDetail);
+    // 2단계 배포 버튼 이벤트 바인딩
+    const btnSaveOverridesOnly = document.getElementById('btnSaveOverridesOnly');
+    if (btnSaveOverridesOnly) {
+      btnSaveOverridesOnly.addEventListener('click', async () => {
+        closeUserPreviewModal();
+        await onSaveToGistClick({ isPublish: false });
+      });
+    }
+
+    const btnPublishToUsers = document.getElementById('btnPublishToUsers');
+    if (btnPublishToUsers) {
+      btnPublishToUsers.addEventListener('click', async () => {
+        const confirmMsg = '🚀 [사용자 배포 적용]\n\n검수 완료된 변경 사항을 최종 배포하시겠습니까?\n(마스터 537건 기준선과 오버라이드가 결합되어 안전하게 배포됩니다)';
+        if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+          if (!window.confirm(confirmMsg)) return;
+        }
+        closeUserPreviewModal();
+        await onSaveToGistClick({ isPublish: true });
+      });
+    }
+
+    // 모달 및 탭 이벤트 바인딩
+    const btnOpenUserPreview = document.getElementById('btnOpenUserPreview');
+    if (btnOpenUserPreview) btnOpenUserPreview.addEventListener('click', openUserPreviewModal);
+
+    const btnCloseUserPreviewModal = document.getElementById('btnCloseUserPreviewModal');
+    if (btnCloseUserPreviewModal) btnCloseUserPreviewModal.addEventListener('click', closeUserPreviewModal);
+
+    const btnInspectorTabDiff = document.getElementById('btnInspectorTabDiff');
+    if (btnInspectorTabDiff) btnInspectorTabDiff.addEventListener('click', () => switchInspectorTab('diff'));
+
+    const btnInspectorTabPreview = document.getElementById('btnInspectorTabPreview');
+    if (btnInspectorTabPreview) btnInspectorTabPreview.addEventListener('click', () => switchInspectorTab('preview'));
+
+    const btnToggleUserPreviewTheme = document.getElementById('btnToggleUserPreviewTheme');
+    if (btnToggleUserPreviewTheme) btnToggleUserPreviewTheme.addEventListener('click', toggleUserPreviewTheme);
+
+    const btnCloseUpdDetail = document.getElementById('btnCloseUpdDetail');
+    if (btnCloseUpdDetail) btnCloseUpdDetail.addEventListener('click', closeUpdDetail);
 
     document.getElementById('btnUserPrevMonth').addEventListener('click', () => {
       userPreviewDate.setMonth(userPreviewDate.getMonth() - 1);

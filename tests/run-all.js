@@ -36,9 +36,10 @@ import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.tes
 import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimming.test.js';
 import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test.js';
 
-// 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM)
+// 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM & 검수 격리)
 import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
 import { run as runOpsUiDomTest } from './docs/ops-ui-dom.test.js';
+import { run as runOpsUserInspectorTest } from './docs/ops-user-inspector.test.js';
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
@@ -151,6 +152,7 @@ async function main() {
   const docsSuites = [
     runOpsEngineTest,
     runOpsUiDomTest,
+    runOpsUserInspectorTest,
     runPagesTest,
     runSeoTest
   ];

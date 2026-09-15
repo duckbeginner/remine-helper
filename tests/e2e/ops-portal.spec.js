@@ -102,4 +102,63 @@ test.describe('Ops Portal - Comprehensive E2E Test Suite', () => {
     expect(isOverflowing).toBe(false);
   });
 
+  // 4. 사용자 뷰 사전 검수기 모달 오픈, 탭 전환(선택 상태) 및 닫기 인터랙션 검증
+  test('User Review Inspector: 모달 오픈, Diff/사이드패널 뷰 탭 전환 및 닫기 인터랙션', async ({ page }) => {
+    const openBtn = page.locator('#btnOpenUserPreview');
+    await expect(openBtn).toBeVisible();
+    await openBtn.click();
+
+    const modal = page.locator('#userReviewModalOverlay');
+    await expect(modal).toHaveClass(/active/);
+
+    const btnDiff = page.locator('#btnInspectorTabDiff');
+    const btnPreview = page.locator('#btnInspectorTabPreview');
+    const diffContainer = page.locator('#inspectorDiffContainer');
+    const previewContainer = page.locator('#inspectorPreviewContainer');
+
+    // 초기 상태: Diff 탭 활성화 & 컨테이너 표시
+    await expect(btnDiff).toHaveClass(/active/);
+    await expect(btnPreview).not.toHaveClass(/active/);
+    await expect(diffContainer).toBeVisible();
+    await expect(previewContainer).toBeHidden();
+
+    // 사이드패널 뷰 탭 클릭 -> Preview 탭 활성화 & 컨테이너 전환
+    await btnPreview.click();
+    await expect(btnPreview).toHaveClass(/active/);
+    await expect(btnDiff).not.toHaveClass(/active/);
+    await expect(previewContainer).toBeVisible();
+    await expect(diffContainer).toBeHidden();
+
+    // Diff 탭 다시 클릭 -> 복귀
+    await btnDiff.click();
+    await expect(btnDiff).toHaveClass(/active/);
+    await expect(btnPreview).not.toHaveClass(/active/);
+    await expect(diffContainer).toBeVisible();
+    await expect(previewContainer).toBeHidden();
+
+    // 닫기 버튼 클릭 -> 모달 닫힘
+    const closeBtn = page.locator('#btnCloseUserPreviewModal');
+    await closeBtn.click();
+    await expect(modal).not.toHaveClass(/active/);
+  });
+
+  // 5. 새 일정 등록 모달 오픈 인터랙션 검증
+  test('New Schedule Modal: + 새 일정 버튼 클릭 시 등록 바텀시트 정상 오픈', async ({ page }) => {
+    const addBtn = page.locator('#btnOpenAddModal');
+    await expect(addBtn).toBeVisible();
+    await addBtn.click();
+
+    const editModal = page.locator('#editModalOverlay');
+    await expect(editModal).toHaveClass(/active/);
+
+    const titleEl = page.locator('#modalHeaderTitle');
+    await expect(titleEl).toHaveText('새 일정 등록');
+
+    // 닫기
+    const closeBtn = page.locator('#btnCloseModal');
+    await closeBtn.click();
+    await expect(editModal).not.toHaveClass(/active/);
+  });
+
 });
+

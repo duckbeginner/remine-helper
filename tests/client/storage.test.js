@@ -76,24 +76,26 @@ export async function run() {
   });
 
   // 2. filterAndDeduplicateSchedules
-  runner.test('filterAndDeduplicateSchedules: 중복 제거 및 직캠/투표 등 제외 정규식 검증', () => {
+  runner.test('filterAndDeduplicateSchedules: 중복 제거 및 고유 ID/날짜제목 안전망 검증', () => {
     const rawItems = [
       { id: '1', title: '뮤직뱅크 본방', startTime: '2026-09-15T17:00:00+09:00' },
-      { id: '1', title: '뮤직뱅크 본방', startTime: '2026-09-15T17:00:00+09:00' }, // ID 중복 -> 제외
-      { id: '2', title: '인기가요 [직캠]', startTime: '2026-09-15T18:00:00+09:00' }, // 직캠 -> 제외
-      { id: '3', title: '엠넷플러스 투표', startTime: '2026-09-16T12:00:00+09:00' }, // 투표 -> 제외
+      { id: '1', title: '뮤직뱅크 본방', startTime: '2026-09-15T17:00:00+09:00' }, // ID 중복 -> 1건만 유지
+      { id: '2', title: '인기가요 본방', startTime: '2026-09-15T18:00:00+09:00', message: '관련 영상: https://youtu.be/xxx, https://www.youtube.com/shorts/yyy' },
+      { id: '3', title: '엠넷플러스 방송', startTime: '2026-09-16T12:00:00+09:00' },
       { id: '4', title: '팬사인회 공지', startTime: '2026-09-17T14:00:00+09:00' }
     ];
 
     const result = filterAndDeduplicateSchedules(rawItems);
-    assert.strictEqual(result.length, 2);
+    assert.strictEqual(result.length, 4, '중복 1건만 제거되고 나머지 4건은 온전히 보존되어야 합니다.');
     assert.strictEqual(result[0].id, '1');
-    assert.strictEqual(result[1].id, '4');
+    assert.strictEqual(result[1].id, '2');
+    assert.strictEqual(result[2].id, '3');
+    assert.strictEqual(result[3].id, '4');
   });
 
-  runner.test('filterAndDeduplicateSchedules: _isCustom 관리자 일정은 키워드 매칭과 무관하게 100% 보존', () => {
+  runner.test('filterAndDeduplicateSchedules: 커스텀/수정 일정 및 공식 행사 100% 보존', () => {
     const rawItems = [
-      { id: 'custom_1', title: '스페셜 직캠 상영회', _isCustom: true, startTime: '2026-09-18T19:00:00+09:00' }
+      { id: 'custom_1', title: '삼성 라이온즈 시구/공연', startTime: '2024-08-03T00:00:00+09:00', message: 'https://www.youtube.com/shorts/FOVjOMyKFPg' }
     ];
 
     const result = filterAndDeduplicateSchedules(rawItems);

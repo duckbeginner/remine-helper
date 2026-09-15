@@ -66,17 +66,13 @@ export const EXCLUDE_SCHEDULE_REGEX = /(직캠|풀캠|팬캠|페이스캠|입덕
 
 export function filterAndDeduplicateSchedules(schedules) {
   if (!Array.isArray(schedules) || schedules.length === 0) return [];
+  // 백엔드 Central Data Hub에서 직캠/쇼츠/투표 필터링 및 오버라이드 합성이 100% 완료된 완제품을 공급하므로,
+  // 클라이언트는 유효성 방어(null/undefined 배제) 및 동일 ID/날짜제목 중복 가드만 수행하여 537건 마스터 데이터를 온전히 보존합니다.
   const seen = new Set();
   const results = [];
 
   for (const item of schedules) {
     if (!item) continue;
-    // 관리자가 직접 생성했거나 수정한 일정은 키워드 매칭과 무관하게 100% 보존
-    if (!item._isCustom && !item._isModified) {
-      const text = (item.title || "") + " " + (item.message || "") + " " + (item.url || "") + " " + (item.link || "");
-      if (EXCLUDE_SCHEDULE_REGEX.test(text)) continue;
-      if (item._isShorts || /youtube\.com\/shorts\//i.test(text) || /#shorts\b|#쇼츠\b/i.test(text) || /(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(text)) continue;
-    }
 
     // 중복 제거 가드 (동일 ID 또는 동일 시작일+제목)
     const key = item.id || `${(item.startTime || '').slice(0, 10)}_${item.title}`;
