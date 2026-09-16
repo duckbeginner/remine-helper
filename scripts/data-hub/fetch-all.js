@@ -17,6 +17,7 @@ const OUTPUT_DIR = path.join(ROOT_DIR, 'docs/api/v1');
 
 const CORE_FILE = path.join(OUTPUT_DIR, 'core.json');
 const SCHEDULES_FILE = path.join(OUTPUT_DIR, 'schedules.json');
+const MASTER_SCHEDULES_FILE = path.join(OUTPUT_DIR, 'master-schedules.json');
 const DATA_FILE = path.join(OUTPUT_DIR, 'data.json');
 
 async function main() {
@@ -131,6 +132,15 @@ async function main() {
       items: schedule.items
     };
 
+    // 5-1. [Ops 전수 마스터] master-schedules.json (필터 탈락 일정 포함 전수 검수용 아카이브)
+    const masterSchedulesData = {
+      version: "1.0.0",
+      updatedAt: nowIso,
+      updatedAtTimestamp: nowTimestamp,
+      totalCount: schedule.masterCount || (schedule.masterItems || []).length,
+      items: schedule.masterItems || schedule.items
+    };
+
     // 6. [하위 호환] data.json (기존 통합본)
     const finalData = {
       ...coreData,
@@ -147,22 +157,25 @@ async function main() {
 
     fs.writeFileSync(CORE_FILE, JSON.stringify(coreData), 'utf8');
     fs.writeFileSync(SCHEDULES_FILE, JSON.stringify(schedulesData), 'utf8');
+    fs.writeFileSync(MASTER_SCHEDULES_FILE, JSON.stringify(masterSchedulesData), 'utf8');
     fs.writeFileSync(DATA_FILE, JSON.stringify(finalData), 'utf8');
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     const coreSizeKb = (Buffer.byteLength(JSON.stringify(coreData), 'utf8') / 1024).toFixed(2);
     const schedSizeKb = (Buffer.byteLength(JSON.stringify(schedulesData), 'utf8') / 1024).toFixed(2);
+    const masterSizeKb = (Buffer.byteLength(JSON.stringify(masterSchedulesData), 'utf8') / 1024).toFixed(2);
     const totalSizeKb = (Buffer.byteLength(JSON.stringify(finalData), 'utf8') / 1024).toFixed(2);
 
     console.log("\n==================================================");
     console.log("🎉 [RESCENE Data Hub] 2계층 데이터 분할 생성 성공!");
-    console.log(`📦 core.json 크기      : ${coreSizeKb} KB (활성 스케줄 ${activeItems.length}건 + 영상 + SNS)`);
-    console.log(`📦 schedules.json 크기 : ${schedSizeKb} KB (전체 마스터 아카이브 ${schedule.totalCount}건)`);
-    console.log(`📦 data.json 크기      : ${totalSizeKb} KB (기존 통합본)`);
-    console.log(`⏱️ 총 소요 시간        : ${duration}초`);
+    console.log(`📦 core.json 크기             : ${coreSizeKb} KB (활성 스케줄 ${activeItems.length}건 + 영상 + SNS)`);
+    console.log(`📦 schedules.json 크기        : ${schedSizeKb} KB (확장 배포용 아카이브 ${schedule.totalCount}건)`);
+    console.log(`📦 master-schedules.json 크기 : ${masterSizeKb} KB (Ops 전수 검수 아카이브 ${masterSchedulesData.totalCount}건)`);
+    console.log(`📦 data.json 크기             : ${totalSizeKb} KB (기존 통합본)`);
+    console.log(`⏱️ 총 소요 시간               : ${duration}초`);
     console.log("==================================================");
 
-    return { coreData, schedulesData, finalData };
+    return { coreData, schedulesData, masterSchedulesData, finalData };
   } catch (error) {
     console.error("\n❌ [RESCENE Data Hub] 수집 중 치명적 오류 발생:", error);
     process.exit(1);

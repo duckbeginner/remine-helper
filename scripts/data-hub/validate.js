@@ -11,19 +11,21 @@ const OUTPUT_DIR = path.resolve(__dirname, '../../docs/api/v1');
 
 const CORE_FILE = path.join(OUTPUT_DIR, 'core.json');
 const SCHEDULES_FILE = path.join(OUTPUT_DIR, 'schedules.json');
+const MASTER_SCHEDULES_FILE = path.join(OUTPUT_DIR, 'master-schedules.json');
 
 function runValidation() {
   console.log("==================================================");
   console.log("🧪 [Data Hub Test] 2계층 데이터 무결성 검증 시작");
   console.log("==================================================\n");
 
-  if (!fs.existsSync(CORE_FILE) || !fs.existsSync(SCHEDULES_FILE)) {
-    console.error("❌ 실패: 필수 데이터 파일(core.json, schedules.json)이 존재하지 않습니다.");
+  if (!fs.existsSync(CORE_FILE) || !fs.existsSync(SCHEDULES_FILE) || !fs.existsSync(MASTER_SCHEDULES_FILE)) {
+    console.error("❌ 실패: 필수 데이터 파일(core.json, schedules.json, master-schedules.json)이 존재하지 않습니다.");
     process.exit(1);
   }
 
   const core = JSON.parse(fs.readFileSync(CORE_FILE, 'utf8'));
   const schedules = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
+  const masterSchedules = JSON.parse(fs.readFileSync(MASTER_SCHEDULES_FILE, 'utf8'));
 
   let passed = 0;
   let failed = 0;
@@ -60,6 +62,13 @@ function runValidation() {
   
   const sampleSchedule = schedules.items?.[0];
   assert(Boolean(sampleSchedule?.title && sampleSchedule?.startTime), "스케줄 필수 필드(title, startTime) 완비");
+
+  console.log("\n2-1️⃣ [master-schedules.json] Ops 전수 검수 아카이브 검증");
+  assert(masterSchedules.version === "1.0.0", "버전 번호 일치 (1.0.0)");
+  assert(typeof masterSchedules.totalCount === 'number' && masterSchedules.totalCount >= schedules.totalCount, `전수 마스터 아카이브 건수(${masterSchedules.totalCount}건)가 배포본(${schedules.totalCount}건) 이상 집계됨`);
+  assert(Array.isArray(masterSchedules.items) && masterSchedules.items.length === masterSchedules.totalCount, "전수 아카이브 items 배열 길이 일치");
+  const masterKb = Buffer.byteLength(JSON.stringify(masterSchedules)) / 1024;
+  assert(masterKb <= 800, `master-schedules.json 800KB 규격 내 유지 (${masterKb.toFixed(2)} KB)`);
 
   console.log("\n3️⃣ 파일 크기 2계층 다이어트 규격 검증");
   const coreKb = Buffer.byteLength(JSON.stringify(core)) / 1024;

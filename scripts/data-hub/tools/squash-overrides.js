@@ -133,6 +133,7 @@ async function main() {
   const squashedOverrides = {
     version: "2.0.0",
     updatedAt: new Date().toISOString(),
+    pipelineConfig: gistData.pipelineConfig || { mode: 'auto', approvedScheduleIds: [] },
     filterRules: gistData.filterRules || { enabled: true, excludeShorts: true },
     customSchedules: {},
     sourceOverrides: {},

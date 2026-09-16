@@ -58,6 +58,28 @@ export function extractYouTubeVideoId(url) {
   return match ? match[1] : null;
 }
 
+// SNS 미디어(YouTube, Instagram, X/Twitter 등) 고유 식별자 추출기
+export function extractMediaIdentifier(itemOrUrl) {
+  if (!itemOrUrl) return null;
+  const text = typeof itemOrUrl === 'string'
+    ? itemOrUrl
+    : [itemOrUrl.url, itemOrUrl.link, itemOrUrl.message, itemOrUrl.title].filter(Boolean).join(' ');
+
+  const ytMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch) return `yt:${ytMatch[1]}`;
+
+  const igMatch = text.match(/instagram\.com\/(?:[a-zA-Z0-9_.]+\/)?(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/i);
+  if (igMatch) return `ig:${igMatch[1]}`;
+
+  const xMatch = text.match(/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/([0-9]+)/i);
+  if (xMatch) return `x:${xMatch[1]}`;
+
+  const ttMatch = text.match(/(?:tiktok\.com\/@[^/]+\/video\/|vt\.tiktok\.com\/)([0-9a-zA-Z]+)/i);
+  if (ttMatch) return `tt:${ttMatch[1]}`;
+
+  return null;
+}
+
 // 크롤링 대상 월 계산 (기본: 과거 1개월 ~ 미래 3개월 패스트트랙, isFull=true: 2024년~내년 말 전수)
 export function getMonthsToFetch(baseDate = new Date(), isFull = false) {
   const months = [];
@@ -673,7 +695,7 @@ function cleanScheduleText(text) {
   if (!text) return "";
   return text
     .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
-    .replace(/[<>[\]{}()_!?,.~`'"•\-/]/g, ' ')
+    .replace(/[<>[\]{}()_!?,.~`'"•\-/:;|+=]/g, ' ')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
@@ -706,16 +728,10 @@ function normalizeTitle(title) {
 
 // 스케줄 중복 판별
 export function areSchedulesDuplicate(item1, item2) {
-  const extractYtId = (item) => {
-    const text = [item.url, item.link, item.message, item.title].filter(Boolean).join(' ');
-    const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-    return match ? match[1] : null;
-  };
-
-  const ytId1 = extractYtId(item1);
-  const ytId2 = extractYtId(item2);
-  if (ytId1 && ytId2) {
-    return ytId1 === ytId2;
+  const mediaId1 = extractMediaIdentifier(item1);
+  const mediaId2 = extractMediaIdentifier(item2);
+  if (mediaId1 && mediaId2) {
+    return mediaId1 === mediaId2;
   }
 
   const t1 = item1.title || "";
@@ -962,11 +978,25 @@ export async function collectScheduleData(allYtVideos = []) {
   // [초강력 데이터 다이어트 & starAttendees 복원]
   const slimmedList = overriddenList.map(item => slimScheduleItem(item)).filter(Boolean);
 
-  console.log(`✓ [Schedule] 완료: 총 수집/아카이브 ${rawList.length}건 중 ${slimmedList.length}건 유효 슬림화 완료`);
+  // [2트랙 마스터 아카이브 슬림화]
+  const masterRaw = overriddenList.masterItems || [];
+  masterRaw.sort((a, b) => (parseSafeDate(a.startTime)?.getTime() || 0) - (parseSafeDate(b.startTime)?.getTime() || 0));
+  const slimmedMaster = masterRaw.map(item => {
+    const slim = slimScheduleItem(item);
+    if (!slim) return null;
+    if (item._filterReason) slim._filterReason = item._filterReason;
+    if (item._isPendingReview) slim._isPendingReview = true;
+    if (item.isDeleted) slim.isDeleted = true;
+    return slim;
+  }).filter(Boolean);
+
+  console.log(`✓ [Schedule] 완료: 총 수집/아카이브 ${rawList.length}건 중 배포본 ${slimmedList.length}건, 전수 마스터 ${slimmedMaster.length}건 정제 완료`);
 
   return {
     totalCount: slimmedList.length,
-    items: slimmedList
+    items: slimmedList,
+    masterCount: slimmedMaster.length,
+    masterItems: slimmedMaster
   };
 }
 
@@ -1022,14 +1052,18 @@ export function determineClusterPrimary(cluster) {
   return sorted[0];
 }
 
-// [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 적용
+// [Gist 보정 규칙 v2.0] 사용자가 Ops 포털에서 수정한 오버라이드(수정/삭제/추가) 규칙 및 2중 운영 모드(auto/review) 적용
 export function mergeSchedulesV2(rawItems, overridesV2) {
   const {
     filterRules = {},
     customSchedules = {},
     sourceOverrides = {},
-    legacyAliases = {}
+    legacyAliases = {},
+    pipelineConfig = {}
   } = (overridesV2 || {});
+
+  const mode = pipelineConfig.mode || 'auto'; // 'auto' (빠른 반영) | 'review' (관리자 검수)
+  const approvedSet = new Set(Array.isArray(pipelineConfig.approvedScheduleIds) ? pipelineConfig.approvedScheduleIds : []);
 
   // 필터 규칙 설정
   const filterEnabled = filterRules.enabled !== false;
@@ -1040,14 +1074,16 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     ? filterRules.excludeKeywords
     : DEFAULT_EXCLUDE_KEYWORDS;
 
-  const matchFilter = (item) => {
-    if (!filterEnabled || excludeKeywords.length === 0) return false;
+  const matchFilterReason = (item) => {
+    if (!filterEnabled || excludeKeywords.length === 0) return null;
     const text = [item.title, item.message, item.url, item.link].filter(Boolean).join(' ').toLowerCase();
-    return excludeKeywords.some(kw => {
+    for (const kw of excludeKeywords) {
       const cleanKw = kw.trim().toLowerCase();
-      if (!cleanKw) return false;
-      return text.includes(cleanKw);
-    });
+      if (cleanKw && text.includes(cleanKw)) {
+        return `키워드: ${kw.trim()}`;
+      }
+    }
+    return null;
   };
 
   // (A) 원본 아이템에 ID 부여 및 소스 오버라이드 맵 준비
@@ -1080,77 +1116,145 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   let modCount = 0;
   let filterCount = 0;
 
-  // (D) 개별 삭제 및 필터 규칙 적용 (100% 독립 동작)
+  // (C-1) 관리자 검수 모드: 승인된 일정과 연결된 서브 일정 연쇄 승인 (Cluster Awareness)
+  const effectiveApprovedSet = new Set(approvedSet);
+  if (mode === 'review' && approvedSet.size > 0) {
+    const linkMap = new Map();
+    const mediaIdMap = new Map();
+
+    itemMap.forEach(it => {
+      if (!linkMap.has(it.id)) linkMap.set(it.id, new Set());
+      const ov = resolvedOverrides[it.id];
+      const mergedLinked = [
+        ...(it.linkedScheduleIds || []),
+        ...((ov && ov.linkedScheduleIds) || [])
+      ];
+      mergedLinked.forEach(tId => {
+        linkMap.get(it.id).add(tId);
+        if (!linkMap.has(tId)) linkMap.set(tId, new Set());
+        linkMap.get(tId).add(it.id);
+      });
+
+      const effectiveItem = ov ? { ...it, ...ov } : it;
+      const mId = extractMediaIdentifier(effectiveItem);
+      if (mId) {
+        if (!mediaIdMap.has(mId)) mediaIdMap.set(mId, []);
+        mediaIdMap.get(mId).push(it.id);
+      }
+    });
+
+    mediaIdMap.forEach(ids => {
+      if (ids.length > 1) {
+        for (let i = 0; i < ids.length; i++) {
+          for (let j = i + 1; j < ids.length; j++) {
+            linkMap.get(ids[i]).add(ids[j]);
+            linkMap.get(ids[j]).add(ids[i]);
+          }
+        }
+      }
+    });
+
+    approvedSet.forEach(startId => {
+      if (linkMap.has(startId)) {
+        const q = [startId];
+        const visited = new Set([startId]);
+        while (q.length > 0) {
+          const cur = q.shift();
+          effectiveApprovedSet.add(cur);
+          (linkMap.get(cur) || []).forEach(nextId => {
+            if (!visited.has(nextId)) {
+              visited.add(nextId);
+              q.push(nextId);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  // (D) 2트랙 분기: activeItems (확장 배포용) & masterItems (Ops 전수 검수용 아카이브)
   const activeItems = [];
+  const masterItems = [];
+
   itemMap.forEach(item => {
     const ov = resolvedOverrides[item.id];
-    if (ov && ov.isDeleted) {
-      delCount++;
-      return;
+    const isDeleted = Boolean(item.isDeleted || (ov && ov.isDeleted));
+
+    // 수정 필드 합성 베이스 아이템 생성
+    let baseItem = { ...item };
+    if (ov) {
+      ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'].forEach(f => {
+        if (ov[f] !== undefined) baseItem[f] = ov[f];
+      });
+      if (ov.linkedScheduleIds) {
+        baseItem.linkedScheduleIds = Array.from(new Set([...(baseItem.linkedScheduleIds || []), ...ov.linkedScheduleIds]));
+      }
+      modCount++;
     }
-    if (item.isDeleted) {
+    if (isDeleted) {
+      baseItem.isDeleted = true;
       delCount++;
-      return;
     }
 
-    // 쇼츠 제외 (커스텀 일정은 보호 대상 제외)
+    // 필터 사유 판별 (쇼츠 ➡️ 종류 ➡️ 채널 ➡️ 키워드 순)
+    let filterReason = null;
     if (excludeShorts && !item._isCustom && (item._isShorts || isShortsSchedule(item))) {
-      filterCount++;
-      return;
-    }
-
-    // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드가 있는 항목은 필터링에서 보호
-    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
-
-    // 종류(typeText)별 제외
-    if (!isProtected && excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) {
-      filterCount++;
-      return;
-    }
-
-    // 채널(channel / extField)별 제외
-    if (!isProtected && excludeChannels.length > 0) {
+      filterReason = '쇼츠/숏폼 영상';
+    } else if (excludeTypes.length > 0 && item.typeText && excludeTypes.includes(item.typeText)) {
+      filterReason = `카테고리 제외 (${item.typeText})`;
+    } else if (excludeChannels.length > 0) {
       const channelValues = [
         item.channel,
         (item.extField && (item.extField.key === '채널' || item.extField.key === '방송사') ? item.extField.value : null)
       ].filter(Boolean).map(s => s.trim().toLowerCase());
 
-      const isChannelExcluded = excludeChannels.some(ex => {
+      const matchedCh = excludeChannels.find(ex => {
         const cleanEx = ex.trim().toLowerCase();
-        if (!cleanEx) return false;
-        return channelValues.some(c => c === cleanEx || c.includes(cleanEx));
+        return cleanEx && channelValues.some(c => c === cleanEx || c.includes(cleanEx));
       });
-
-      if (isChannelExcluded) {
-        filterCount++;
-        return;
+      if (matchedCh) {
+        filterReason = `제외 채널: ${matchedCh}`;
       }
     }
+    if (!filterReason) {
+      filterReason = matchFilterReason(item);
+    }
 
-    if (!isProtected && matchFilter(item)) {
+    // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드가 있는 항목은 필터링에서 100% 보호
+    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+
+    // [트랙 1: Ops 포털 전수 마스터에 수록]
+    const masterEntry = { ...baseItem };
+    if (filterReason && !isProtected) {
+      masterEntry._filterReason = filterReason;
+    }
+    // 관리자 검수 모드일 때 미승인 신규 일정 표시 (연관 서브 일정까지 지능형 연쇄 승인 반영)
+    const isApprovedOrExempt = isProtected || effectiveApprovedSet.has(item.id);
+    if (mode === 'review' && !isApprovedOrExempt) {
+      masterEntry._isPendingReview = true;
+    }
+    masterItems.push(masterEntry);
+
+    // [트랙 2: 확장 프로그램 배포용 activeItems 판정]
+    if (isDeleted) return; // 삭제 일정 배제
+
+    if (filterReason && !isProtected) {
       filterCount++;
+      return; // 필터 탈락 일정 배제
+    }
+
+    // 검수 모드(review)에서는 승인되었거나 오버라이드/커스텀 일정만 통과 (미승인은 배포 보류)
+    if (mode === 'review' && !isApprovedOrExempt) {
       return;
     }
 
-    // 수정 필드 적용 (수정된 것만 덮어쓰고 원본은 보존)
-    if (ov) {
-      const merged = { ...item };
-      ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'].forEach(f => {
-        if (ov[f] !== undefined) merged[f] = ov[f];
-      });
-      if (ov.linkedScheduleIds) {
-        merged.linkedScheduleIds = Array.from(new Set([...(merged.linkedScheduleIds || []), ...ov.linkedScheduleIds]));
-      }
-      activeItems.push(merged);
-      modCount++;
-    } else {
-      activeItems.push(item);
-    }
+    activeItems.push(baseItem);
   });
 
   if (filterCount > 0) {
     console.log(`  ✂️ [Filter Rules] 제외 필터 규칙에 의해 ${filterCount}건 자동 제외 완료 (투표/직캠/이벤트 등)`);
   }
+
 
   // (E) 연관 일정 상호 합성 (linkedScheduleIds 및 동일 YouTube Video ID 기준 양방향 클러스터링)
   const adj = new Map();
@@ -1164,22 +1268,55 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     });
   });
 
-  // 동일 YouTube Video ID 자동 인접 엣지 추가 (동일 영상 일정 100% 자동 클러스터링)
-  const ytVideoMap = new Map();
+  // 1) 동일 미디어(YouTube, Instagram, X/Twitter 등) 공유 일정 자동 인접 엣지 추가
+  const mediaMap = new Map();
   activeItems.forEach(item => {
-    const vid = extractYouTubeVideoId(item.url || item.link);
-    if (vid) {
-      if (!ytVideoMap.has(vid)) ytVideoMap.set(vid, []);
-      ytVideoMap.get(vid).push(item.id);
+    const mId = extractMediaIdentifier(item);
+    if (mId) {
+      if (!mediaMap.has(mId)) mediaMap.set(mId, []);
+      mediaMap.get(mId).push(item.id);
     }
   });
 
-  ytVideoMap.forEach(ids => {
+  mediaMap.forEach(ids => {
     if (ids.length > 1) {
       for (let i = 0; i < ids.length; i++) {
         for (let j = i + 1; j < ids.length; j++) {
           adj.get(ids[i]).add(ids[j]);
           adj.get(ids[j]).add(ids[i]);
+        }
+      }
+    }
+  });
+
+  // 2) 동일 날짜(KST 기준) + 중복/유사 제목 일정 자동 인접 엣지 추가 (Mnet vs Blip 동일 일정 100% 자동 합성)
+  const getKSTDateString = (dateStr) => {
+    if (!dateStr) return '';
+    const d = parseSafeDate(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+  };
+
+  const dateGroups = new Map();
+  activeItems.forEach(item => {
+    const kstDate = getKSTDateString(item.startTime);
+    if (kstDate) {
+      if (!dateGroups.has(kstDate)) dateGroups.set(kstDate, []);
+      dateGroups.get(kstDate).push(item);
+    }
+  });
+
+  dateGroups.forEach(group => {
+    if (group.length > 1) {
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const itemA = group[i];
+          const itemB = group[j];
+          if (areSchedulesDuplicate(itemA, itemB)) {
+            adj.get(itemA.id).add(itemB.id);
+            adj.get(itemB.id).add(itemA.id);
+          }
         }
       }
     }
@@ -1223,6 +1360,9 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     const synthetic = { ...primary };
 
     secondaries.forEach(sec => {
+      if (sec.title && !primary._isModified && !primary._isCustom) {
+        synthetic.title = pickBestTitle(synthetic.title, sec.title);
+      }
       if (!synthetic.url && sec.url) synthetic.url = sec.url;
       if (!synthetic.location && sec.location) synthetic.location = sec.location;
       if (!synthetic.channel && sec.channel) synthetic.channel = sec.channel;
@@ -1232,8 +1372,11 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
         if (!synthetic.starAttendees || synthetic.starAttendees.length === 0) {
           synthetic.starAttendees = [...sec.starAttendees];
         } else {
-          const existNames = new Set(synthetic.starAttendees.map(a => a.name));
-          const newOnes = sec.starAttendees.filter(a => a.name && !existNames.has(a.name));
+          const existNames = new Set(synthetic.starAttendees.map(a => (a.name || a.nickname || '').trim()).filter(Boolean));
+          const newOnes = sec.starAttendees.filter(a => {
+            const n = (a.name || a.nickname || '').trim();
+            return n && !existNames.has(n);
+          });
           synthetic.starAttendees = [...synthetic.starAttendees, ...newOnes];
         }
       }
@@ -1249,6 +1392,9 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   if (modCount > 0 || delCount > 0 || addCount > 0) {
     console.log(`  🛠️ [Schedule Overrides v2.0] 수동 보정 적용: 수정 ${modCount}건, 삭제 ${delCount}건, 신규 ${addCount}건`);
   }
+
+  // 2트랙 마스터 아카이브 (Ops 포털 전수 검수용) 첨부
+  finalResults.masterItems = masterItems;
 
   return finalResults;
 }

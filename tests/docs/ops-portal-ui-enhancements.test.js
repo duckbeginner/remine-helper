@@ -266,6 +266,67 @@ export async function run() {
     assert.strictEqual(resetState.isClearBtnVisible, false, '초기화 후 X 버튼이 숨겨져야 함');
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 8. Gist sourceOverrides 유령 파편 항목 복원 시 동일 날짜+제목 중복 복원 방어 검증
+  // ─────────────────────────────────────────────────────────────
+  runner.test('sourceOverrides Duplicate Guard: 이미 동일 날짜/제목 일정이 존재할 경우 중복 복원 차단 및 속성만 흡수', () => {
+    function normalizeTitle(title) {
+      if (!title) return '';
+      return String(title)
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
+        .replace(/[<>[\]{}()_!?,.~`'"•\-/:;|+=]/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .trim();
+    }
+
+    const allSchedules = [
+      {
+        id: 'primary-event-01',
+        title: 'RESCENE Special POP-UP Store',
+        startTime: '2026-09-15T00:00:00+09:00',
+        _isDeleted: false,
+        linkedScheduleIds: []
+      }
+    ];
+
+    // Gist에 남아있는 동일 일정의 다른 해시 키 오버라이드
+    const legacyOverrideItem = {
+      id: 'mod_legacy_hash_xyz',
+      title: '[RESCENE] Special POP-UP Store',
+      startTime: '2026-09-15T00:00:00+09:00',
+      linkedScheduleIds: ['mod_another_hash']
+    };
+
+    // 복원 시뮬레이터
+    function processRestoreItem(v) {
+      const vDate = (v.startTime || '').slice(0, 10);
+      const vNorm = normalizeTitle(v.title || '');
+      const existingDuplicate = allSchedules.find(s => {
+        if (!s.startTime || !s.title) return false;
+        const sDate = (s.startTime || '').slice(0, 10);
+        if (sDate !== vDate) return false;
+        const sNorm = normalizeTitle(s.title || '');
+        return sNorm === vNorm || (sNorm && vNorm && (sNorm.includes(vNorm) || vNorm.includes(sNorm)) && Math.min(sNorm.length, vNorm.length) >= 4);
+      });
+
+      if (existingDuplicate) {
+        if (Array.isArray(v.linkedScheduleIds)) {
+          existingDuplicate.linkedScheduleIds = Array.from(new Set([...(existingDuplicate.linkedScheduleIds || []), ...v.linkedScheduleIds]));
+        }
+        return false; // 중복 복원 거부 (흡수만 수행)
+      }
+
+      allSchedules.push(v);
+      return true;
+    }
+
+    const restored = processRestoreItem(legacyOverrideItem);
+    assert.strictEqual(restored, false, '동일 날짜/제목 일정이 이미 있으므로 신규 카드 생성이 거부되어야 함');
+    assert.strictEqual(allSchedules.length, 1, '전체 일정 수가 늘어나지 않고 1건으로 유지되어야 함');
+    assert(allSchedules[0].linkedScheduleIds.includes('mod_another_hash'), '연관 일정 속성은 기존 카드에 안전하게 병합되어야 함');
+  });
+
   return runner.summary();
 }
 

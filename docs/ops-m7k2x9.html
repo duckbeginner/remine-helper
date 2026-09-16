@@ -1976,6 +1976,11 @@
         </div>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn-action btn-mode-toggle" id="btnTogglePipelineMode"
+          title="수집기 운영 모드 전환 (클릭하여 빠른 반영 ↔ 관리자 검수 전환)"
+          style="display: flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 12px; font-weight: 600; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">
+          <span id="pipelineModeIcon">⚡</span><span id="pipelineModeText" class="hide-mobile-text">빠른 반영</span>
+        </button>
         <button type="button" class="btn-action btn-user-preview" id="btnOpenUserPreview"
           title="사용자에게 표시되는 일정 미리보기 (사이드패널 뷰)">
           <span>📱</span><span class="hide-mobile-text">사용자 뷰</span>
@@ -2637,8 +2642,30 @@
       };
     }
 
+    // 파이프라인 수집기 운영 모드 설정 ('auto' | 'review')
+    let currentPipelineConfig = {
+      mode: 'auto',
+      approvedScheduleIds: []
+    };
+    let basePipelineConfigSnapshot = {
+      mode: 'auto',
+      approvedScheduleIds: []
+    };
+
+    function updateBasePipelineConfigSnapshot(source) {
+      if (!source) {
+        basePipelineConfigSnapshot = { mode: 'auto', approvedScheduleIds: [] };
+        return;
+      }
+      basePipelineConfigSnapshot = {
+        mode: source.mode || 'auto',
+        approvedScheduleIds: Array.isArray(source.approvedScheduleIds) ? [...source.approvedScheduleIds] : []
+      };
+    }
+
     const GIST_ID = '44b49b328233ef6157499debe03f165c';
     const GIST_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedules.json`;
+    const GIST_MASTER_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/master-schedules.json`;
     const GIST_OVERRIDES_RAW_URL = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedule-overrides.json`;
 
     // 토큰 관리
@@ -2802,6 +2829,16 @@
       if (!item) return '';
       const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
       return `${d}_${item.title}`;
+    }
+
+    function normalizeTitle(title) {
+      if (!title) return '';
+      return String(title)
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
+        .replace(/[<>[\]{}()_!?,.~`'"•\-/:;|+=]/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .trim();
     }
 
     function escapeHtml(str) {
@@ -2982,10 +3019,30 @@
       try {
         const token = getStoredToken();
 
-        // 1. 기본 schedules.json 로드
-        const res = await fetch(`${GIST_RAW_URL}?t=${Date.now()}`);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
+        // 1. master-schedules.json 우선 로드 (없으면 기본 schedules.json 폴백)
+        let data = null;
+        try {
+          const masterRes = await fetch(`${GIST_MASTER_RAW_URL}?t=${Date.now()}`);
+          if (masterRes.ok) {
+            data = await masterRes.json();
+          }
+        } catch (e) { }
+
+        if (!data || !Array.isArray(data.items)) {
+          try {
+            const localMasterRes = await fetch(`./api/v1/master-schedules.json?t=${Date.now()}`);
+            if (localMasterRes.ok) {
+              data = await localMasterRes.json();
+            }
+          } catch (e) { }
+        }
+
+        if (!data || !Array.isArray(data.items)) {
+          const res = await fetch(`${GIST_RAW_URL}?t=${Date.now()}`);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          data = await res.json();
+        }
+
         const baseItems = (data.items || []).map(item => {
           if (item && item.id && String(item.id).startsWith('custom_')) {
             item._isCustom = true;
@@ -3035,6 +3092,20 @@
         // 2-1. v2.0 통합 파서로 appliedOverrides 확정 및 기준 스냅샷 갱신
         appliedOverrides = parseOverridesV2IntoMemory(overridesJson);
         updateBaseOverridesSnapshot(appliedOverrides);
+
+        // 2-2. pipelineConfig 동기화 및 기준 스냅샷 갱신
+        if (overridesJson && overridesJson.pipelineConfig && typeof overridesJson.pipelineConfig === 'object') {
+          currentPipelineConfig = {
+            mode: overridesJson.pipelineConfig.mode || 'auto',
+            approvedScheduleIds: Array.isArray(overridesJson.pipelineConfig.approvedScheduleIds)
+              ? [...overridesJson.pipelineConfig.approvedScheduleIds]
+              : []
+          };
+        } else {
+          currentPipelineConfig = { mode: 'auto', approvedScheduleIds: [] };
+        }
+        updateBasePipelineConfigSnapshot(currentPipelineConfig);
+        updatePipelineModeUI();
 
         // 삭제 판별 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
         const checkIsDeleted = (item) => {
@@ -3115,6 +3186,27 @@
               const vCandidate = { ...v, id: v.id || k };
               if (!isValidScheduleItem(vCandidate)) return;
 
+              // 동일 날짜 + 정규화 제목 일치 기존 일정이 이미 allSchedules에 존재하는지 확인 (동일 일정 중복 복원 차단)
+              const vDate = v.startTime ? formatDateYMD(new Date(v.startTime)) : '';
+              const vNorm = normalizeTitle(v.title || '');
+              const existingDuplicate = allSchedules.find(s => {
+                if (!s.startTime || !s.title) return false;
+                const sDate = formatDateYMD(new Date(s.startTime));
+                if (sDate !== vDate) return false;
+                const sNorm = normalizeTitle(s.title || '');
+                return sNorm === vNorm || (sNorm && vNorm && (sNorm.includes(vNorm) || vNorm.includes(sNorm)) && Math.min(sNorm.length, vNorm.length) >= 4);
+              });
+
+              if (existingDuplicate) {
+                if (v.isDeleted || appliedOverrides.deleted.has(k) || (v.id && appliedOverrides.deleted.has(v.id))) {
+                  existingDuplicate._isDeleted = true;
+                }
+                if (Array.isArray(v.linkedScheduleIds)) {
+                  existingDuplicate.linkedScheduleIds = Array.from(new Set([...(existingDuplicate.linkedScheduleIds || []), ...v.linkedScheduleIds]));
+                }
+                return;
+              }
+
               const isBlip = String(k).startsWith('blip_') || (v.id && String(v.id).startsWith('blip_'));
               const isMnet = String(k).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(k));
               const sourceVal = v.source || (isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom'));
@@ -3185,6 +3277,48 @@
           </div>
         `;
       }
+    }
+
+    // 파이프라인 모드 UI 갱신 헬퍼
+    function updatePipelineModeUI() {
+      const btn = document.getElementById('btnTogglePipelineMode');
+      const icon = document.getElementById('pipelineModeIcon');
+      const text = document.getElementById('pipelineModeText');
+      if (!btn) return;
+
+      const mode = currentPipelineConfig.mode || 'auto';
+      if (mode === 'review') {
+        if (icon) icon.textContent = '🛡️';
+        if (text) text.textContent = '관리자 검수';
+        btn.style.background = 'rgba(245, 158, 11, 0.15)';
+        btn.style.color = '#fbbf24';
+        btn.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+        btn.title = '현재 관리자 검수 모드 (수집 일정 승인 후 배포) - 클릭 시 빠른 반영 모드로 전환';
+      } else {
+        if (icon) icon.textContent = '⚡';
+        if (text) text.textContent = '빠른 반영';
+        btn.style.background = 'rgba(16, 185, 129, 0.15)';
+        btn.style.color = '#6ee7b7';
+        btn.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+        btn.title = '현재 빠른 반영 모드 (수집 일정 즉시 배포) - 클릭 시 관리자 검수 모드로 전환';
+      }
+    }
+
+    // 관리자 검수 대기 일정 승인 처리
+    function approveScheduleItem(key) {
+      const item = allSchedules.find(s => getScheduleKey(s) === key || (s.id && s.id === key) || s._originKey === key);
+      if (!item) return;
+
+      currentPipelineConfig.approvedScheduleIds = currentPipelineConfig.approvedScheduleIds || [];
+      const targetId = item.id || key;
+      if (!currentPipelineConfig.approvedScheduleIds.includes(targetId)) {
+        currentPipelineConfig.approvedScheduleIds.push(targetId);
+      }
+      item._isPendingReview = false;
+      updatePipelineModeUI();
+      updateStagingBar();
+      renderSchedules();
+      showToast(`'${item.title}' 일정이 배포 승인되었습니다. [저장 적용] 시 사용자 앱에 반영됩니다.`);
     }
 
     // 일정 분류 결정 헬퍼 (Mnet, Blip, YouTube 1:1 표준 매핑)
@@ -3481,6 +3615,13 @@
             stateBadge = '<span class="state-badge badge-new-collected" title="새로 수집된 일정">✨ NEW</span> ' + stateBadge;
           }
 
+          const isApproved = (currentPipelineConfig.approvedScheduleIds || []).includes(primaryItem.id || key);
+          const isPendingReview = !isDeleted && !isApproved && (Boolean(primaryItem._isPendingReview) || (currentPipelineConfig.mode === 'review' && !primaryItem._isCustom && !isSavedMod && !isPendingMod));
+          if (isPendingReview) {
+            statusClass += ' status-pending-review';
+            stateBadge = '<span class="state-badge badge-pending-review" style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid rgba(245, 158, 11, 0.4); margin-right:4px;" title="관리자 검수 모드: 승인 전까지 사용자에게 배포되지 않습니다">🛡️ 검수 대기</span>' + stateBadge;
+          }
+
           const type = resolveScheduleType(primaryItem);
           let typeBadgeClass = 'badge-default';
           let placeholderIcon = '📅';
@@ -3662,6 +3803,7 @@
               <div class="card-bottom">
                 <div class="card-time">⏰ ${timeStr}</div>
                 <div class="card-actions" onclick="event.stopPropagation()">
+                  ${isPendingReview ? `<button type="button" class="btn-action btn-approve" style="background:rgba(16, 185, 129, 0.2); color:#6ee7b7; border:1px solid rgba(16, 185, 129, 0.4); font-weight:600;" onclick="approveScheduleItem('${safeKeyJs}')" title="이 일정을 승인하여 사용자 앱에 배포">✅ 승인</button>` : ''}
                   ${isNewCollected ? `<button type="button" class="btn-action btn-confirm-new" onclick="markNewScheduleAsRead('${safeKeyJs}', event)" title="확인 완료 처리">✓ 확인</button>` : ''}
                   ${primaryItem.url ? `<a href="${escapeHtml(primaryItem.url)}" target="_blank" class="btn-action" style="text-decoration:none;">🔗 링크</a>` : ''}
                   ${(isPendingMod || isSavedMod) && hasRawOriginal ? `<button type="button" class="btn-action btn-restore-mod" onclick="restoreModifiedItem('${safeKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
@@ -4686,6 +4828,23 @@
         input.value = '';
         input.focus();
       }
+    }
+
+    const btnTogglePipelineMode = document.getElementById('btnTogglePipelineMode');
+    if (btnTogglePipelineMode) {
+      btnTogglePipelineMode.addEventListener('click', () => {
+        const prevMode = currentPipelineConfig.mode || 'auto';
+        const newMode = prevMode === 'auto' ? 'review' : 'auto';
+        currentPipelineConfig.mode = newMode;
+        updatePipelineModeUI();
+        updateStagingBar();
+        renderSchedules();
+        if (newMode === 'review') {
+          showToast('🛡️ 관리자 검수 모드로 전환되었습니다. [저장 적용] 시 반영됩니다.');
+        } else {
+          showToast('⚡ 빠른 반영 모드로 전환되었습니다. [저장 적용] 시 반영됩니다.');
+        }
+      });
     }
 
     document.getElementById('btnOpenFilterModal').addEventListener('click', openFilterModal);
@@ -5827,11 +5986,15 @@
       });
       const modCount = uniqueModified.size;
 
-      const count = modCount + delCount + pendingOverrides.created.length + restoredCount + (filterRulesChanged ? 1 : 0);
+      const isModeChanged = Boolean(basePipelineConfigSnapshot && basePipelineConfigSnapshot.mode !== currentPipelineConfig.mode);
+      const newlyApprovedIds = (currentPipelineConfig.approvedScheduleIds || []).filter(id => !(basePipelineConfigSnapshot && (basePipelineConfigSnapshot.approvedScheduleIds || []).includes(id)));
+      const pipelineConfigChanged = isModeChanged || newlyApprovedIds.length > 0;
+
+      const count = modCount + delCount + pendingOverrides.created.length + restoredCount + (filterRulesChanged ? 1 : 0) + (pipelineConfigChanged ? 1 : 0);
       const bar = document.getElementById('stagingBar');
       const badge = document.getElementById('stagingCountBadge');
 
-      if (badge) badge.textContent = `${count}건${filterRulesChanged ? ' (필터포함)' : ''}`;
+      if (badge) badge.textContent = `${count}건${filterRulesChanged ? ' (필터포함)' : ''}${pipelineConfigChanged ? ' (운영모드포함)' : ''}`;
       if (count > 0) {
         bar.style.display = 'flex';
         void bar.offsetHeight;
@@ -6082,6 +6245,29 @@
         });
       }
 
+      // 6. 파이프라인 수집기 운영 모드 및 승인 일정 변경
+      const isModeChanged = Boolean(basePipelineConfigSnapshot && basePipelineConfigSnapshot.mode !== currentPipelineConfig.mode);
+      const newlyApprovedIds = (currentPipelineConfig.approvedScheduleIds || []).filter(id => !(basePipelineConfigSnapshot && (basePipelineConfigSnapshot.approvedScheduleIds || []).includes(id)));
+
+      if (isModeChanged) {
+        items.push({
+          badgeText: '⚙️ 모드',
+          badgeClass: currentPipelineConfig.mode === 'auto' ? 'badge-new' : 'badge-special',
+          date: '운영',
+          title: `수집기 운영 모드 변경: ${currentPipelineConfig.mode === 'auto' ? '⚡ 빠른 반영 (자동 배포)' : '🛡️ 관리자 검수 (승인 후 배포)'}`,
+          detailHtml: `<span style="color: ${currentPipelineConfig.mode === 'auto' ? '#6ee7b7' : '#fbbf24'};">수집 일정의 배포 방식이 ${currentPipelineConfig.mode === 'auto' ? '즉시 배포' : '검수 승인 배포'}로 전환됩니다.</span>`
+        });
+      }
+      if (newlyApprovedIds.length > 0) {
+        items.push({
+          badgeText: '✅ 승인',
+          badgeClass: 'badge-new',
+          date: '검수',
+          title: `검수 대기 일정 ${newlyApprovedIds.length}건 배포 승인`,
+          detailHtml: `<span style="color: #6ee7b7;">선택한 ${newlyApprovedIds.length}건의 일정이 승인되어 사용자 앱에 공개 배포됩니다.</span>`
+        });
+      }
+
       return items;
     }
 
@@ -6180,6 +6366,12 @@
               appliedOverrides.created.push(rc);
             }
           });
+
+          if (remoteOverrides.pipelineConfig && typeof remoteOverrides.pipelineConfig === 'object') {
+            const remoteApproved = Array.isArray(remoteOverrides.pipelineConfig.approvedScheduleIds) ? remoteOverrides.pipelineConfig.approvedScheduleIds : [];
+            const localApproved = Array.isArray(currentPipelineConfig.approvedScheduleIds) ? currentPipelineConfig.approvedScheduleIds : [];
+            currentPipelineConfig.approvedScheduleIds = Array.from(new Set([...localApproved, ...remoteApproved]));
+          }
         }
 
         // 1. 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합
@@ -6189,17 +6381,19 @@
         const mergedModified = { ...resolvedApplied, ...resolvedPending };
 
         // 연쇄 수정본 속성을 상호 모든 연관 키에 일괄 동기화 (원본 키 & 파생 키 양방향 갱신)
-        Object.keys(mergedModified).forEach(k => {
-          const datePart = k.split('_')[0];
-          const val = mergedModified[k];
-          if (val && val.title) {
-            const derivedKey = `${datePart}_${val.title}`;
-            if (derivedKey !== k && mergedModified[derivedKey]) {
-              const combined = { ...mergedModified[k], ...mergedModified[derivedKey] };
-              mergedModified[k] = { ...combined };
-              mergedModified[derivedKey] = { ...combined };
-            }
+        Object.entries(mergedModified).forEach(([k, mod]) => {
+          if (!mod) return;
+          const rootKey = resolveRootScheduleKey(k, mergedModified);
+          const allAliases = [k, rootKey];
+          if (mod.title) {
+            const datePart = (mod.startTime ? mod.startTime.slice(0, 10) : k.split('_')[0]);
+            allAliases.push(`${datePart}_${mod.title}`);
           }
+          allAliases.forEach(aliasKey => {
+            if (aliasKey && (!mergedModified[aliasKey] || JSON.stringify(mergedModified[aliasKey]) !== JSON.stringify(mod))) {
+              mergedModified[aliasKey] = { ...mod, id: aliasKey };
+            }
+          });
         });
 
         // modified 안에 남아있던 _isCustom 격리 항목을 created로 승격 및 modified에서 제거
@@ -6298,6 +6492,7 @@
               content: JSON.stringify({
                 version: "2.0.0",
                 updatedAt: new Date().toISOString(),
+                pipelineConfig: currentPipelineConfig,
                 filterRules: finalFilterRules,
                 customSchedules,
                 sourceOverrides,
@@ -6333,6 +6528,17 @@
         // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정 (v2.0 정규 파서 적용) 및 기준 스냅샷 동기화
         appliedOverrides = parseOverridesV2IntoMemory(confirmedOverrides);
         updateBaseOverridesSnapshot(appliedOverrides);
+
+        if (confirmedOverrides.pipelineConfig && typeof confirmedOverrides.pipelineConfig === 'object') {
+          currentPipelineConfig = {
+            mode: confirmedOverrides.pipelineConfig.mode || 'auto',
+            approvedScheduleIds: Array.isArray(confirmedOverrides.pipelineConfig.approvedScheduleIds)
+              ? [...confirmedOverrides.pipelineConfig.approvedScheduleIds]
+              : []
+          };
+        }
+        updateBasePipelineConfigSnapshot(currentPipelineConfig);
+        updatePipelineModeUI();
 
         // 3. 대기열(pendingOverrides) 비우기 & 필터 규칙 확정
         pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };
@@ -6438,6 +6644,13 @@
       if (confirm('모든 수정 대기 내역을 초기화하시겠습니까?')) {
         pendingOverrides = { modified: {}, deleted: new Set(), created: [], restoredModified: new Set() };
         pendingFilterRules = null;
+        if (basePipelineConfigSnapshot) {
+          currentPipelineConfig = {
+            mode: basePipelineConfigSnapshot.mode || 'auto',
+            approvedScheduleIds: [...(basePipelineConfigSnapshot.approvedScheduleIds || [])]
+          };
+          updatePipelineModeUI();
+        }
         updateStagingBar();
         loadSchedules();
       }
@@ -6895,25 +7108,66 @@
         handledDels.add(itemKey);
       });
 
-      const totalCount = createdItems.length + diffModItems.length + diffDelItems.length;
+      // 4) 운영 모드 및 승인 일정 변경 감지
+      const isModeChanged = Boolean(basePipelineConfigSnapshot && basePipelineConfigSnapshot.mode !== currentPipelineConfig.mode);
+      const newlyApprovedIds = (currentPipelineConfig.approvedScheduleIds || []).filter(id => !(basePipelineConfigSnapshot && (basePipelineConfigSnapshot.approvedScheduleIds || []).includes(id)));
+
+      const totalCount = createdItems.length + diffModItems.length + diffDelItems.length + (isModeChanged ? 1 : 0) + newlyApprovedIds.length;
 
       summaryEl.innerHTML = `
         <span style="font-size: 11.5px; font-weight: 700; color: #fff;">총 변경 ${totalCount}건:</span>
         <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: 600;">➕ 추가 ${createdItems.length}건</span>
         <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 600;">🔄 수정 ${diffModItems.length}건</span>
         <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 600;">➖ 삭제 ${diffDelItems.length}건</span>
+        ${isModeChanged ? `<span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600;">⚙️ 모드 전환</span>` : ''}
+        ${newlyApprovedIds.length > 0 ? `<span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 600;">✅ 승인 ${newlyApprovedIds.length}건</span>` : ''}
       `;
 
       if (totalCount === 0) {
         listEl.innerHTML = `
           <div style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed rgba(255,255,255,0.1);">
-            ✨ 대기 중인 변경사항이 없습니다.<br>마스터 537건 기준선과 완벽하게 일치합니다.
+            ✨ 대기 중인 변경사항이 없습니다.<br>원격 기준선과 완벽하게 일치합니다.
           </div>
         `;
         return;
       }
 
       let html = '';
+
+      // 0-1) 운영 모드 변경 카드
+      if (isModeChanged) {
+        html += `
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 10.5px; font-weight: 700; color: #fbbf24; background: rgba(245, 158, 11, 0.2); padding: 1px 6px; border-radius: 4px;">⚙️ 파이프라인 모드</span>
+              <span style="font-size: 11px; color: var(--text-muted);">수집기 배포 방식</span>
+            </div>
+            <div style="font-size: 13px; font-weight: 600; color: #fff;">
+              ${basePipelineConfigSnapshot?.mode === 'auto' ? '⚡ 빠른 반영' : '🛡️ 관리자 검수'} ➔ <span style="color: ${currentPipelineConfig.mode === 'auto' ? '#4ade80' : '#fbbf24'};">${currentPipelineConfig.mode === 'auto' ? '⚡ 빠른 반영' : '🛡️ 관리자 검수'}</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8;">
+              ${currentPipelineConfig.mode === 'auto' ? '수집된 일정이 검수 없이 사용자 앱에 즉시 공개 배포됩니다.' : '수집된 일정이 배포 보류되며 관리자 승인 후 배포됩니다.'}
+            </div>
+          </div>
+        `;
+      }
+
+      // 0-2) 새로 승인된 일정 카드
+      if (newlyApprovedIds.length > 0) {
+        newlyApprovedIds.forEach(aId => {
+          const matched = allSchedules.find(s => s.id === aId || s._originKey === aId || getScheduleKey(s) === aId);
+          html += `
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 10.5px; font-weight: 700; color: #6ee7b7; background: rgba(16, 185, 129, 0.2); padding: 1px 6px; border-radius: 4px;">✅ 배포 승인</span>
+                <span style="font-size: 11px; color: var(--text-muted);">${matched?.startTime ? formatDateYMD(new Date(matched.startTime)) : ''}</span>
+              </div>
+              <div style="font-size: 13px; font-weight: 600; color: #fff;">${escapeHtml(matched?.title || aId)}</div>
+              <div style="font-size: 11px; color: #6ee7b7;">검수 보류가 해제되어 사용자 앱에 정상 배포됩니다.</div>
+            </div>
+          `;
+        });
+      }
 
       // 1) 추가된 일정
       createdItems.forEach(c => {
@@ -7003,6 +7257,13 @@
         if (!(startT <= monthEnd && endT >= monthStart)) return false;
 
         const isProtected = item._isCustom || (item.id && String(item.id).startsWith('custom_')) || (pendingOverrides && pendingOverrides.modified && pendingOverrides.modified[item.id]) || (appliedOverrides && appliedOverrides.modified && appliedOverrides.modified[item.id]);
+
+        // 관리자 검수 모드(review)에서는 승인되지 않은 일반 수집 일정은 사용자 뷰에서 배제
+        const isApproved = (currentPipelineConfig.approvedScheduleIds || []).includes(item.id || key);
+        if (currentPipelineConfig.mode === 'review' && !isProtected && !isApproved) {
+          return false;
+        }
+
         if (!isProtected && filterEnabled) {
           if (excludeShorts) {
             const raw = [item.url, item.link, item.title].filter(Boolean).join(' ');

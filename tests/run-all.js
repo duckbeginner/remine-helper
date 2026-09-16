@@ -35,6 +35,7 @@ import { run as runSchedulePipelineTest } from './data-hub/schedule-pipeline.tes
 import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.test.js';
 import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimming.test.js';
 import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test.js';
+import { run as runPipelineModeTest } from './data-hub/pipeline-mode.test.js';
 
 // 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM & 검수 격리)
 import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
@@ -125,7 +126,8 @@ async function main() {
     runSchedulePipelineTest,
     runUrlCleanerAndIdTest,
     runDataPayloadSlimmingTest,
-    runSquashAndConfigTest
+    runSquashAndConfigTest,
+    runPipelineModeTest
   ];
 
   for (const suite of hubSuites) {

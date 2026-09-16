@@ -160,5 +160,34 @@ test.describe('Ops Portal - Comprehensive E2E Test Suite', () => {
     await expect(editModal).not.toHaveClass(/active/);
   });
 
+  // 6. 수집 파이프라인 2중 운영 모드 토글 인터랙션 검증
+  test('Pipeline Mode Toggle: 빠른 반영 ↔ 관리자 검수 모드 전환 및 스테이징 바 반응', async ({ page }) => {
+    const toggleBtn = page.locator('#btnTogglePipelineMode');
+    await expect(toggleBtn).toBeVisible();
+
+    const modeText = page.locator('#pipelineModeText');
+    const modeIcon = page.locator('#pipelineModeIcon');
+
+    // 초기 상태: 빠른 반영 모드
+    await expect(modeText).toHaveText('빠른 반영');
+    await expect(modeIcon).toHaveText('⚡');
+
+    // 클릭 1회 -> 관리자 검수 모드로 전환
+    await toggleBtn.click();
+    await expect(modeText).toHaveText('관리자 검수');
+    await expect(modeIcon).toHaveText('🛡️');
+
+    // 스테이징 바에 변경사항 표시 확인
+    const stagingBar = page.locator('#stagingBar');
+    await expect(stagingBar).toBeVisible();
+    const stagingBadge = page.locator('#stagingCountBadge');
+    await expect(stagingBadge).toContainText('운영모드포함');
+
+    // 클릭 2회 -> 다시 빠른 반영 모드로 복귀
+    await toggleBtn.click();
+    await expect(modeText).toHaveText('빠른 반영');
+    await expect(modeIcon).toHaveText('⚡');
+  });
+
 });
 
