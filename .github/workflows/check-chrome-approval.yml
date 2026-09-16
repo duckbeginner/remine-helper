@@ -3,7 +3,7 @@ name: Check Chrome Approval & Deploy Firefox / Docs
 on:
   schedule:
     # 매 30분마다 크롬 웹스토어 라이브 상태 확인
-    - cron: '*/30 * * * *'
+#    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
