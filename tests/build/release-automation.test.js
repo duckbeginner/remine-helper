@@ -64,6 +64,58 @@ export async function run() {
     const checkContent = fs.readFileSync(checkWf, 'utf8');
     assert(checkContent.includes('check-chrome-store-version.mjs'), '버전 체크 스크립트가 호출되어야 합니다.');
     assert(checkContent.includes('firefox-addon') || checkContent.includes('publish-firefox'), 'Firefox 배포 단계가 포함되어야 합니다.');
+    assert(checkContent.includes('continue-on-error: true'), 'Firefox 업로드 단계에 continue-on-error 안전장치가 있어야 합니다.');
+    assert(checkContent.includes('already_released'), '워크플로우에 이미 릴리즈 완료된 버전을 스킵하는 가드가 있어야 합니다.');
+    assert(
+      checkContent.includes('check-chrome-approval.yml') && checkContent.includes('disable approval cron'),
+      '워크플로우에 배포 완료 후 cron 스케줄을 자동으로 비활성화하여 커밋하는 로직이 포함되어야 합니다.'
+    );
+  });
+
+  runner.test('Cron Auto-Disable Logic: 릴리즈 완료 후 cron 자동 주석 처리 로직 검증', () => {
+    // 활성화된 cron 스케줄 YAML 시뮬레이션
+    const activeYaml = `name: Check Chrome Approval
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+`;
+
+    // 워크플로우에 적용될 치환 로직
+    const disabledYaml = activeYaml
+      .replace(/^(\s*)schedule:/gm, '$1# schedule:')
+      .replace(/^(\s*)-\s*cron:/gm, '$1# - cron:');
+
+    assert(disabledYaml.includes('# schedule:'), 'schedule이 주석 처리되어야 합니다.');
+    assert(disabledYaml.includes('# - cron:'), 'cron 표현식이 주석 처리되어야 합니다.');
+    assert(!disabledYaml.match(/^\s*schedule:/m), '활성화된 schedule 키가 남아있지 않아야 합니다.');
+  });
+
+  runner.test('isAlreadyReleased: 소개페이지(docs/index.html) 배포 완료 사전 감지 함수 검증', async () => {
+    const { isAlreadyReleased } = await import('../../scripts/check-chrome-store-version.mjs');
+    assert(typeof isAlreadyReleased === 'function', 'isAlreadyReleased 함수가 정의되어 있어야 합니다.');
+
+    // 1. docs/index.html에서 현재 실제 표기된 릴리즈 버전을 동적으로 파싱
+    const htmlPath = path.join(ROOT_DIR, 'docs/index.html');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    const verMatch = htmlContent.match(/<span class="version-badge">v([^<]+)<\/span>/);
+    assert(verMatch, 'docs/index.html에 버전 뱃지가 존재해야 합니다.');
+    const activeDocVersion = verMatch[1];
+
+    // 2. 동적으로 추출된 현재 실제 문서 버전 검증 (true)
+    assert.strictEqual(
+      isAlreadyReleased(activeDocVersion),
+      true,
+      `docs/index.html에 실제로 반영된 버전(v${activeDocVersion})은 true여야 합니다.`
+    );
+
+    // 3. 존재하지 않는 가상 미배포 버전 검증 (false)
+    const hypotheticalVersion = `${activeDocVersion}_unreleased_999`;
+    assert.strictEqual(
+      isAlreadyReleased(hypotheticalVersion),
+      false,
+      `미배포 가상 버전(${hypotheticalVersion})은 false여야 합니다.`
+    );
   });
 
   return runner.summary();

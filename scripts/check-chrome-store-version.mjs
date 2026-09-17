@@ -45,6 +45,13 @@ export async function fetchLiveChromeVersion(extensionId = CHROME_EXTENSION_ID) 
   });
 }
 
+export function isAlreadyReleased(targetVersion) {
+  const docsIndexPath = path.join(ROOT_DIR, 'docs/index.html');
+  if (!fs.existsSync(docsIndexPath)) return false;
+  const html = fs.readFileSync(docsIndexPath, 'utf8');
+  return html.includes(`v${targetVersion}`) && html.includes(`v${targetVersion} 업데이트 내역`);
+}
+
 export async function main() {
   const targetVersionArg = process.argv[2];
   const manifestPath = path.join(ROOT_DIR, 'remine-helper/manifest.json');
@@ -53,6 +60,10 @@ export async function main() {
 
   console.log(`[CWS Polling] Checking Chrome Web Store live status for ${CHROME_EXTENSION_ID}...`);
   console.log(`[CWS Polling] Target Version to detect: v${targetVersion}`);
+
+  if (isAlreadyReleased(targetVersion)) {
+    console.log(`ℹ️ [CWS Polling] Version v${targetVersion} is already fully deployed to docs/index.html.`);
+  }
 
   try {
     const liveInfo = await fetchLiveChromeVersion(CHROME_EXTENSION_ID);

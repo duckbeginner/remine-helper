@@ -25,12 +25,23 @@ jobs:
         with:
           node-version: 20
 
-      - name: Check Live Version
+      - name: Check Live Version & Release Status
         id: check_version
         run: |
           VERSION=$(grep -o '"version": "[^"]*"' remine-helper/manifest.json | head -n 1 | cut -d'"' -f4)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+          # 1. 이미 소개페이지(docs/index.html)에 반영 완료된 버전인지 사전 검사
+          if grep -q "v$VERSION" docs/index.html && grep -q "v$VERSION 업데이트 내역" docs/index.html; then
+            echo "already_released=true" >> $GITHUB_OUTPUT
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "✅ Version v$VERSION is already fully deployed and released to docs/index.html. Skipping downstream jobs."
+            exit 0
+          fi
+
+          echo "already_released=false" >> $GITHUB_OUTPUT
+
+          # 2. 크롬 웹스토어 라이브 상태 확인
           if node scripts/check-chrome-store-version.mjs "$VERSION"; then
             echo "approved=true" >> $GITHUB_OUTPUT
             echo "🎉 Chrome Web Store v$VERSION has been approved and is LIVE!"
@@ -64,9 +75,10 @@ jobs:
           chmod +x scripts/*.sh
           ./scripts/package.sh
 
-      # 1. Firefox AMO 배포
+      # 1. Firefox AMO 배포 (중복 배포 시 워크플로우 중단 방지 가드)
       - name: Upload & Sign on Firefox Add-ons (AMO)
         if: env.FIREFOX_JWT_ISSUER != ''
+        continue-on-error: true
         uses: wdzeng/firefox-addon@v1
         with:
           addon-guid: '{8e25f021-4c94-49f8-91b7-18f5f3e5a810}'
@@ -74,25 +86,35 @@ jobs:
           jwt-issuer: ${{ secrets.FIREFOX_JWT_ISSUER }}
           jwt-secret: ${{ secrets.FIREFOX_JWT_SECRET }}
 
-      # 2. 소개페이지(docs/index.html)에 v1.0.5 정식 반영 및 푸시
+      # 2. 소개페이지(docs/index.html)에 새 버전 정식 반영
       - name: Apply Release to Landing Page & Tests
         run: |
           node scripts/apply-release-docs.mjs "${{ env.TARGET_VERSION }}"
 
-      - name: Commit & Push Landing Page Update
+      # 3. 소개페이지 반영 및 cron 스케줄 자동 비활성화(종료) 커밋 & 푸시
+      - name: Commit & Push Landing Page Update & Disable Cron
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git status --porcelain | grep -q 'docs/index.html'; then
-            git add docs/index.html tests/docs/pages.test.js
-            git commit -m "docs: release v${{ env.TARGET_VERSION }} updates after Chrome Web Store approval [skip ci]"
-            git push origin main
-            echo "✓ Landing page updated to v${{ env.TARGET_VERSION }} and pushed to main."
-          else
-            echo "Landing page already up to date."
+
+          # 릴리즈 완료 후 승인 폴링 cron 자동 비활성화 (주석 처리)
+          WF_FILE=".github/workflows/check-chrome-approval.yml"
+          if [ -f "$WF_FILE" ]; then
+            sed -i.bak -E 's/^([[:space:]]*)schedule:/\1# schedule:/g' "$WF_FILE" || true
+            sed -i.bak -E 's/^([[:space:]]*)-([[:space:]]*)cron:/\1# -\2cron:/g' "$WF_FILE" || true
+            rm -f "${WF_FILE}.bak"
           fi
 
-      # 3. GitHub Release 공개 (Draft 해제)
+          if git status --porcelain | grep -qE '(docs/index.html|tests/docs/pages.test.js|\.github/workflows/check-chrome-approval\.yml)'; then
+            git add docs/index.html tests/docs/pages.test.js "$WF_FILE"
+            git commit -m "docs: release v${{ env.TARGET_VERSION }} updates & disable approval cron [skip ci]"
+            git push origin main
+            echo "✓ Landing page updated and approval cron disabled for v${{ env.TARGET_VERSION }}."
+          else
+            echo "Landing page and approval workflow already up to date."
+          fi
+
+      # 4. GitHub Release 공개 (Draft 해제)
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
