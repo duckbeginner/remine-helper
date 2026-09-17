@@ -10,12 +10,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const OPS_HTML_PATH = path.join(ROOT_DIR, 'docs/ops-m7k2x9.html');
+const OPS_JS_PATH = path.join(ROOT_DIR, 'docs/ops.js');
 
 export async function run() {
   const runner = new TestRunner('Docs - Ops Portal Core Data & Lifecycle Engine');
   runner.run();
 
-  const opsHtml = fs.readFileSync(OPS_HTML_PATH, 'utf8');
+  const opsHtml = [
+    fs.readFileSync(OPS_HTML_PATH, 'utf8'),
+    fs.readFileSync(OPS_JS_PATH, 'utf8')
+  ].join('\n');
 
   // ─────────────────────────────────────────────────────────────
   // 1. 스키마 유효성 검증 & 유령 일정 차단 (Pipeline Integrity)

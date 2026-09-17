@@ -10,12 +10,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const OPS_HTML_PATH = path.join(ROOT_DIR, 'docs/ops-m7k2x9.html');
+const OPS_CSS_PATH = path.join(ROOT_DIR, 'docs/ops.css');
+const OPS_JS_PATH = path.join(ROOT_DIR, 'docs/ops.js');
 
 export async function run() {
   const runner = new TestRunner('Docs - Ops Portal UI & DOM Integrity');
   runner.run();
 
-  const opsHtml = fs.readFileSync(OPS_HTML_PATH, 'utf8');
+  const opsHtml = [
+    fs.readFileSync(OPS_HTML_PATH, 'utf8'),
+    fs.readFileSync(OPS_CSS_PATH, 'utf8'),
+    fs.readFileSync(OPS_JS_PATH, 'utf8')
+  ].join('\n');
 
   // ─────────────────────────────────────────────────────────────
   // 1. 필수 UI 컨트롤 및 토스트/미리보기 DOM 구조 (from ops-tool)

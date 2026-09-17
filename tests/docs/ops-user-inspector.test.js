@@ -10,6 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const OPS_HTML_PATH = path.join(ROOT_DIR, 'docs/ops-m7k2x9.html');
+const OPS_CSS_PATH = path.join(ROOT_DIR, 'docs/ops.css');
+const OPS_JS_PATH = path.join(ROOT_DIR, 'docs/ops.js');
 const LOCAL_MASTER_PATH = path.join(ROOT_DIR, 'docs/api/v1/schedules.json');
 const STORAGE_MODULE_PATH = path.join(ROOT_DIR, 'remine-helper/common/modules/storage.js');
 
@@ -17,7 +19,11 @@ export async function run() {
   const runner = new TestRunner('Ops & Client - Master Baseline & Inspector Integrity');
   runner.run();
 
-  const opsHtml = fs.readFileSync(OPS_HTML_PATH, 'utf8');
+  const opsHtml = [
+    fs.readFileSync(OPS_HTML_PATH, 'utf8'),
+    fs.readFileSync(OPS_CSS_PATH, 'utf8'),
+    fs.readFileSync(OPS_JS_PATH, 'utf8')
+  ].join('\n');
   const storageModule = await import(STORAGE_MODULE_PATH);
   const { filterAndDeduplicateSchedules } = storageModule;
 
