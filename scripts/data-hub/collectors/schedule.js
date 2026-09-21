@@ -98,6 +98,17 @@ export function extractYouTubeVideoId(url) {
 // SNS 미디어(YouTube, Instagram, X/Twitter 등) 고유 식별자 추출기
 export function extractMediaIdentifier(itemOrUrl) {
   if (!itemOrUrl) return null;
+
+  if (typeof itemOrUrl === 'string') {
+    const s = itemOrUrl.trim();
+    if (s.startsWith('yt:') && s.length >= 14) return s.split('?')[0];
+    if (s.startsWith('ig:') || s.startsWith('x:') || s.startsWith('tt:') || s.startsWith('ch:')) return s.split('?')[0];
+  } else if (itemOrUrl && typeof itemOrUrl.url === 'string') {
+    const s = itemOrUrl.url.trim();
+    if (s.startsWith('yt:') && s.length >= 14) return s.split('?')[0];
+    if (s.startsWith('ig:') || s.startsWith('x:') || s.startsWith('tt:') || s.startsWith('ch:')) return s.split('?')[0];
+  }
+
   const text = typeof itemOrUrl === 'string'
     ? itemOrUrl
     : [itemOrUrl.url, itemOrUrl.link, itemOrUrl.message, itemOrUrl.title].filter(Boolean).join(' ');
@@ -115,6 +126,56 @@ export function extractMediaIdentifier(itemOrUrl) {
   if (ttMatch) return `tt:${ttMatch[1]}`;
 
   return null;
+}
+
+// 미디어 식별자(yt:, ig:, x:, tt:)를 완전한 Full URL로 복원하는 헬퍼
+export function formatMediaUrl(mediaIdOrUrl) {
+  if (!mediaIdOrUrl || typeof mediaIdOrUrl !== 'string') return '';
+  const trimmed = mediaIdOrUrl.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('yt:')) {
+    const rest = trimmed.slice(3);
+    if (rest.includes('?')) {
+      const [id, query] = rest.split('?');
+      return `https://www.youtube.com/watch?v=${id}&${query}`;
+    }
+    return `https://www.youtube.com/watch?v=${rest}`;
+  }
+  if (trimmed.startsWith('ig:')) {
+    const code = trimmed.slice(3);
+    return `https://www.instagram.com/p/${code}/`;
+  }
+  if (trimmed.startsWith('x:')) {
+    const id = trimmed.slice(2);
+    return `https://x.com/i/status/${id}`;
+  }
+  if (trimmed.startsWith('tt:')) {
+    const id = trimmed.slice(3);
+    return `https://www.tiktok.com/video/${id}`;
+  }
+  if (trimmed.startsWith('ch:')) {
+    const id = trimmed.slice(3);
+    return `https://chzzk.naver.com/live/${id}`;
+  }
+  return trimmed;
+}
+
+// linkedScheduleIds 내 비표준 키(mod_*, YYYY-MM-DD_*) 정제 및 24자리 hex mnet_ 강제 변환
+export function normalizeLinkedScheduleIds(linkedIds) {
+  if (!Array.isArray(linkedIds)) return undefined;
+  const normalized = [];
+  linkedIds.forEach(t => {
+    if (!t || typeof t !== 'string') return;
+    const trimmed = t.trim();
+    if (!trimmed) return;
+    // Canonical prefix만 허용
+    if (/^(blip_|mnet_|yt_|custom_)/.test(trimmed)) {
+      normalized.push(trimmed);
+    }
+  });
+  const deduped = Array.from(new Set(normalized));
+  return deduped.length > 0 ? deduped : undefined;
 }
 
 // 크롤링 대상 월 계산 (기본: 과거 1개월 ~ 미래 3개월 패스트트랙, isFull=true: 2024년~내년 말 전수)
@@ -142,24 +203,35 @@ export function getMonthsToFetch(baseDate = new Date(), isFull = false) {
   return months;
 }
 
-// 스케줄 단일 아이템 슬림화 (starAttendees 복원, custom extField 배제 및 URL 정제)
+// 스케줄 단일 아이템 슬림화 (starAttendees 복원, custom extField 배제 및 URL/mediaIds 정제)
 export function slimScheduleItem(item) {
   if (!item) return null;
 
-  const rawUrl = item.url || item.link || '';
+  const rawUrl = formatMediaUrl(item.url || item.link || '');
   const cleanedUrl = cleanUrl(rawUrl);
 
   const isYoutube = item.source === 'youtube' || (cleanedUrl && (cleanedUrl.includes('youtube.com') || cleanedUrl.includes('youtu.be')));
   const isCustom = Boolean(item.id && String(item.id).startsWith('custom_'));
 
+  // mediaIds 배열 추출 및 정규화
+  const extractedMediaId = extractMediaIdentifier(item);
+  let mediaIds = Array.isArray(item.mediaIds) ? [...item.mediaIds] : [];
+  if (extractedMediaId && !mediaIds.includes(extractedMediaId)) {
+    mediaIds.push(extractedMediaId);
+  }
+  mediaIds = Array.from(new Set(mediaIds.filter(Boolean)));
+
+  const canonicalId = getCanonicalScheduleId(item.source, item) || item.id || undefined;
+
   const slim = {
-    id: item.id || undefined,
+    id: canonicalId,
     title: item.title,
     startTime: item.startTime,
     endTime: (item.endTime && item.endTime !== item.startTime) ? item.endTime : undefined,
     isAllday: Boolean(item.isAllday),
     typeId: item.typeId,
     url: cleanedUrl || undefined,
+    mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
     typeText: item.typeText || undefined,
     channel: item.channel || undefined,
     location: item.location || undefined,
@@ -171,7 +243,7 @@ export function slimScheduleItem(item) {
     extField: isCustom
       ? undefined
       : ((item.extField && item.extField.key && item.extField.value) ? item.extField : undefined),
-    linkedScheduleIds: (Array.isArray(item.linkedScheduleIds) && item.linkedScheduleIds.length > 0) ? item.linkedScheduleIds : undefined,
+    linkedScheduleIds: normalizeLinkedScheduleIds(item.linkedScheduleIds),
     // [참석 멤버 복원] starAttendees 보존
     starAttendees: (Array.isArray(item.starAttendees) && item.starAttendees.length > 0)
       ? item.starAttendees.map(a => ({
@@ -356,38 +428,57 @@ async function fetchOfficialLiveStreams() {
 }
 
 // 소스별 고정 Canonical Key 생성기 (원칙에 의한 소스명 prefix 고정 규격)
-export function generateCanonicalScheduleId(source, item) {
+export const getCanonicalScheduleId = generateCanonicalScheduleId;
+export function generateCanonicalScheduleId(sourceOrItemOrId, maybeItem) {
+  if (!sourceOrItemOrId) return null;
+
+  // 1) 단일 문자열 ID가 전달된 경우
+  if (typeof sourceOrItemOrId === 'string' && !maybeItem) {
+    return sourceOrItemOrId.trim();
+  }
+
+  // 2) (source, item) 또는 (item) 호출 처리
+  let source = '';
+  let item = null;
+  if (typeof sourceOrItemOrId === 'string') {
+    source = sourceOrItemOrId;
+    item = maybeItem;
+  } else {
+    item = sourceOrItemOrId;
+    source = item?.source || '';
+  }
   if (!item) return null;
+
   const s = source || item.source;
 
-  // 1) Mnet Plus: 24자리 hex 등 앞에 반드시 mnet_ 접두사 부여
+  // 1) Mnet Plus: 출처가 mnet이면 ID 형태와 무관하게 무조건 mnet_ 접두사 부여!
   if (s === 'mnet') {
-    const rawId = item.id || item.eventId || item._id;
+    const rawId = item.eventId || item.id || item._id;
     if (rawId) {
-      const cleanId = String(rawId).replace(/^mnet_/, '').trim();
-      return `mnet_${cleanId}`;
+      const cleanId = String(rawId).trim();
+      return cleanId.startsWith('mnet_') ? cleanId : `mnet_${cleanId}`;
     }
   }
 
-  // 2) Blip: 원본 scheduleId 앞에 blip_ 접두사 부여
+  // 2) Blip: 출처가 blip이면 무조건 blip_ 접두사 부여!
   if (s === 'blip') {
     const rawId = item.scheduleId || item.id;
     if (rawId) {
-      const cleanId = String(rawId).replace(/^blip_/, '').trim();
-      return `blip_${cleanId}`;
+      const cleanId = String(rawId).trim();
+      return cleanId.startsWith('blip_') ? cleanId : `blip_${cleanId}`;
     }
   }
 
-  // 3) YouTube: videoId 앞에 yt_ 접두사 부여
+  // 3) YouTube: 출처가 youtube이면 무조건 yt_ 접두사 부여!
   if (s === 'youtube') {
     const rawId = item.videoId || extractYouTubeVideoId(item.url) || item.id;
     if (rawId) {
-      const cleanId = String(rawId).replace(/^yt_/, '').trim();
-      return `yt_${cleanId}`;
+      const cleanId = String(rawId).trim();
+      return cleanId.startsWith('yt_') ? cleanId : `yt_${cleanId}`;
     }
   }
 
-  // 4) 커스텀/관리자 수동 일정: 반드시 custom_ 접두사 부여
+  // 4) 커스텀/관리자 수동 일정: 반드시 custom_ 접두사 부여!
   if (s === 'custom' || item._isCustom || s === 'namu') {
     if (item.id && String(item.id).startsWith('custom_')) {
       return String(item.id).trim();
@@ -398,13 +489,8 @@ export function generateCanonicalScheduleId(source, item) {
   }
 
   // 기존 id에 이미 canonical prefix가 있는 경우
-  if (item.id && /^(mnet_|blip_|yt_|custom_)/.test(item.id)) {
-    return item.id.trim();
-  }
-
-  // 24자리 hex ObjectId인 경우 mnet으로 귀속
-  if (item.id && /^[a-f0-9]{24}$/.test(item.id)) {
-    return `mnet_${item.id.trim()}`;
+  if (item.id && /^(mnet_|blip_|yt_|custom_)/.test(String(item.id).trim())) {
+    return String(item.id).trim();
   }
 
   return generateScheduleId(source, item);
@@ -413,33 +499,49 @@ export function generateCanonicalScheduleId(source, item) {
 // 소스별 불변 고유 ID 생성기 (v2.0 하위 호환)
 export function generateScheduleId(source, item) {
   if (!item) return null;
-  if (item.id && typeof item.id === 'string' && item.id.trim()) {
-    return item.id.trim();
+
+  const s = source || item.source;
+
+  // 1) 출처가 mnet인 경우: 형태 무관 무조건 mnet_ 부여!
+  if (s === 'mnet') {
+    const eId = item.eventId || item.id || item._id;
+    if (eId) {
+      const cleanEId = String(eId).trim();
+      return cleanEId.startsWith('mnet_') ? cleanEId : `mnet_${cleanEId}`;
+    }
   }
 
-  // 1) Blip 공식 일정
-  if (source === 'blip' || item.source === 'blip') {
+  // 2) 출처가 blip인 경우: 형태 무관 무조건 blip_ 부여!
+  if (s === 'blip') {
     const sId = item.scheduleId || item.id;
-    if (sId) return `blip_${sId}`;
+    if (sId) {
+      const cleanSId = String(sId).trim();
+      return cleanSId.startsWith('blip_') ? cleanSId : `blip_${cleanSId}`;
+    }
   }
 
-  // 2) Mnet Plus 공식 일정
-  if (source === 'mnet' || item.source === 'mnet') {
-    const eId = item.eventId || item.id;
-    if (eId) return `mnet_${eId}`;
-  }
-
-  // 3) YouTube 공식/라이브 영상
-  if (source === 'youtube' || item.source === 'youtube') {
-    const vId = item.videoId || item.id;
-    if (vId) return `yt_${vId}`;
+  // 3) 출처가 youtube인 경우: 형태 무관 무조건 yt_ 부여!
+  if (s === 'youtube') {
+    const vId = item.videoId || extractYouTubeVideoId(item.url) || item.id;
+    if (vId) {
+      const cleanVId = String(vId).trim();
+      return cleanVId.startsWith('yt_') ? cleanVId : `yt_${cleanVId}`;
+    }
   }
 
   // 4) 커스텀/관리자 수동 일정
-  if (item._isCustom || source === 'custom' || item.source === 'custom' || item.source === 'namu') {
+  if (item._isCustom || s === 'custom' || s === 'namu') {
+    if (item.id && String(item.id).startsWith('custom_')) {
+      return String(item.id).trim();
+    }
     const dateStr = item.startTime ? item.startTime.slice(2, 10).replace(/-/g, '') : '000000';
     const rand = crypto.randomBytes(3).toString('hex');
     return `custom_${dateStr}_${rand}`;
+  }
+
+  // 출처가 지정되지 않았으나 id에 이미 prefix가 있는 경우
+  if (item.id && typeof item.id === 'string' && item.id.trim()) {
+    return item.id.trim();
   }
 
   // 5) 레거시 구버전 호환용 결정론적 해시 ID
@@ -904,7 +1006,7 @@ async function fetchMonthRawSchedules(year, month) {
             })) : [];
 
             return {
-              id: generateScheduleId('mnet', ev),
+              id: getCanonicalScheduleId('mnet', ev),
               title: ev.title ? ev.title.trim() : "",
               startTime: ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""),
               endTime: ev.endAt || (ev.endAtForAllDay ? `${ev.endAtForAllDay}T23:59:59Z` : (ev.startAt || (ev.startAtAllDay ? `${ev.startAtAllDay}T00:00:00Z` : ""))),
@@ -980,7 +1082,7 @@ async function fetchMonthRawSchedules(year, month) {
           }
 
           return {
-            id: generateScheduleId('blip', item),
+            id: getCanonicalScheduleId('blip', item),
             title: item.title ? item.title.trim() : "",
             startTime: item.startTime,
             endTime: item.endTime || item.startTime,
@@ -1284,12 +1386,23 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
 
     // 수정 필드 합성 베이스 아이템 생성
     let baseItem = { ...item };
+    if (baseItem.url) {
+      baseItem.url = formatMediaUrl(baseItem.url);
+    }
+    if (baseItem.linkedScheduleIds) {
+      baseItem.linkedScheduleIds = normalizeLinkedScheduleIds(baseItem.linkedScheduleIds);
+    }
+
     if (ov) {
       ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'].forEach(f => {
-        if (ov[f] !== undefined) baseItem[f] = ov[f];
+        if (ov[f] !== undefined) {
+          if (f === 'url') baseItem[f] = formatMediaUrl(ov[f]);
+          else baseItem[f] = ov[f];
+        }
       });
       if (ov.linkedScheduleIds) {
-        baseItem.linkedScheduleIds = Array.from(new Set([...(baseItem.linkedScheduleIds || []), ...ov.linkedScheduleIds]));
+        const mergedLinked = [...(baseItem.linkedScheduleIds || []), ...ov.linkedScheduleIds];
+        baseItem.linkedScheduleIds = normalizeLinkedScheduleIds(mergedLinked);
       }
       modCount++;
     }

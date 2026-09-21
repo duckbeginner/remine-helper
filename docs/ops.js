@@ -19,6 +19,24 @@
       }, duration);
     }
 
+    // 일정 키 클립보드 복사 헬퍼
+    function copyScheduleId(key, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      if (!key) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(key).then(() => {
+          showToast(`🔑 키 복사됨: ${key}`);
+        }).catch(() => {
+          showToast(`키: ${key}`);
+        });
+      } else {
+        showToast(`키: ${key}`);
+      }
+    }
+    window.copyScheduleId = copyScheduleId;
+
     // RESCENE 멤버 및 아바타 매핑 (Single Source of Truth)
     const RESCENE_MEMBERS = [
       { id: '6a85595d92c2d65318a474de', name: '원이', avatar: 'icons/member_woni.jpeg' },
@@ -139,6 +157,16 @@
 
       if (badges.length === 0) return '';
       return `<span class="schedule-attendees-badges" style="display:inline-flex; align-items:center; gap:2px; margin-left:4px; vertical-align:middle;">${badges.join('')}</span>`;
+    }
+
+    function normalizeLinkedScheduleIds(ids) {
+      if (!Array.isArray(ids)) return [];
+      return Array.from(new Set(ids.map(id => {
+        if (!id || typeof id !== 'string') return '';
+        const trimmed = id.trim();
+        if (/^(blip_|mnet_|yt_|custom_)/.test(trimmed)) return trimmed;
+        return '';
+      }).filter(Boolean)));
     }
 
     // 상태 관리
@@ -406,8 +434,15 @@
 
     function getScheduleKey(item) {
       if (!item) return '';
-      if (item.id) return item.id;
-      if (item._originKey) return item._originKey;
+      const source = item.source || '';
+      let id = item.id || item._originKey;
+      if (id) {
+        id = String(id).trim();
+        if (source === 'mnet' && !id.startsWith('mnet_')) return `mnet_${id}`;
+        if (source === 'blip' && !id.startsWith('blip_')) return `blip_${id}`;
+        if (source === 'youtube' && !id.startsWith('yt_')) return `yt_${id}`;
+        return id;
+      }
       return getRawScheduleKey(item);
     }
 
@@ -460,7 +495,7 @@
       // 고유 ID 불일치 방어 가드: mod에 지정된 ID가 다른 소스의 고유 ID인 경우 매칭 차단
       const isIdMismatch = (mod) => {
         if (!mod || !mod.id || !item.id) return false;
-        return mod.id !== item.id && (String(mod.id).startsWith('blip_') || /^[a-f0-9]{24}$/.test(String(mod.id)));
+        return mod.id !== item.id && /^(blip_|mnet_|yt_|custom_)/.test(String(mod.id));
       };
 
       if (modifiedMap[originKey] && !isIdMismatch(modifiedMap[originKey])) return modifiedMap[originKey];
@@ -688,8 +723,20 @@
         const SAFE_OVERRIDE_FIELDS = ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'typeId', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'];
         allSchedules = baseItems.map(item => {
           const itemCopy = { ...item };
-          const origId = item.id;
           const origSource = item.source;
+          let origId = item.id;
+          if (origId) {
+            origId = String(origId).trim();
+            if (origSource === 'mnet' && !origId.startsWith('mnet_')) {
+              origId = `mnet_${origId}`;
+            } else if (origSource === 'blip' && !origId.startsWith('blip_')) {
+              origId = `blip_${origId}`;
+            } else if (origSource === 'youtube' && !origId.startsWith('yt_')) {
+              origId = `yt_${origId}`;
+            }
+          }
+          itemCopy.id = origId;
+          itemCopy.source = origSource;
           const rawKey = getRawScheduleKey(itemCopy);
           itemCopy._originKey = origId || rawKey;
 
@@ -700,9 +747,12 @@
               if (mod[f] !== undefined) itemCopy[f] = mod[f];
             });
             if (mod.linkedScheduleIds) {
-              itemCopy.linkedScheduleIds = Array.from(new Set([...(itemCopy.linkedScheduleIds || []), ...mod.linkedScheduleIds]));
+              itemCopy.linkedScheduleIds = normalizeLinkedScheduleIds([...(itemCopy.linkedScheduleIds || []), ...mod.linkedScheduleIds]);
             }
             itemCopy._isModified = true;
+          }
+          if (itemCopy.linkedScheduleIds) {
+            itemCopy.linkedScheduleIds = normalizeLinkedScheduleIds(itemCopy.linkedScheduleIds);
           }
 
           // ID 및 Source 불변성 영구 보존
@@ -762,8 +812,9 @@
               }
 
               const isBlip = String(k).startsWith('blip_') || (v.id && String(v.id).startsWith('blip_'));
-              const isMnet = String(k).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(k));
-              const sourceVal = v.source || (isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom'));
+              const isMnet = String(k).startsWith('mnet_') || (v.id && String(v.id).startsWith('mnet_'));
+              const isYoutube = String(k).startsWith('yt_') || (v.id && String(v.id).startsWith('yt_'));
+              const sourceVal = v.source || (isBlip ? 'blip' : (isMnet ? 'mnet' : (isYoutube ? 'youtube' : 'custom')));
 
               const resItem = {
                 ...v,
@@ -1232,6 +1283,7 @@
                   <div class="compact-main" style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow: hidden;">
                     <span class="state-badge badge-del" style="flex-shrink: 0;">숨김됨</span>
                     <span class="type-badge ${typeBadgeClass}" style="flex-shrink: 0; font-size: 10px; padding: 1px 6px;">${escapeHtml(type)}</span>
+                    <span class="key-badge" onclick="copyScheduleId('${safeKeyJs}', event)" title="클릭하여 키 복사" style="font-family: monospace; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #38bdf8; border: 1px solid rgba(56,189,248,0.25); cursor: pointer; flex-shrink: 0;">🔑 ${escapeHtml(key)}</span>
                     <span class="compact-title" style="font-size: 12.5px; font-weight: 500; color: var(--text-muted); text-decoration: line-through; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(primaryItem.title)}</span>
                     ${primaryItem.location ? `<span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">📍 ${escapeHtml(primaryItem.location)}</span>` : ''}
                     <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${timeStr}</span>
@@ -1254,6 +1306,7 @@
                   <div class="compact-main" style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow: hidden;">
                     <span class="state-badge badge-filtered" style="flex-shrink: 0; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;">🚫 필터: ${escapeHtml(primaryItem._filterReason)}</span>
                     <span class="type-badge ${typeBadgeClass}" style="flex-shrink: 0; font-size: 10px; padding: 1px 6px;">${escapeHtml(type)}</span>
+                    <span class="key-badge" onclick="copyScheduleId('${safeKeyJs}', event)" title="클릭하여 키 복사" style="font-family: monospace; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #38bdf8; border: 1px solid rgba(56,189,248,0.25); cursor: pointer; flex-shrink: 0;">🔑 ${escapeHtml(key)}</span>
                     <span class="compact-title" style="font-size: 12.5px; font-weight: 500; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(primaryItem.title)}</span>
                     <span style="font-size: 10px; color: var(--text-muted); flex-shrink: 0;">⏰ ${timeStr}</span>
                   </div>
@@ -1304,6 +1357,7 @@
                 <div class="linked-sub-card" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-size: 11px;">
                   <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden;">
                     <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${sourceBadgeBg}; color: ${sourceBadgeColor}; flex-shrink: 0;">${sourceName}</span>
+                    <span class="key-badge sub-key-badge" onclick="copyScheduleId('${subKeyJs}', event)" title="클릭하여 키 복사" style="font-family: monospace; font-size: 9px; padding: 1px 5px; border-radius: 4px; background: rgba(56,189,248,0.1); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); cursor: pointer; flex-shrink: 0;">🔑 ${escapeHtml(subKey)}</span>
                     <span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); flex-shrink: 0;">${escapeHtml(subType)}</span>
                     <span style="font-weight: 500; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(sub.title)}</span>
                     ${getMemberAttendeeBadgesHTML(sub.starAttendees)}
@@ -1344,6 +1398,7 @@
                 <div class="card-meta">
                   <div class="meta-badges">
                     <span class="type-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
+                    <span class="key-badge" onclick="copyScheduleId('${safeKeyJs}', event)" title="클릭하여 키 복사" style="font-family: monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); cursor: pointer; vertical-align: middle; display: inline-flex; align-items: center; gap: 3px;">🔑 ${escapeHtml(key)}</span>
                     ${primaryItem.channel ? `<span style="font-size:10px; color:var(--text-muted); font-weight:600;">${escapeHtml(primaryItem.channel)}</span>` : ''}
                     ${stateBadge}
                     ${subItems.length > 0 ? `<span class="state-badge" style="background:rgba(56,189,248,0.2); color:#38bdf8; font-weight:600;" title="연관 일정 ${subItems.length}건과 1개로 합성됨">🔗 연관 ${subItems.length}건 합성</span>` : ''}
@@ -1579,15 +1634,20 @@
       if (!Array.isArray(allSchedules)) return;
       const newSubItems = [];
       allSchedules.forEach(item => {
-        const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
+        const linkedIds = normalizeLinkedScheduleIds(Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : []);
         linkedIds.forEach(tId => {
           if (tId === item.id) return;
-          let target = allSchedules.find(s => (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId);
+          if (!tId.startsWith('blip_') && !tId.startsWith('mnet_')) return;
+          let target = allSchedules.find(s => 
+            (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId
+          );
           if (!target) {
-            target = newSubItems.find(s => (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId);
+            target = newSubItems.find(s => 
+              (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId
+            );
           }
           const isBlip = String(tId).startsWith('blip_');
-          const isMnet = String(tId).startsWith('mnet_') || /^[a-f0-9]{24}$/.test(String(tId));
+          const isMnet = String(tId).startsWith('mnet_');
           const sourceName = isBlip ? '블립' : (isMnet ? 'Mnet' : '연관');
           const sourceVal = isBlip ? 'blip' : (isMnet ? 'mnet' : 'custom');
 

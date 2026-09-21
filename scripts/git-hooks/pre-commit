@@ -1,0 +1,26 @@
+#!/bin/bash
+# scripts/git-hooks/pre-commit
+# Git Pre-commit Hook: 커밋 전 코드 문법 및 린트 무결성 물리적 차단벽
+
+set -e
+
+echo "🔒 [Git Hook] 커밋 전 코드 문법 및 린트 검사를 시작합니다..."
+
+# 1. 파일 문법 검사 (Syntax Check)
+echo "  ▶ 1/2: node --check 문법 검사 실행..."
+if ! npm run check --silent; then
+  echo "❌ [Git Hook 실패] 파일 문법 오류(Syntax Error)가 발견되어 커밋을 중단합니다."
+  echo "   위의 오류를 수정한 후 다시 커밋해 주세요."
+  exit 1
+fi
+
+# 2. 정적 린터 검사 (Oxlint)
+echo "  ▶ 2/2: oxlint 정적 린터 검사 실행..."
+if ! npm run lint --silent; then
+  echo "❌ [Git Hook 실패] 린트 오류(Lint Error)가 발견되어 커밋을 중단합니다."
+  echo "   위의 오류를 수정한 후 다시 커밋해 주세요."
+  exit 1
+fi
+
+echo "✅ [Git Hook 통과] 모든 코드 문법 및 린트 검사를 완벽히 통과했습니다! 커밋을 진행합니다."
+exit 0
