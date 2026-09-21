@@ -65,9 +65,9 @@ export async function run() {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // 3. extField 하위 호환 보조 생성 (구버전 v1.0.3 클라이언트 완벽 호환)
+  // 3. extField 합성 배제 (v1.0.6 페이로드 슬림화 원칙: channel/location은 보존하고 extField 보조 생성은 배제)
   // ─────────────────────────────────────────────────────────────
-  runner.test('slimScheduleItem: extField 부재 시 channel/location으로부터 하위 호환용 extField 보조 생성', () => {
+  runner.test('slimScheduleItem: extField 부재 시 channel/location을 최상위 필드로 보존하고 불필요한 extField 합성은 배제', () => {
     const rawWithoutExt = {
       id: 'mnet-999',
       title: '엠카운트다운',
@@ -77,9 +77,7 @@ export async function run() {
     };
 
     const slimmed = slimScheduleItem(rawWithoutExt);
-    assert(slimmed.extField !== undefined, 'extField가 보조 생성되어야 함');
-    assert.strictEqual(slimmed.extField.key, '채널');
-    assert.strictEqual(slimmed.extField.value, 'Mnet');
+    assert.strictEqual(slimmed.extField, undefined, 'extField는 불필요하게 보조 생성되지 않아야 함');
     assert.strictEqual(slimmed.channel, 'Mnet');
     assert.strictEqual(slimmed.location, 'CJ ENM 센터');
   });

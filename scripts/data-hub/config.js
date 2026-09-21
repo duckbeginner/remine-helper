@@ -38,6 +38,9 @@ export const MONTH_FETCH_CONFIG = {
 export const CACHE_CONFIG = {
   cacheDir: path.join(ROOT_DIR, '.cache'),
   rawCacheDir: path.join(ROOT_DIR, '.cache/raw'),
+  sourcesCacheDir: path.join(ROOT_DIR, '.cache/sources'),
+  rebuildDir: path.join(ROOT_DIR, '.cache/rebuild'),
   oembedCacheFile: path.join(ROOT_DIR, '.cache/oembed-cache.json'),
   ttlMs: 24 * 60 * 60 * 1000 // 24시간
 };
+

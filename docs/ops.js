@@ -56,6 +56,50 @@
       '미나미': 'icons/member_minami.jpeg'
     };
 
+    // 마스터 대비 순수 차이점(Pure Diff) 추출 헬퍼 (no-op 배제, 1일정 1수정본)
+    function computePureDiff(baseItem, editedItem) {
+      if (!editedItem) return null;
+      if (editedItem.isDeleted) return { isDeleted: true };
+
+      const diff = {};
+      let hasDiff = false;
+      const compareFields = [
+        'title', 'startTime', 'endTime', 'isAllday', 'typeId', 'typeText',
+        'channel', 'location', 'url', 'thumbnail', 'isOfficialYoutube', 'message'
+      ];
+
+      for (const field of compareFields) {
+        const editVal = editedItem[field];
+        const baseVal = baseItem ? baseItem[field] : undefined;
+
+        if (editVal === undefined || editVal === null) continue;
+
+        const isBaseEmpty = baseVal === undefined || baseVal === null || baseVal === '' || baseVal === false;
+        const isEditEmpty = editVal === '' || editVal === false;
+        if (isBaseEmpty && isEditEmpty) continue;
+
+        if (field === 'endTime') {
+          const effectiveStart = editedItem.startTime || (baseItem && baseItem.startTime);
+          if (editVal === effectiveStart) continue;
+        }
+
+        if (JSON.stringify(editVal) !== JSON.stringify(baseVal)) {
+          diff[field] = editVal;
+          hasDiff = true;
+        }
+      }
+
+      if (Array.isArray(editedItem.starAttendees)) {
+        const baseAttendees = (baseItem && Array.isArray(baseItem.starAttendees)) ? baseItem.starAttendees : [];
+        if (JSON.stringify(editedItem.starAttendees) !== JSON.stringify(baseAttendees)) {
+          diff.starAttendees = editedItem.starAttendees;
+          hasDiff = true;
+        }
+      }
+
+      return hasDiff ? diff : null;
+    }
+
     function getMemberAttendeeBadgesHTML(attendees) {
       if (!Array.isArray(attendees) || attendees.length === 0) return '';
 
@@ -394,6 +438,7 @@
 
       return resolved;
     }
+
 
     // [스키마 유효성 검증기] 유령/껍데기 일정 진입 원천 차단 (최소 필수 3대 속성 검증)
     function isValidScheduleItem(item) {
@@ -1043,7 +1088,7 @@
           return tA - tB;
         });
 
-        groupItems.forEach(({ item, originalIndex }) => {
+        groupItems.forEach(({ item }) => {
           if (item.id && renderedGlobalScheduleIds.has(item.id)) return;
           const fallbackKey = item._originKey || getScheduleKey(item);
           if (!item.id && fallbackKey && renderedGlobalScheduleIds.has(fallbackKey)) return;
@@ -2187,7 +2232,7 @@
         if (cIdx >= 0) pendingOverrides.created[cIdx] = { ...targetItem, ...targetModObj };
         else pendingOverrides.created.push({ ...targetItem, ...targetModObj });
       } else {
-        pendingOverrides.modified[targetKey] = { ...(pendingOverrides.modified[targetKey] || {}), ...targetModObj };
+        pendingOverrides.modified[targetKey] = { ...pendingOverrides.modified[targetKey], ...targetModObj };
       }
 
       // 2. formerItem (및 클러스터 내 다른 항목)의 isPrimary 해제
@@ -2216,7 +2261,7 @@
           if (cIdx >= 0) pendingOverrides.created[cIdx] = { ...formerItem, ...formerModObj };
           else pendingOverrides.created.push({ ...formerItem, ...formerModObj });
         } else {
-          pendingOverrides.modified[formerKey] = { ...(pendingOverrides.modified[formerKey] || {}), ...formerModObj };
+          pendingOverrides.modified[formerKey] = { ...pendingOverrides.modified[formerKey], ...formerModObj };
         }
       }
 
@@ -2433,8 +2478,8 @@
       if (!url || typeof url !== 'string') return null;
       const clean = url.trim();
       if (/youtu\.be\/|youtube\.com\/(?:watch|shorts|live)/i.test(clean)) return 'youtube';
-      if (/(?:twitter\.com|x\.com)\/[^\/]+\/status\/\d+/i.test(clean)) return 'twitter';
-      if (/tiktok\.com\/(@[^\/]+\/video\/\d+|v\/|t\/)/i.test(clean) || /vt\.tiktok\.com\/[\w-]+/i.test(clean)) return 'tiktok';
+      if (/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/i.test(clean)) return 'twitter';
+      if (/tiktok\.com\/(@[^/]+\/video\/\d+|v\/|t\/)/i.test(clean) || /vt\.tiktok\.com\/[\w-]+/i.test(clean)) return 'tiktok';
       if (/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i.test(clean)) return 'instagram';
       if (/^https?:\/\//i.test(clean)) return 'web';
       return null;
@@ -2669,6 +2714,7 @@
           }
 
           // 3순위: embed 프록시 폴백
+          let htmlStr = '';
           if (!igCaption && shortcode) {
             try {
               const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
@@ -2678,6 +2724,10 @@
                 if (pRes1.ok) {
                   const pd1 = await pRes1.json();
                   htmlStr = pd1?.contents || '';
+                  if (htmlStr && !igCaption) {
+                    const m = htmlStr.match(/<title>([^<]+)<\/title>/i);
+                    if (m && m[1]) igCaption = m[1].replace(/Instagram.*$/i, '').trim();
+                  }
                 }
               }
             } catch (e1) { }
@@ -3263,7 +3313,6 @@
           starAttendees,
           _isCustom: true
         };
-        const nKey = getRawScheduleKey(newItem);
         newItem._originKey = id;
         allSchedules.unshift(newItem);
         pendingOverrides.created.push(newItem);
@@ -3884,27 +3933,9 @@
           }
         }
 
-        // 1. 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합
+        // 1. 기존 Gist에 있던 appliedOverrides와 새로 수정한 pendingOverrides를 스마트 병합 (1일정 1수정본)
         const mergedDeleted = new Set([...appliedOverrides.deleted, ...pendingOverrides.deleted]);
-        const resolvedApplied = resolveModifiedChain(appliedOverrides.modified);
-        const resolvedPending = resolveModifiedChain(pendingOverrides.modified);
-        const mergedModified = { ...resolvedApplied, ...resolvedPending };
-
-        // 연쇄 수정본 속성을 상호 모든 연관 키에 일괄 동기화 (원본 키 & 파생 키 양방향 갱신)
-        Object.entries(mergedModified).forEach(([k, mod]) => {
-          if (!mod) return;
-          const rootKey = resolveRootScheduleKey(k, mergedModified);
-          const allAliases = [k, rootKey];
-          if (mod.title) {
-            const datePart = (mod.startTime ? mod.startTime.slice(0, 10) : k.split('_')[0]);
-            allAliases.push(`${datePart}_${mod.title}`);
-          }
-          allAliases.forEach(aliasKey => {
-            if (aliasKey && (!mergedModified[aliasKey] || JSON.stringify(mergedModified[aliasKey]) !== JSON.stringify(mod))) {
-              mergedModified[aliasKey] = { ...mod, id: aliasKey };
-            }
-          });
-        });
+        const mergedModified = { ...appliedOverrides.modified, ...pendingOverrides.modified };
 
         // modified 안에 남아있던 _isCustom 격리 항목을 created로 승격 및 modified에서 제거
         const mergedCreatedMap = new Map();
@@ -3923,72 +3954,51 @@
         // 삭제 대상에 포함된 키는 mergedModified에서 완전 제거
         mergedDeleted.forEach(dKey => {
           delete mergedModified[dKey];
-          const datePart = dKey.split('_')[0];
-          // 연관 파생 키들도 제거
-          for (const mKey of Object.keys(mergedModified)) {
-            if (mKey.startsWith(datePart + '_')) {
-              const val = mergedModified[mKey];
-              if (val && (val.title === dKey.slice(datePart.length + 1) || mKey === dKey)) {
-                delete mergedModified[mKey];
-              }
-            }
-          }
         });
 
         // 원본으로 복구된 항목들은 mergedModified에서 완전 제거
         if (pendingOverrides.restoredModified && pendingOverrides.restoredModified.size > 0) {
           pendingOverrides.restoredModified.forEach(rKey => {
             delete mergedModified[rKey];
-            const datePart = rKey.split('_')[0];
-            for (const mKey of Object.keys(mergedModified)) {
-              if (mKey === rKey || mKey.startsWith(datePart + '_')) {
-                const val = mergedModified[mKey];
-                if (val && (val.title === rKey.slice(datePart.length + 1) || mKey === rKey)) {
-                  delete mergedModified[mKey];
-                }
-              }
-            }
           });
         }
 
-        // created 항목 처리 (삭제 대상인 항목도 isDeleted: true로 보존하여 복구 가능하게 유지)
+        // created 항목 처리 (custom_ prefix 고정 및 isDeleted 상태 반영)
         const finalCreated = Array.from(mergedCreatedMap.values()).map(c => {
-          const cKey = getScheduleKey(c);
-          const rKey = getRawScheduleKey(c);
           const isDel = Boolean(
             (c.id && mergedDeleted.has(c.id)) ||
-            mergedDeleted.has(cKey) ||
-            mergedDeleted.has(rKey) ||
-            mergedDeleted.has(c.title) ||
             c.isDeleted ||
             c._isDeleted
           );
-          if (isDel) {
-            mergedDeleted.add(cKey);
-            if (c.id) mergedDeleted.add(c.id);
-          }
           return {
             ...c,
             isDeleted: isDel
           };
         });
 
-        // v2.0 형식 빌드 (Single Source of Truth)
+        // v2.0 정규 형식 빌드 (Single Source of Truth, 순수 Diff만 보존)
         const customSchedules = {};
-        const legacyAliases = {};
         finalCreated.forEach(c => {
-          const id = c.id || `custom_${(c.startTime || '').slice(2, 10).replace(/-/g, '')}_${Math.random().toString(36).slice(2, 8)}`;
+          const id = (c.id && String(c.id).startsWith('custom_'))
+            ? c.id
+            : `custom_${(c.startTime || '').slice(2, 10).replace(/-/g, '') || 'manual'}_${Math.random().toString(36).slice(2, 8)}`;
           customSchedules[id] = { ...c, id, _isCustom: true, isDeleted: Boolean(c.isDeleted) };
-          legacyAliases[`${(c.startTime || '').slice(0, 10)}_${c.title}`] = id;
-          if (c._originKey) legacyAliases[c._originKey] = id;
         });
 
         const sourceOverrides = {};
+        // 1) 삭제 일정 등록
         mergedDeleted.forEach(dKey => {
-          sourceOverrides[dKey] = { id: dKey, isDeleted: true };
+          sourceOverrides[dKey] = { isDeleted: true };
         });
+
+        // 2) 수정 일정 등록 (마스터와 비교하여 실제 달라진 속성만 diff로 추출)
         Object.entries(mergedModified).forEach(([mKey, mVal]) => {
-          sourceOverrides[mKey] = { ...(sourceOverrides[mKey] || {}), ...mVal, id: mKey };
+          if (!mVal || (sourceOverrides[mKey] && sourceOverrides[mKey].isDeleted)) return;
+          const baseItem = allSchedules.find(s => s && (s.id === mKey || getScheduleKey(s) === mKey));
+          const diff = computePureDiff(baseItem, mVal);
+          if (diff) {
+            sourceOverrides[mKey] = diff;
+          }
         });
 
         const finalFilterRules = pendingFilterRules || currentFilterRules;
@@ -4005,8 +4015,7 @@
                 pipelineConfig: currentPipelineConfig,
                 filterRules: finalFilterRules,
                 customSchedules,
-                sourceOverrides,
-                legacyAliases
+                sourceOverrides
               })
             }
           }
@@ -4501,10 +4510,10 @@
     // -------------------------------------------------------------
     let userPreviewDate = new Date();
     let isUserPreviewDark = true;
-    let currentInspectorTab = 'diff';
+    let _currentInspectorTab = 'diff';
 
     function switchInspectorTab(tab) {
-      currentInspectorTab = tab;
+      _currentInspectorTab = tab;
       const diffContainer = document.getElementById('inspectorDiffContainer');
       const previewContainer = document.getElementById('inspectorPreviewContainer');
       const btnDiff = document.getElementById('btnInspectorTabDiff');
@@ -5201,6 +5210,12 @@
       closeUpdDetail();
       renderUserPreviewSchedules();
     });
+
+    // 인라인 이벤트 및 콘솔 디버깅용 함수 노출
+    window.approveScheduleItem = approveScheduleItem;
+    window.openEditModalByKey = openEditModalByKey;
+    window.restoreItem = restoreItem;
+    window.decodeHtmlEntities = decodeHtmlEntities;
 
     // 앱 초기화 진입점
     const initialToken = getStoredToken();

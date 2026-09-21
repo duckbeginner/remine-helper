@@ -4,11 +4,13 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 import { CACHE_CONFIG, DEFAULT_EXCLUDE_KEYWORDS } from '../config.js';
+import { cleanUrl, cleanTextUrls } from '../utils/url-cleaner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CACHE_DIR = CACHE_CONFIG.cacheDir;
 const RAW_CACHE_DIR = CACHE_CONFIG.rawCacheDir;
+const SOURCES_CACHE_DIR = CACHE_CONFIG.sourcesCacheDir || path.join(CACHE_DIR, 'sources');
 const OEMBED_CACHE_FILE = path.join(CACHE_DIR, 'oembed-cache.json');
 const STREAMS_CACHE_FILE = path.join(CACHE_DIR, 'streams-cache.json');
 const OVERRIDES_CACHE_FILE = path.join(CACHE_DIR, 'schedule-overrides.json');
@@ -22,6 +24,15 @@ function ensureCacheDir() {
   if (!fs.existsSync(RAW_CACHE_DIR)) {
     fs.mkdirSync(RAW_CACHE_DIR, { recursive: true });
   }
+  if (!fs.existsSync(SOURCES_CACHE_DIR)) {
+    fs.mkdirSync(SOURCES_CACHE_DIR, { recursive: true });
+  }
+  ['mnet', 'blip', 'youtube', 'custom'].forEach(sub => {
+    const subDir = path.join(SOURCES_CACHE_DIR, sub);
+    if (!fs.existsSync(subDir)) {
+      fs.mkdirSync(subDir, { recursive: true });
+    }
+  });
 }
 
 // SHA-256 해시 계산 헬퍼
@@ -30,7 +41,33 @@ export function getSha256Hash(data) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
-// Raw 응답 원본 JSON 캐싱
+// 수집 데이터 원본 소스 채널별 독립 캐시 저장
+export function saveSourceCache(source, ymKey, data) {
+  try {
+    ensureCacheDir();
+    const sourceDir = path.join(SOURCES_CACHE_DIR, source);
+    if (!fs.existsSync(sourceDir)) fs.mkdirSync(sourceDir, { recursive: true });
+    const filePath = path.join(sourceDir, `${source}_${ymKey}.json`);
+    const hash = getSha256Hash(data);
+    fs.writeFileSync(filePath, JSON.stringify({ source, period: ymKey, hash, data, cachedAt: Date.now() }, null, 2), 'utf8');
+    // 하위 호환을 위해 기존 RAW_CACHE_DIR에도 저장
+    saveRawCache(source, ymKey, data);
+  } catch (e) {}
+}
+
+// 수집 데이터 원본 소스 채널별 독립 캐시 로드
+export function loadSourceCache(source, ymKey) {
+  try {
+    const filePath = path.join(SOURCES_CACHE_DIR, source, `${source}_${ymKey}.json`);
+    if (fs.existsSync(filePath)) {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return parsed.data || parsed;
+    }
+  } catch (e) {}
+  return loadRawCache(source, ymKey);
+}
+
+// Raw 응답 원본 JSON 캐싱 (레거시 호환)
 export function saveRawCache(source, ymKey, data) {
   try {
     ensureCacheDir();
@@ -40,7 +77,7 @@ export function saveRawCache(source, ymKey, data) {
   } catch (e) {}
 }
 
-// Raw 응답 원본 JSON 로드
+// Raw 응답 원본 JSON 로드 (레거시 호환)
 export function loadRawCache(source, ymKey) {
   try {
     const filePath = path.join(RAW_CACHE_DIR, `${source}_${ymKey}.json`);
@@ -105,9 +142,15 @@ export function getMonthsToFetch(baseDate = new Date(), isFull = false) {
   return months;
 }
 
-// 스케줄 단일 아이템 슬림화 (starAttendees 복원 및 extField 하위 호환 보강)
+// 스케줄 단일 아이템 슬림화 (starAttendees 복원, custom extField 배제 및 URL 정제)
 export function slimScheduleItem(item) {
   if (!item) return null;
+
+  const rawUrl = item.url || item.link || '';
+  const cleanedUrl = cleanUrl(rawUrl);
+
+  const isYoutube = item.source === 'youtube' || (cleanedUrl && (cleanedUrl.includes('youtube.com') || cleanedUrl.includes('youtu.be')));
+  const isCustom = Boolean(item.id && String(item.id).startsWith('custom_'));
 
   const slim = {
     id: item.id || undefined,
@@ -116,17 +159,18 @@ export function slimScheduleItem(item) {
     endTime: (item.endTime && item.endTime !== item.startTime) ? item.endTime : undefined,
     isAllday: Boolean(item.isAllday),
     typeId: item.typeId,
-    url: item.url || item.link || undefined,
+    url: cleanedUrl || undefined,
     typeText: item.typeText || undefined,
     channel: item.channel || undefined,
     location: item.location || undefined,
     source: item.source || undefined,
-    thumbnail: item.thumbnail || undefined,
+    // [유튜브 썸네일 간소화] videoId 기반 동적 생성 가능하므로 i.ytimg.com 중복 저장 배제
+    thumbnail: (isYoutube && item.thumbnail && item.thumbnail.includes('i.ytimg.com')) ? undefined : (item.thumbnail || undefined),
     isOfficialYoutube: item.isOfficialYoutube || undefined,
-    // [하위 호환] extField 유예 보조 생성 (v1.0.3 클라이언트 { key, value } 규격 완벽 호환)
-    extField: (item.extField && item.extField.key && item.extField.value)
-      ? item.extField
-      : (item.channel ? { key: '채널', value: item.channel } : (item.location ? { key: '장소', value: item.location } : undefined)),
+    // [하위 호환] custom_ 일정은 extField 100% 배제, 원본에 실제로 존재하는 유효 extField만 제한적 보존
+    extField: isCustom
+      ? undefined
+      : ((item.extField && item.extField.key && item.extField.value) ? item.extField : undefined),
     linkedScheduleIds: (Array.isArray(item.linkedScheduleIds) && item.linkedScheduleIds.length > 0) ? item.linkedScheduleIds : undefined,
     // [참석 멤버 복원] starAttendees 보존
     starAttendees: (Array.isArray(item.starAttendees) && item.starAttendees.length > 0)
@@ -137,9 +181,10 @@ export function slimScheduleItem(item) {
       : undefined
   };
 
-  const trimmedMsg = (item.message || '').trim();
-  if (trimmedMsg && trimmedMsg !== '\n') {
-    slim.message = trimmedMsg;
+  const rawMsg = (item.message || '').trim();
+  const cleanedMsg = cleanTextUrls(rawMsg).trim();
+  if (cleanedMsg && cleanedMsg !== '\n') {
+    slim.message = cleanedMsg;
   }
 
   return slim;
@@ -310,7 +355,62 @@ async function fetchOfficialLiveStreams() {
   return Object.values(cache);
 }
 
-// 소스별 불변 고유 ID 생성기 (v2.0)
+// 소스별 고정 Canonical Key 생성기 (원칙에 의한 소스명 prefix 고정 규격)
+export function generateCanonicalScheduleId(source, item) {
+  if (!item) return null;
+  const s = source || item.source;
+
+  // 1) Mnet Plus: 24자리 hex 등 앞에 반드시 mnet_ 접두사 부여
+  if (s === 'mnet') {
+    const rawId = item.id || item.eventId || item._id;
+    if (rawId) {
+      const cleanId = String(rawId).replace(/^mnet_/, '').trim();
+      return `mnet_${cleanId}`;
+    }
+  }
+
+  // 2) Blip: 원본 scheduleId 앞에 blip_ 접두사 부여
+  if (s === 'blip') {
+    const rawId = item.scheduleId || item.id;
+    if (rawId) {
+      const cleanId = String(rawId).replace(/^blip_/, '').trim();
+      return `blip_${cleanId}`;
+    }
+  }
+
+  // 3) YouTube: videoId 앞에 yt_ 접두사 부여
+  if (s === 'youtube') {
+    const rawId = item.videoId || extractYouTubeVideoId(item.url) || item.id;
+    if (rawId) {
+      const cleanId = String(rawId).replace(/^yt_/, '').trim();
+      return `yt_${cleanId}`;
+    }
+  }
+
+  // 4) 커스텀/관리자 수동 일정: 반드시 custom_ 접두사 부여
+  if (s === 'custom' || item._isCustom || s === 'namu') {
+    if (item.id && String(item.id).startsWith('custom_')) {
+      return String(item.id).trim();
+    }
+    const dateStr = item.startTime ? item.startTime.slice(2, 10).replace(/-/g, '') : 'manual';
+    const rand = crypto.randomBytes(3).toString('hex');
+    return `custom_${dateStr}_${rand}`;
+  }
+
+  // 기존 id에 이미 canonical prefix가 있는 경우
+  if (item.id && /^(mnet_|blip_|yt_|custom_)/.test(item.id)) {
+    return item.id.trim();
+  }
+
+  // 24자리 hex ObjectId인 경우 mnet으로 귀속
+  if (item.id && /^[a-f0-9]{24}$/.test(item.id)) {
+    return `mnet_${item.id.trim()}`;
+  }
+
+  return generateScheduleId(source, item);
+}
+
+// 소스별 불변 고유 ID 생성기 (v2.0 하위 호환)
 export function generateScheduleId(source, item) {
   if (!item) return null;
   if (item.id && typeof item.id === 'string' && item.id.trim()) {
@@ -1116,9 +1216,9 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
   let modCount = 0;
   let filterCount = 0;
 
-  // (C-1) 관리자 검수 모드: 승인된 일정과 연결된 서브 일정 연쇄 승인 (Cluster Awareness)
+  // (C-1) 승인된 일정과 연결된 서브 일정 연쇄 승인 (Cluster Awareness)
   const effectiveApprovedSet = new Set(approvedSet);
-  if (mode === 'review' && approvedSet.size > 0) {
+  if (approvedSet.size > 0) {
     const linkMap = new Map();
     const mediaIdMap = new Map();
 
@@ -1220,8 +1320,8 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
       filterReason = matchFilterReason(item);
     }
 
-    // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드가 있는 항목은 필터링에서 100% 보호
-    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0);
+    // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드 또는 승인 목록에 있는 항목은 필터링에서 100% 보호
+    const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0) || effectiveApprovedSet.has(item.id);
 
     // [트랙 1: Ops 포털 전수 마스터에 수록]
     const masterEntry = { ...baseItem };
