@@ -8,7 +8,12 @@ on:
     paths:
       - 'scripts/data-hub/**'
       - '.github/workflows/data-hub-sync.yml'
-  workflow_dispatch: # GitHub UI에서 수동 트리거 가능
+  workflow_dispatch:
+    inputs:
+      full:
+        description: '전체 과거 수집 (--full)'
+        type: boolean
+        default: false
 
 jobs:
   sync-data:
@@ -35,7 +40,12 @@ jobs:
             data-hub-cache-
 
       - name: Run Data Hub Aggregator
-        run: node scripts/data-hub/fetch-all.js
+        run: |
+          if [ "${{ inputs.full }}" = "true" ]; then
+            node scripts/data-hub/fetch-all.js --full
+          else
+            node scripts/data-hub/fetch-all.js
+          fi
 
       - name: Run Schema Validation Test
         run: node scripts/data-hub/validate.js

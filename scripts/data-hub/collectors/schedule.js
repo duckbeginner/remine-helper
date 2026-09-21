@@ -1013,8 +1013,10 @@ export async function collectScheduleData(allYtVideos = []) {
   const monthsToFetch = getMonthsToFetch(now, isFull);
   console.log(`  📅 수집 대상 월: ${monthsToFetch.map(m => `${m.year}.${m.month}`).join(', ')}`);
 
-  // 델타 병합을 위한 기존 마스터 일정 로드 (패스트트랙 시 비수집 기간 보존)
-  const MASTER_SCHEDULES_FILE = path.resolve(__dirname, '../../../docs/api/v1/schedules.json');
+  // 델타 병합을 위한 기존 마스터 일정 로드 (패스트트랙 시 비수집 기간 보존: master-schedules.json 우선)
+  const MASTER_FILE = path.resolve(__dirname, '../../../docs/api/v1/master-schedules.json');
+  const FALLBACK_FILE = path.resolve(__dirname, '../../../docs/api/v1/schedules.json');
+  const MASTER_SCHEDULES_FILE = fs.existsSync(MASTER_FILE) ? MASTER_FILE : FALLBACK_FILE;
   let archivedItems = [];
   if (!isFull && fs.existsSync(MASTER_SCHEDULES_FILE)) {
     try {
