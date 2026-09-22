@@ -406,12 +406,6 @@
       return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${days[d.getDay()]})`;
     }
 
-    function getRawScheduleKey(item) {
-      if (!item) return '';
-      const d = item.startTime ? formatDateYMD(new Date(item.startTime)) : 'no-date';
-      return `${d}_${item.title}`;
-    }
-
     function normalizeTitle(title) {
       if (!title) return '';
       return String(title)
@@ -443,7 +437,7 @@
         if (source === 'youtube' && !id.startsWith('yt_')) return `yt_${id}`;
         return id;
       }
-      return getRawScheduleKey(item);
+      return '';
     }
 
     // 연쇄 수정 체인 추적 및 최신 속성 통합 (A -> B -> C)
@@ -453,27 +447,8 @@
       Object.keys(modifiedMap).forEach(k => {
         resolved[k] = { ...modifiedMap[k] };
       });
-
-      Object.keys(resolved).forEach(startKey => {
-        const visited = new Set([startKey]);
-        let current = resolved[startKey];
-        const datePart = startKey.split('_')[0];
-
-        while (current && current.title) {
-          const nextKey = `${datePart}_${current.title}`;
-          if (nextKey !== startKey && resolved[nextKey] && !visited.has(nextKey)) {
-            visited.add(nextKey);
-            current = { ...current, ...resolved[nextKey] };
-            resolved[startKey] = current;
-          } else {
-            break;
-          }
-        }
-      });
-
       return resolved;
     }
-
 
     // [스키마 유효성 검증기] 유령/껍데기 일정 진입 원천 차단 (최소 필수 3대 속성 검증)
     function isValidScheduleItem(item) {
@@ -484,30 +459,24 @@
       return true;
     }
 
-    // 아이템과 일치하는 오버라이드 객체 검색 (직접 키, 제목, 체인 등 다각도 매칭)
+    // 고유 ID 불일치 방어 가드: mod에 지정된 ID가 다른 소스의 고유 ID인 경우 매칭 차단
+    const isIdMismatch = (mod, item) => {
+      if (!mod || !mod.id || !item || !item.id) return false;
+      return mod.id !== item.id && /^(blip_|mnet_|yt_|custom_)/.test(String(mod.id));
+    };
+
+    // 아이템과 일치하는 오버라이드 객체 검색 (Canonical ID 단일화 매칭)
     function findMatchingOverride(item, modifiedMap) {
       if (!item || !modifiedMap) return null;
-      if (item.id && modifiedMap[item.id]) return modifiedMap[item.id];
-      const rawKey = getRawScheduleKey(item);
-      const originKey = item._originKey || rawKey;
-      const datePart = rawKey.split('_')[0];
-
-      // 고유 ID 불일치 방어 가드: mod에 지정된 ID가 다른 소스의 고유 ID인 경우 매칭 차단
-      const isIdMismatch = (mod) => {
-        if (!mod || !mod.id || !item.id) return false;
-        return mod.id !== item.id && /^(blip_|mnet_|yt_|custom_)/.test(String(mod.id));
-      };
-
-      if (modifiedMap[originKey] && !isIdMismatch(modifiedMap[originKey])) return modifiedMap[originKey];
-      if (modifiedMap[rawKey] && !isIdMismatch(modifiedMap[rawKey])) return modifiedMap[rawKey];
-      if (modifiedMap[item.title] && !isIdMismatch(modifiedMap[item.title])) return modifiedMap[item.title];
-
-      for (const [mKey, mVal] of Object.entries(modifiedMap)) {
-        if (mKey.startsWith(datePart + '_')) {
-          if (mVal.title === item.title || (mVal._originTitle && mVal._originTitle === item.title)) {
-            if (!isIdMismatch(mVal)) return mVal;
-          }
-        }
+      if (item.id && modifiedMap[item.id] && !isIdMismatch(modifiedMap[item.id], item)) {
+        return modifiedMap[item.id];
+      }
+      if (item._originKey && modifiedMap[item._originKey] && !isIdMismatch(modifiedMap[item._originKey], item)) {
+        return modifiedMap[item._originKey];
+      }
+      const sKey = getScheduleKey(item);
+      if (sKey && modifiedMap[sKey] && !isIdMismatch(modifiedMap[sKey], item)) {
+        return modifiedMap[sKey];
       }
       return null;
     }
@@ -528,10 +497,10 @@
         };
       }
 
-      // 2. v2.0 customSchedules 로드 (고유 id 최우선 식별)
+      // 2. v2.0 customSchedules 로드 (고유 id 최우선 식별 및 필수 스키마 검증)
       if (overridesJson.customSchedules && typeof overridesJson.customSchedules === 'object') {
         Object.values(overridesJson.customSchedules).forEach(c => {
-          if (!c) return;
+          if (!c || !isValidScheduleItem(c)) return;
           const isDel = Boolean(c.isDeleted);
           const cId = c.id || getScheduleKey(c);
           if (isDel) {
@@ -632,7 +601,7 @@
           data = await res.json();
         }
 
-        const baseItems = (data.items || []).map(item => {
+        const baseItems = (data.items || []).filter(isValidScheduleItem).map(item => {
           if (item && item.id && String(item.id).startsWith('custom_')) {
             item._isCustom = true;
           }
@@ -696,26 +665,13 @@
         updateBasePipelineConfigSnapshot(currentPipelineConfig);
         updatePipelineModeUI();
 
-        // 삭제 판별 헬퍼 (수정 전/후 제목 및 체인 연관 키 포괄 검사)
+        // 삭제 판별 헬퍼 (Canonical ID 단일화 검사)
         const checkIsDeleted = (item) => {
+          if (!item) return false;
           if (item.id && appliedOverrides.deleted.has(item.id)) return true;
-          const rawKey = getRawScheduleKey(item);
-          const originKey = item._originKey || rawKey;
-          if (appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(item.title)) {
-            return true;
-          }
-          const datePart = rawKey.split('_')[0];
-          const mod = findMatchingOverride(item, appliedOverrides.modified);
-          if (mod && mod.title) {
-            const derivedKey = `${datePart}_${mod.title}`;
-            if (appliedOverrides.deleted.has(derivedKey) || appliedOverrides.deleted.has(mod.title)) return true;
-          }
-          for (const dKey of appliedOverrides.deleted) {
-            if (dKey.startsWith(datePart + '_')) {
-              const dTitle = dKey.slice(datePart.length + 1);
-              if (dTitle === item.title) return true;
-            }
-          }
+          if (item._originKey && appliedOverrides.deleted.has(item._originKey)) return true;
+          const sKey = getScheduleKey(item);
+          if (sKey && appliedOverrides.deleted.has(sKey)) return true;
           return false;
         };
 
@@ -737,8 +693,7 @@
           }
           itemCopy.id = origId;
           itemCopy.source = origSource;
-          const rawKey = getRawScheduleKey(itemCopy);
-          itemCopy._originKey = origId || rawKey;
+          itemCopy._originKey = origId || getScheduleKey(itemCopy);
 
           // Gist에 저장된 수정본이 있으면 실제 속성 덮어쓰기! (체인 반영 최신본 매칭)
           const mod = findMatchingOverride(itemCopy, appliedOverrides.modified);
@@ -758,7 +713,7 @@
           // ID 및 Source 불변성 영구 보존
           if (origId) itemCopy.id = origId;
           if (origSource) itemCopy.source = origSource;
-          itemCopy._originKey = origId || rawKey;
+          itemCopy._originKey = origId || getScheduleKey(itemCopy);
 
           if (checkIsDeleted(itemCopy)) {
             itemCopy._isDeleted = true;
@@ -784,7 +739,7 @@
         if (overridesJson && overridesJson.sourceOverrides && typeof overridesJson.sourceOverrides === 'object') {
           Object.entries(overridesJson.sourceOverrides).forEach(([k, v]) => {
             if (!v) return;
-            const alreadyExists = allSchedules.some(s => (s.id && (s.id === k || s.id === v.id)) || getScheduleKey(s) === k || getRawScheduleKey(s) === k);
+            const alreadyExists = allSchedules.some(s => (s.id && (s.id === k || s.id === v.id)) || (s._originKey && (s._originKey === k || s._originKey === v.id)) || getScheduleKey(s) === k);
             if (!alreadyExists) {
               // ⚠️ [스키마 유효성 검증] 유효한 제목과 시작일시가 없는 불완전 껍데기 조각(URL/채널만 있는 데이터)은 유령 일정 생성을 막기 위해 복원 제외!
               const vCandidate = { ...v, id: v.id || k };
@@ -985,11 +940,10 @@
 
         // 2. 카테고리 필터
         const itemKey = getScheduleKey(item);
-        const itemRawKey = getRawScheduleKey(item);
         const isItemDeleted = Boolean(
           item._isDeleted ||
-          (pendingOverrides && (pendingOverrides.deleted.has(itemKey) || pendingOverrides.deleted.has(itemRawKey) || (item.id && pendingOverrides.deleted.has(item.id)))) ||
-          (appliedOverrides && (appliedOverrides.deleted.has(itemKey) || appliedOverrides.deleted.has(itemRawKey) || (item.id && appliedOverrides.deleted.has(item.id))))
+          (pendingOverrides && (pendingOverrides.deleted.has(itemKey) || (item.id && pendingOverrides.deleted.has(item.id)) || (item._originKey && pendingOverrides.deleted.has(item._originKey)))) ||
+          (appliedOverrides && (appliedOverrides.deleted.has(itemKey) || (item.id && appliedOverrides.deleted.has(item.id)) || (item._originKey && appliedOverrides.deleted.has(item._originKey))))
         );
 
         const isCorrupted = !item.startTime || !item.title || isNaN(new Date(item.startTime).getTime()) || Boolean(item._isCorrupted);
@@ -1070,16 +1024,22 @@
       if (cluster.length === 1) return cluster[0];
 
       // 1순위: 관리자 명시 대표 지정 (isPrimary: true)
-      const explicit = cluster.find(c => c && c.isPrimary);
-      if (explicit) return explicit;
+      const explicitList = cluster.filter(c => c && c.isPrimary);
+      if (explicitList.length > 0) {
+        return explicitList.sort((a, b) => String(a.id || a._originKey || '').localeCompare(String(b.id || b._originKey || '')))[0];
+      }
 
       // 2순위: 수동 커스텀 등록 일정 (_isCustom)
-      const custom = cluster.find(c => c && c._isCustom);
-      if (custom) return custom;
+      const customList = cluster.filter(c => c && c._isCustom);
+      if (customList.length > 0) {
+        return customList.sort((a, b) => String(a.id || a._originKey || '').localeCompare(String(b.id || b._originKey || '')))[0];
+      }
 
       // 3순위: 관리자 수정 일정 (_isModified)
-      const modified = cluster.find(c => c && (c._isModified || (pendingOverrides.modified && pendingOverrides.modified[getScheduleKey(c)])));
-      if (modified) return modified;
+      const modifiedList = cluster.filter(c => c && (c._isModified || (pendingOverrides.modified && pendingOverrides.modified[getScheduleKey(c)])));
+      if (modifiedList.length > 0) {
+        return modifiedList.sort((a, b) => String(a.id || a._originKey || '').localeCompare(String(b.id || b._originKey || '')))[0];
+      }
 
       // 4순위: 소스 우선순위 (blip > mnet > 기타) 및 세부 정보 충실도
       const sourceScore = (src) => src === 'blip' ? 30 : src === 'mnet' ? 20 : 10;
@@ -1105,11 +1065,78 @@
     }
     window.determineClusterPrimary = determineClusterPrimary;
 
+    // [연관 일정 BFS 전이적 폐포(Transitive Closure) 클러스터링 알고리즘]
+    // 상호 양방향 및 N-hop으로 연결된 모든 일정을 단일 무방향 그래프 연결 요소로 완전 수집
+    function buildScheduleClusterTransitive(startItem, allList) {
+      if (!startItem) return [];
+      const list = (Array.isArray(allList) && allList.length > 0) ? allList : (Array.isArray(allSchedules) ? allSchedules : []);
+      const cluster = [];
+      const visitedKeys = new Set();
+      const queue = [startItem];
+
+      const getKeys = (item) => {
+        const keys = [];
+        if (item.id) keys.push(item.id);
+        if (item._originKey) keys.push(item._originKey);
+        const sk = getScheduleKey(item);
+        if (sk) keys.push(sk);
+        return Array.from(new Set(keys.filter(Boolean)));
+      };
+
+      const startKeys = getKeys(startItem);
+      startKeys.forEach(k => visitedKeys.add(k));
+
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        if (!cluster.includes(cur)) {
+          cluster.push(cur);
+        }
+
+        const curKeys = getKeys(cur);
+        curKeys.forEach(k => visitedKeys.add(k));
+
+        // 1. 순방향 탐색: cur.linkedScheduleIds 에 지정된 모든 대상
+        const linkedIds = Array.isArray(cur.linkedScheduleIds) ? cur.linkedScheduleIds : [];
+        linkedIds.forEach(tId => {
+          if (!tId) return;
+          const matched = list.find(cand => {
+            return (cand.id && cand.id === tId) || cand._originKey === tId || getScheduleKey(cand) === tId;
+          });
+          if (matched) {
+            const mKeys = getKeys(matched);
+            const isAlreadyVisited = mKeys.some(k => visitedKeys.has(k)) || cluster.includes(matched);
+            if (!isAlreadyVisited) {
+              mKeys.forEach(k => visitedKeys.add(k));
+              queue.push(matched);
+            }
+          }
+        });
+
+        // 2. 역방향 탐색: list 내 다른 일정이 curKeys 중 하나라도 linkedScheduleIds에 포함하고 있는 경우
+        list.forEach(cand => {
+          if (cand === cur || cluster.includes(cand)) return;
+          const candKeys = getKeys(cand);
+          if (candKeys.some(k => visitedKeys.has(k))) return;
+
+          const cLinked = Array.isArray(cand.linkedScheduleIds) ? cand.linkedScheduleIds : [];
+          const hasLink = curKeys.some(k => cLinked.includes(k));
+          if (hasLink) {
+            candKeys.forEach(k => visitedKeys.add(k));
+            queue.push(cand);
+          }
+        });
+      }
+
+      return cluster;
+    }
+    window.buildScheduleClusterTransitive = buildScheduleClusterTransitive;
+
     // 날짜별 그룹 HTML 생성기
     function renderScheduleGroupsHTML(filteredItems) {
       if (!filteredItems || filteredItems.length === 0) return '';
 
       const renderedGlobalScheduleIds = new Set();
+      const renderedPrimaryKeys = new Set();
       const groups = {};
       filteredItems.forEach((item, index) => {
         const d = new Date(item.startTime);
@@ -1142,43 +1169,31 @@
         groupItems.forEach(({ item }) => {
           if (item.id && renderedGlobalScheduleIds.has(item.id)) return;
           const fallbackKey = item._originKey || getScheduleKey(item);
-          if (!item.id && fallbackKey && renderedGlobalScheduleIds.has(fallbackKey)) return;
+          if (fallbackKey && renderedGlobalScheduleIds.has(fallbackKey)) return;
 
-          // 연관 연결된 클러스터 탐색 (allSchedules 전체에서 탐색)
-          let cluster = [item];
+          // 연관 연결된 클러스터 BFS 전이적 완전 탐색 (allSchedules 전체에서 탐색)
           const allList = (Array.isArray(allSchedules) && allSchedules.length > 0) ? allSchedules : (window.allSchedules || filteredItems);
-          const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
-          if (linkedIds.length > 0) {
-            linkedIds.forEach(tId => {
-              const matched = allList.find(cand => {
-                return (cand.id && cand.id === tId) || cand._originKey === tId || getScheduleKey(cand) === tId;
-              });
-              if (matched && !cluster.includes(matched)) {
-                cluster.push(matched);
-              }
-            });
-          }
-
-          // 역방향 연계 탐색 (다른 일정이 이 item을 linkedScheduleIds에 포함하고 있는 경우 상호 묶음)
-          allList.forEach(cand => {
-            if (cand === item || cluster.includes(cand)) return;
-            const cLinked = Array.isArray(cand.linkedScheduleIds) ? cand.linkedScheduleIds : [];
-            const cItemId = item.id;
-            const cItemKey = item._originKey || getScheduleKey(item);
-            if ((cItemId && cLinked.includes(cItemId)) || (cItemKey && cLinked.includes(cItemKey))) {
-              cluster.push(cand);
-            }
-          });
+          const cluster = buildScheduleClusterTransitive(item, allList);
 
           cluster.forEach(c => {
-            if (c.id) {
-              renderedGlobalScheduleIds.add(c.id);
-            } else if (c._originKey) {
-              renderedGlobalScheduleIds.add(c._originKey);
-            }
+            if (c.id) renderedGlobalScheduleIds.add(c.id);
+            if (c._originKey) renderedGlobalScheduleIds.add(c._originKey);
+            const sk = getScheduleKey(c);
+            if (sk) renderedGlobalScheduleIds.add(sk);
           });
 
           let primaryItem = determineClusterPrimary(cluster);
+          if (!primaryItem) return;
+
+          const primaryKey = primaryItem.id || primaryItem._originKey || getScheduleKey(primaryItem);
+          // Fail-Safe: 동일한 대표 일정이 2개 이상의 카드로 중복 배출되는 것을 원천 차단
+          if (primaryKey) {
+            if (renderedPrimaryKeys.has(primaryKey)) {
+              return;
+            }
+            renderedPrimaryKeys.add(primaryKey);
+          }
+
           let subItems = cluster.filter(c => c !== primaryItem);
 
           const key = getScheduleKey(primaryItem);
@@ -1189,8 +1204,8 @@
           const rawListForCard = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
           const hasRawOriginal = !isCustom && Array.isArray(rawListForCard) && rawListForCard.some(b =>
             (b.id && (b.id === key || b.id === primaryItem.id || b.id === primaryItem._originKey)) ||
-            getScheduleKey(b) === key ||
-            getRawScheduleKey(b) === key
+            (b._originKey && (b._originKey === key || b._originKey === primaryItem.id || b._originKey === primaryItem._originKey)) ||
+            getScheduleKey(b) === key
           );
 
           let statusClass = '';
@@ -1366,7 +1381,7 @@
                   <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-shrink: 0;">
                     <button type="button" class="btn-action set-primary-btn" style="padding: 2px 6px; font-size: 10.5px; background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3); color: #eab308; border-radius: 4px;" title="이 일정을 대표 일정으로 지정" onclick="setClusterPrimary('${subKeyJs}', '${safeKeyJs}')">⭐ 대표 지정</button>
                     ${sub.url ? `<a href="${escapeHtml(sub.url)}" target="_blank" class="btn-action" style="padding: 2px 6px; font-size: 10.5px; text-decoration: none;">🔗 링크</a>` : ''}
-                    ${(sub._isModified || (pendingOverrides.modified && pendingOverrides.modified[subKey])) && !sub._isCustom && Array.isArray(rawBaseSchedules) && rawBaseSchedules.some(b => (b.id && (b.id === subKey || b.id === sub.id)) || getScheduleKey(b) === subKey || getRawScheduleKey(b) === subKey) ? `<button type="button" class="btn-action btn-restore-mod" style="padding: 2px 6px; font-size: 10.5px;" onclick="restoreModifiedItem('${subKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
+                    ${(sub._isModified || (pendingOverrides.modified && pendingOverrides.modified[subKey])) && !sub._isCustom && Array.isArray(rawBaseSchedules) && rawBaseSchedules.some(b => (b.id && (b.id === subKey || b.id === sub.id)) || (b._originKey && (b._originKey === subKey || b._originKey === sub._originKey)) || getScheduleKey(b) === subKey) ? `<button type="button" class="btn-action btn-restore-mod" style="padding: 2px 6px; font-size: 10.5px;" onclick="restoreModifiedItem('${subKeyJs}')" title="수정 취소 및 공식 원본으로 복구">↩️ 원본 복구</button>` : ''}
                     <button class="btn-action" style="padding: 2px 6px; font-size: 10.5px;" onclick="openEditModalByKey('${subKeyJs}')">✏️ 수정</button>
                     <button class="btn-action btn-del" style="padding: 2px 6px; font-size: 10.5px;" title="연결 해제" onclick="unlinkSchedulePair('${safeKeyJs}', '${subKeyJs}')">🔗 해제</button>
                   </div>
@@ -1639,11 +1654,11 @@
           if (tId === item.id) return;
           if (!tId.startsWith('blip_') && !tId.startsWith('mnet_')) return;
           let target = allSchedules.find(s => 
-            (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId
+            (s.id && s.id === tId) || (s._originKey && s._originKey === tId) || getScheduleKey(s) === tId
           );
           if (!target) {
             target = newSubItems.find(s => 
-              (s.id && s.id === tId) || s._originKey === tId || getScheduleKey(s) === tId || getRawScheduleKey(s) === tId
+              (s.id && s.id === tId) || (s._originKey && s._originKey === tId) || getScheduleKey(s) === tId
             );
           }
           const isBlip = String(tId).startsWith('blip_');
@@ -1812,7 +1827,7 @@
     function openDetailModalByKey(key) {
       if (!key) return;
       const allList = (Array.isArray(allSchedules) && allSchedules.length > 0) ? allSchedules : (window.allSchedules || []);
-      const item = allList.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allList.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
       if (item && typeof showUserPreviewDetail === 'function') {
         showUserPreviewDetail(item);
       }
@@ -1822,7 +1837,7 @@
 
     // 모달 열기
     function openEditModalByKey(key) {
-      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
       if (!item) return;
 
       const stableKey = item.id || item._originKey || getScheduleKey(item);
@@ -1833,7 +1848,7 @@
 
       // 공식 원본 placeholder 안내
       const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
-      const rawItem = rawList.find(b => (b.id && b.id === stableKey) || getScheduleKey(b) === stableKey || getRawScheduleKey(b) === stableKey);
+      const rawItem = rawList.find(b => (b.id && b.id === stableKey) || (b._originKey && b._originKey === stableKey) || getScheduleKey(b) === stableKey);
       if (rawItem && !item._isCustom) {
         document.getElementById('formTitle').placeholder = `공식 원본: ${rawItem.title || ''}`;
         document.getElementById('formLocation').placeholder = rawItem.location ? `공식 원본: ${rawItem.location}` : '장소';
@@ -2061,18 +2076,12 @@
 
     // 아이템 숨김/삭제 토글
     function toggleDeleteItem(key) {
-      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
       const stableKey = item ? (item.id || item._originKey || key) : key;
-      const rawKey = item ? getRawScheduleKey(item) : key;
-      const keysToToggle = new Set([stableKey, rawKey, key]);
+      const keysToToggle = new Set([stableKey, key]);
       if (item && item.id) keysToToggle.add(item.id);
-
-      // 만약 수정된 제목이 있다면 파생 키도 함께 토글 대상에 포함
-      if (item && item.title) {
-        const datePart = rawKey.split('_')[0];
-        keysToToggle.add(`${datePart}_${item.title}`);
-        keysToToggle.add(item.title);
-      }
+      if (item && item._originKey) keysToToggle.add(item._originKey);
+      if (item && item.title) keysToToggle.add(item.title);
 
       // 조작 중인 카드가 위치한 월을 currentViewDate 및 loadedMonths에 보존하여 화면 점프 방지
       if (item && item.startTime) {
@@ -2121,17 +2130,12 @@
     }
 
     function restoreItem(key) {
-      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
       const stableKey = item ? (item.id || item._originKey || key) : key;
-      const rawKey = item ? getRawScheduleKey(item) : key;
-      const keysToRestore = new Set([stableKey, rawKey, key]);
+      const keysToRestore = new Set([stableKey, key]);
       if (item && item.id) keysToRestore.add(item.id);
-
-      if (item && item.title) {
-        const datePart = rawKey.split('_')[0];
-        keysToRestore.add(`${datePart}_${item.title}`);
-        keysToRestore.add(item.title);
-      }
+      if (item && item._originKey) keysToRestore.add(item._originKey);
+      if (item && item.title) keysToRestore.add(item.title);
 
       if (item) {
         item._isDeleted = false;
@@ -2149,24 +2153,19 @@
 
     // 수정한 일정을 공식 원본(rawBaseSchedules) 데이터로 복구
     function restoreModifiedItem(key) {
-      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+      const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
       const stableKey = item ? (item.id || item._originKey || key) : key;
-      const rawKey = item ? getRawScheduleKey(item) : key;
-      const keysToRestore = new Set([stableKey, rawKey, key]);
+      const keysToRestore = new Set([stableKey, key]);
       if (item && item.id) keysToRestore.add(item.id);
-
-      if (item && item.title) {
-        const datePart = rawKey.split('_')[0];
-        keysToRestore.add(`${datePart}_${item.title}`);
-        keysToRestore.add(item.title);
-      }
+      if (item && item._originKey) keysToRestore.add(item._originKey);
+      if (item && item.title) keysToRestore.add(item.title);
 
       // rawBaseSchedules에서 원본 찾기
       const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
       const rawItem = rawList.find(b =>
         (b.id && (b.id === key || b.id === stableKey || (item && b.id === item.id))) ||
-        getScheduleKey(b) === key || getScheduleKey(b) === stableKey ||
-        getRawScheduleKey(b) === key || getRawScheduleKey(b) === stableKey
+        (b._originKey && (b._originKey === key || b._originKey === stableKey)) ||
+        getScheduleKey(b) === key || getScheduleKey(b) === stableKey
       );
 
       if (!rawItem) {
@@ -2211,8 +2210,8 @@
     function unlinkSchedulePair(keyA, keyB) {
       if (!confirm('이 일정과의 연관 연결을 해제하시겠습니까? (서로 독립된 일정으로 분리됩니다)')) return;
 
-      const itemA = allSchedules.find(s => (s.id && s.id === keyA) || s._originKey === keyA || getScheduleKey(s) === keyA || getRawScheduleKey(s) === keyA);
-      const itemB = allSchedules.find(s => (s.id && s.id === keyB) || s._originKey === keyB || getScheduleKey(s) === keyB || getRawScheduleKey(s) === keyB);
+      const itemA = allSchedules.find(s => (s.id && s.id === keyA) || s._originKey === keyA || getScheduleKey(s) === keyA);
+      const itemB = allSchedules.find(s => (s.id && s.id === keyB) || s._originKey === keyB || getScheduleKey(s) === keyB);
 
       if (!itemA || !itemB) return;
 
@@ -2261,8 +2260,8 @@
 
     // 연관 일정 클러스터 대표 일정 지정
     function setClusterPrimary(targetSubKey, formerPrimaryKey) {
-      const targetItem = allSchedules.find(s => (s.id && s.id === targetSubKey) || s._originKey === targetSubKey || getScheduleKey(s) === targetSubKey || getRawScheduleKey(s) === targetSubKey);
-      const formerItem = allSchedules.find(s => (s.id && s.id === formerPrimaryKey) || s._originKey === formerPrimaryKey || getScheduleKey(s) === formerPrimaryKey || getRawScheduleKey(s) === formerPrimaryKey);
+      const targetItem = allSchedules.find(s => (s.id && s.id === targetSubKey) || s._originKey === targetSubKey || getScheduleKey(s) === targetSubKey);
+      const formerItem = allSchedules.find(s => (s.id && s.id === formerPrimaryKey) || s._originKey === formerPrimaryKey || getScheduleKey(s) === formerPrimaryKey);
 
       if (!targetItem) return;
 
@@ -3377,7 +3376,7 @@
         allSchedules.unshift(newItem);
         pendingOverrides.created.push(newItem);
       } else {
-        const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key || getRawScheduleKey(s) === key);
+        const item = allSchedules.find(s => (s.id && s.id === key) || (s._originKey && s._originKey === key) || getScheduleKey(s) === key);
         if (item) {
           const stableKey = item.id || item._originKey || key;
           item._originKey = stableKey;
@@ -3472,7 +3471,8 @@
               isOfficialYoutube,
               _isCustom: true,
               _originKey: stableKey,
-              linkedScheduleIds: item.linkedScheduleIds || []
+              linkedScheduleIds: item.linkedScheduleIds || [],
+              isPrimary: Boolean(item.isPrimary)
             };
             const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === stableKey) || c._originKey === stableKey || getScheduleKey(c) === stableKey);
             if (cIdx >= 0) {
@@ -3485,8 +3485,8 @@
             const rawListForSubmit = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
             const rawItem = Array.isArray(rawListForSubmit) ? rawListForSubmit.find(b =>
               (b.id && (b.id === key || b.id === stableKey || b.id === item.id)) ||
-              getScheduleKey(b) === key || getScheduleKey(b) === stableKey ||
-              getRawScheduleKey(b) === key || getRawScheduleKey(b) === stableKey
+              (b._originKey && (b._originKey === key || b._originKey === stableKey)) ||
+              getScheduleKey(b) === key || getScheduleKey(b) === stableKey
             ) : null;
 
             let isIdenticalToRaw = false;
@@ -3531,20 +3531,12 @@
               message,
               thumbnail,
               isOfficialYoutube,
-              linkedScheduleIds: item.linkedScheduleIds || []
+              linkedScheduleIds: item.linkedScheduleIds || [],
+              isPrimary: Boolean(item.isPrimary)
             };
 
-            // 1) 원본 불변 키로 저장
+            // 원본 불변 Canonical ID 키로 저장 (가상키 일체 배제)
             pendingOverrides.modified[stableKey] = modObj;
-
-            // 2) 만약 제목/날짜가 바뀌었다면 새 키 및 기존 파생 키도 최신본으로 상호 동기화
-            const newRawKey = getRawScheduleKey(item);
-            if (newRawKey !== stableKey) {
-              pendingOverrides.modified[newRawKey] = { ...modObj };
-            }
-            if (key !== stableKey && key !== newRawKey) {
-              pendingOverrides.modified[key] = { ...modObj };
-            }
           }
         }
       }
@@ -3573,14 +3565,13 @@
       const handledDelKeys = new Set();
       (pendingOverrides.deleted || new Set()).forEach(dKey => {
         if (handledDelKeys.has(dKey)) return;
-        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey || s.title === dKey);
+        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey);
         const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : dKey;
         uniqueDeleted.add(itemDedupKey);
         if (item) {
           if (item.id) handledDelKeys.add(item.id);
           if (item._originKey) handledDelKeys.add(item._originKey);
           handledDelKeys.add(getScheduleKey(item));
-          handledDelKeys.add(getRawScheduleKey(item));
           if (item.title) handledDelKeys.add(item.title);
         }
         handledDelKeys.add(dKey);
@@ -3591,14 +3582,13 @@
       const handledModKeys = new Set();
       Object.keys(pendingOverrides.modified || {}).forEach(mKey => {
         if (handledModKeys.has(mKey)) return;
-        const item = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey || s.title === mKey);
+        const item = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey);
         const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : mKey;
         uniqueModified.add(itemDedupKey);
         if (item) {
           if (item.id) handledModKeys.add(item.id);
           if (item._originKey) handledModKeys.add(item._originKey);
           handledModKeys.add(getScheduleKey(item));
-          handledModKeys.add(getRawScheduleKey(item));
           if (item.title) handledModKeys.add(item.title);
         }
         handledModKeys.add(mKey);
@@ -3728,8 +3718,8 @@
       const handledModifiedKeys = new Set();
       Object.entries(pendingOverrides.modified || {}).forEach(([mKey, mod]) => {
         if (!mod) return;
-        const rawItem = rawList.find(b => (b.id && b.id === mKey) || (b._originKey && b._originKey === mKey) || getScheduleKey(b) === mKey || getRawScheduleKey(b) === mKey);
-        const itemObj = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey) || mod;
+        const rawItem = rawList.find(b => (b.id && b.id === mKey) || (b._originKey && b._originKey === mKey) || getScheduleKey(b) === mKey);
+        const itemObj = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey) || mod;
 
         const itemDedupKey = itemObj ? (itemObj.id || itemObj._originKey || getScheduleKey(itemObj)) : mKey;
         if (handledModifiedKeys.has(itemDedupKey)) return;
@@ -3782,7 +3772,7 @@
       const handledDeletedKeys = new Set();
       (pendingOverrides.deleted || new Set()).forEach(dKey => {
         if (handledDeletedKeys.has(dKey)) return;
-        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey || s.title === dKey);
+        const item = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || s.title === dKey);
         const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : dKey;
         if (handledDeletedKeys.has(itemDedupKey)) return;
         handledDeletedKeys.add(itemDedupKey);
@@ -3790,7 +3780,6 @@
           if (item.id) handledDeletedKeys.add(item.id);
           if (item._originKey) handledDeletedKeys.add(item._originKey);
           handledDeletedKeys.add(getScheduleKey(item));
-          handledDeletedKeys.add(getRawScheduleKey(item));
           if (item.title) handledDeletedKeys.add(item.title);
         }
         handledDeletedKeys.add(dKey);
@@ -3833,7 +3822,7 @@
       // 4. 공식 원본 복구 항목 (restoredModified)
       const handledRestoredKeys = new Set();
       (pendingOverrides.restoredModified || new Set()).forEach(rKey => {
-        const item = allSchedules.find(s => (s.id && s.id === rKey) || (s._originKey && s._originKey === rKey) || getScheduleKey(s) === rKey || getRawScheduleKey(s) === rKey);
+        const item = allSchedules.find(s => (s.id && s.id === rKey) || (s._originKey && s._originKey === rKey) || getScheduleKey(s) === rKey);
         const itemDedupKey = item ? (item.id || item._originKey || getScheduleKey(item)) : rKey;
         if (handledRestoredKeys.has(itemDedupKey)) return;
         handledRestoredKeys.add(itemDedupKey);
@@ -4000,7 +3989,7 @@
         // modified 안에 남아있던 _isCustom 격리 항목을 created로 승격 및 modified에서 제거
         const mergedCreatedMap = new Map();
         [...appliedOverrides.created, ...pendingOverrides.created].forEach(c => {
-          const cKey = c.id || getScheduleKey(c) || getRawScheduleKey(c);
+          const cKey = c.id || getScheduleKey(c);
           mergedCreatedMap.set(cKey, { ...c, _isCustom: true });
         });
 
@@ -4046,13 +4035,15 @@
         });
 
         const sourceOverrides = {};
-        // 1) 삭제 일정 등록
+        // 1) 삭제 일정 등록 (Falsy 및 공백 키 필터링)
         mergedDeleted.forEach(dKey => {
+          if (!dKey || typeof dKey !== 'string' || !dKey.trim()) return;
           sourceOverrides[dKey] = { isDeleted: true };
         });
 
-        // 2) 수정 일정 등록 (마스터와 비교하여 실제 달라진 속성만 diff로 추출)
+        // 2) 수정 일정 등록 (마스터와 비교하여 실제 달라진 속성만 diff로 추출, Falsy 및 공백 키 필터링)
         Object.entries(mergedModified).forEach(([mKey, mVal]) => {
+          if (!mKey || typeof mKey !== 'string' || !mKey.trim()) return;
           if (!mVal || (sourceOverrides[mKey] && sourceOverrides[mKey].isDeleted)) return;
           const baseItem = allSchedules.find(s => s && (s.id === mKey || getScheduleKey(s) === mKey));
           const diff = computePureDiff(baseItem, mVal);
@@ -4128,17 +4119,16 @@
 
         // 4. 화면 목록에 확정 반영 덮어쓰기 & re-render (수정 대기 뱃지 -> [수정됨] 초록 뱃지로 확정)
         allSchedules = allSchedules.map(item => {
-          const rawKey = getRawScheduleKey(item);
-          const originKey = item._originKey || rawKey;
+          const originKey = item._originKey || item.id || getScheduleKey(item);
           const mod = findMatchingOverride(item, appliedOverrides.modified);
           if (mod) {
             Object.assign(item, mod);
             item._originKey = originKey;
             item._isModified = true;
           }
-          if (item.id && appliedOverrides.deleted.has(item.id)) {
-            item._isDeleted = true;
-          } else if (appliedOverrides.deleted.has(originKey) || appliedOverrides.deleted.has(rawKey) || appliedOverrides.deleted.has(item.title)) {
+          if ((item.id && appliedOverrides.deleted.has(item.id)) ||
+              (item._originKey && appliedOverrides.deleted.has(item._originKey)) ||
+              appliedOverrides.deleted.has(originKey)) {
             item._isDeleted = true;
           }
           return item;
@@ -4638,7 +4628,7 @@
       modifiedKeys.forEach(mKey => {
         if (handledModKeys.has(mKey)) return;
         const mod = modifiedMap[mKey];
-        const orig = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey || getRawScheduleKey(s) === mKey);
+        const orig = allSchedules.find(s => (s.id && s.id === mKey) || (s._originKey && s._originKey === mKey) || getScheduleKey(s) === mKey);
         const itemDedupKey = orig ? (orig.id || getScheduleKey(orig)) : mKey;
         handledModKeys.add(itemDedupKey);
 
@@ -4677,7 +4667,7 @@
       const handledDels = new Set();
       deletedKeys.forEach(dKey => {
         if (handledDels.has(dKey)) return;
-        const orig = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey || getRawScheduleKey(s) === dKey);
+        const orig = allSchedules.find(s => (s.id && s.id === dKey) || (s._originKey && s._originKey === dKey) || getScheduleKey(s) === dKey);
         const itemKey = orig ? (orig.id || getScheduleKey(orig)) : dKey;
         diffDelItems.push({
           key: itemKey,
@@ -4866,31 +4856,26 @@
         return true;
       });
 
-      // 2. 연관 일정 클러스터링
+      // 2. 연관 일정 클러스터링 (전이적 폐포 및 통일된 대표 선출 적용)
       const processed = new Set();
       const clusters = [];
       validItems.forEach(item => {
-        if (processed.has(item)) return;
-        const cluster = [item];
-        processed.add(item);
-        const linkedIds = Array.isArray(item.linkedScheduleIds) ? item.linkedScheduleIds : [];
-        if (linkedIds.length > 0) {
-          validItems.forEach(other => {
-            if (!processed.has(other)) {
-              const otherId = other.id || other._originKey || getScheduleKey(other);
-              if (linkedIds.includes(otherId) || (Array.isArray(other.linkedScheduleIds) && other.linkedScheduleIds.includes(item.id))) {
-                cluster.push(other);
-                processed.add(other);
-              }
-            }
-          });
-        }
+        const itemKey = item.id || item._originKey || getScheduleKey(item);
+        if (processed.has(itemKey) || (item.id && processed.has(item.id))) return;
+
+        const cluster = buildScheduleClusterTransitive(item, validItems);
+        cluster.forEach(c => {
+          if (c.id) processed.add(c.id);
+          if (c._originKey) processed.add(c._originKey);
+          const sk = getScheduleKey(c);
+          if (sk) processed.add(sk);
+        });
         clusters.push(cluster);
       });
 
-      // 3. 대표 일정 선출
+      // 3. 대표 일정 선출 (determineClusterPrimary 규칙 통일)
       const userDisplayItems = clusters.map(cluster => {
-        return cluster.find(c => c._isCustom) || cluster.find(c => c._isModified) || cluster[0];
+        return determineClusterPrimary(cluster) || cluster[0];
       });
 
       // 4. 시작 시간순 정렬
