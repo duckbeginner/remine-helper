@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { TestRunner, assert } from '../test-helper.js';
+import { determineClusterPrimary } from '../../scripts/data-hub/collectors/schedule.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -145,13 +146,7 @@ export async function run() {
     const allSchedules = [kgma1, kgma2, kgmaMnet];
     const filteredItems = [kgma1, kgma2, kgmaMnet];
 
-    function determineClusterPrimary(cluster) {
-      if (!cluster || cluster.length === 0) return null;
-      if (cluster.length === 1) return cluster[0];
-      const explicit = cluster.find(c => c && c.isPrimary);
-      if (explicit) return explicit;
-      return cluster[0];
-    }
+    // 프로덕션 determineClusterPrimary (scripts/data-hub/collectors/schedule.js) 단일 소스 직접 사용
 
     // 전이적 클러스터링과 중복 대표 가드가 적용된 렌더러 시뮬레이션
     function simulateRender(items, allList) {

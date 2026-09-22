@@ -45,6 +45,8 @@ import { run as runOpsUiDomTest } from './docs/ops-ui-dom.test.js';
 import { run as runOpsUserInspectorTest } from './docs/ops-user-inspector.test.js';
 import { run as runOpsPortalUiEnhancementsTest } from './docs/ops-portal-ui-enhancements.test.js';
 import { run as runOpsClusterPrimaryLinkTest } from './docs/ops-cluster-primary-link.test.js';
+import { run as runOpsLosslessLifecycleTest } from './docs/ops-lossless-lifecycle.test.js';
+import { run as runScheduleFunctionalMatrixTest } from './schedule/schedule-functional-matrix.test.js';
 import { run as runPagesTest } from './docs/pages.test.js';
 import { run as runSeoTest } from './docs/seo.test.js';
 
@@ -163,6 +165,8 @@ async function main() {
     runOpsUserInspectorTest,
     runOpsPortalUiEnhancementsTest,
     runOpsClusterPrimaryLinkTest,
+    runOpsLosslessLifecycleTest,
+    runScheduleFunctionalMatrixTest,
     runPagesTest,
     runSeoTest
   ];

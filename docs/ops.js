@@ -83,7 +83,8 @@
       let hasDiff = false;
       const compareFields = [
         'title', 'startTime', 'endTime', 'isAllday', 'typeId', 'typeText',
-        'channel', 'location', 'url', 'thumbnail', 'isOfficialYoutube', 'message'
+        'channel', 'location', 'url', 'thumbnail', 'isOfficialYoutube', 'message',
+        'isPrimary'
       ];
 
       for (const field of compareFields) {
@@ -91,6 +92,16 @@
         const baseVal = baseItem ? baseItem[field] : undefined;
 
         if (editVal === undefined || editVal === null) continue;
+
+        if (field === 'isPrimary') {
+          const editPrimary = Boolean(editVal);
+          const basePrimary = Boolean(baseVal);
+          if (editPrimary !== basePrimary) {
+            diff.isPrimary = editPrimary;
+            hasDiff = true;
+          }
+          continue;
+        }
 
         const isBaseEmpty = baseVal === undefined || baseVal === null || baseVal === '' || baseVal === false;
         const isEditEmpty = editVal === '' || editVal === false;
@@ -107,20 +118,22 @@
         }
       }
 
-      if (Array.isArray(editedItem.starAttendees)) {
+      if (editedItem.starAttendees !== undefined) {
+        const editAttendees = Array.isArray(editedItem.starAttendees) ? editedItem.starAttendees : [];
         const baseAttendees = (baseItem && Array.isArray(baseItem.starAttendees)) ? baseItem.starAttendees : [];
-        if (JSON.stringify(editedItem.starAttendees) !== JSON.stringify(baseAttendees)) {
-          diff.starAttendees = editedItem.starAttendees;
+        if (JSON.stringify(editAttendees) !== JSON.stringify(baseAttendees)) {
+          diff.starAttendees = editAttendees;
           hasDiff = true;
         }
       }
 
-      if (Array.isArray(editedItem.linkedScheduleIds)) {
+      if (editedItem.linkedScheduleIds !== undefined) {
+        const editLinked = Array.isArray(editedItem.linkedScheduleIds) ? editedItem.linkedScheduleIds : [];
         const baseLinked = (baseItem && Array.isArray(baseItem.linkedScheduleIds)) ? baseItem.linkedScheduleIds : [];
-        const s1 = [...editedItem.linkedScheduleIds].sort();
+        const s1 = [...editLinked].sort();
         const s2 = [...baseLinked].sort();
-        if (JSON.stringify(s1) !== JSON.stringify(s2) || (editedItem.linkedScheduleIds.length > 0 && baseLinked.length === 0)) {
-          diff.linkedScheduleIds = [...editedItem.linkedScheduleIds];
+        if (JSON.stringify(s1) !== JSON.stringify(s2) || (editLinked.length === 0 && baseLinked.length > 0)) {
+          diff.linkedScheduleIds = [...editLinked];
           hasDiff = true;
         }
       }
@@ -705,7 +718,7 @@
         };
 
         // 3. baseItems에 appliedOverrides 병합 (안전 필드만 덮어쓰고 ID/Source 불변성 보장!)
-        const SAFE_OVERRIDE_FIELDS = ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'typeId', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'];
+        const SAFE_OVERRIDE_FIELDS = ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'typeId', 'message', 'channel', 'thumbnail', 'isOfficialYoutube', 'starAttendees', 'isPrimary'];
         allSchedules = baseItems.map(item => {
           const itemCopy = { ...item };
           const origSource = item.source;
@@ -728,10 +741,14 @@
           const mod = findMatchingOverride(itemCopy, appliedOverrides.modified);
           if (mod) {
             SAFE_OVERRIDE_FIELDS.forEach(f => {
-              if (mod[f] !== undefined) itemCopy[f] = mod[f];
+              if (mod[f] !== undefined) {
+                if (f === 'starAttendees') itemCopy[f] = Array.isArray(mod[f]) ? [...mod[f]] : [];
+                else if (f === 'isPrimary') itemCopy[f] = Boolean(mod[f]);
+                else itemCopy[f] = mod[f];
+              }
             });
-            if (mod.linkedScheduleIds) {
-              itemCopy.linkedScheduleIds = normalizeLinkedScheduleIds([...(itemCopy.linkedScheduleIds || []), ...mod.linkedScheduleIds]);
+            if (mod.linkedScheduleIds !== undefined) {
+              itemCopy.linkedScheduleIds = normalizeLinkedScheduleIds(mod.linkedScheduleIds);
             }
             itemCopy._isModified = true;
           }
@@ -768,6 +785,9 @@
         if (overridesJson && overridesJson.sourceOverrides && typeof overridesJson.sourceOverrides === 'object') {
           Object.entries(overridesJson.sourceOverrides).forEach(([k, v]) => {
             if (!v) return;
+            if (!k || typeof k !== 'string' || !k.trim()) return;
+            // ⚠️ [가상키 유입 원천 차단] Canonical prefix 규격을 만족하지 않는 키(예: YYYY-MM-DD_제목)는 복원 차단
+            if (!/^(mnet_|blip_|yt_|custom_)/.test(k)) return;
             const alreadyExists = allSchedules.some(s => (s.id && (s.id === k || s.id === v.id)) || (s._originKey && (s._originKey === k || s._originKey === v.id)) || getScheduleKey(s) === k);
             if (!alreadyExists) {
               // ⚠️ [스키마 유효성 검증] 유효한 제목과 시작일시가 없는 불완전 껍데기 조각(URL/채널만 있는 데이터)은 유령 일정 생성을 막기 위해 복원 제외!
@@ -2225,6 +2245,8 @@
         item.thumbnail = rawItem.thumbnail;
         item.isOfficialYoutube = rawItem.isOfficialYoutube;
         item.linkedScheduleIds = Array.isArray(rawItem.linkedScheduleIds) ? [...rawItem.linkedScheduleIds] : [];
+        item.starAttendees = rawItem.starAttendees;
+        item.isPrimary = false;
         item._isModified = false;
         item._isCustom = false;
       }
@@ -2266,7 +2288,9 @@
           message: target.message,
           thumbnail: target.thumbnail,
           isOfficialYoutube: target.isOfficialYoutube,
-          linkedScheduleIds: target.linkedScheduleIds
+          starAttendees: target.starAttendees,
+          linkedScheduleIds: target.linkedScheduleIds,
+          isPrimary: Boolean(target.isPrimary)
         };
 
         if (target._isCustom) {
@@ -2311,6 +2335,7 @@
         message: targetItem.message,
         thumbnail: targetItem.thumbnail,
         isOfficialYoutube: targetItem.isOfficialYoutube,
+        starAttendees: targetItem.starAttendees,
         linkedScheduleIds: Array.isArray(targetItem.linkedScheduleIds) ? [...targetItem.linkedScheduleIds] : [],
         isPrimary: true
       };
@@ -2340,6 +2365,7 @@
           message: formerItem.message,
           thumbnail: formerItem.thumbnail,
           isOfficialYoutube: formerItem.isOfficialYoutube,
+          starAttendees: formerItem.starAttendees,
           linkedScheduleIds: Array.isArray(formerItem.linkedScheduleIds) ? [...formerItem.linkedScheduleIds] : [],
           isPrimary: false
         };
@@ -3370,9 +3396,11 @@
       }
 
       // 선택된 참석 멤버 수집
+      const allAttendeeCbs = document.querySelectorAll('.attendee-cb');
       const attendeeCbs = document.querySelectorAll('.attendee-cb:checked');
       let starAttendees = undefined;
-      if (attendeeCbs.length > 0) {
+      if (allAttendeeCbs.length > 0) {
+        // 모달에 멤버 선택 UI가 존재하는 경우: 체크된 것이 없으면 빈 배열 []로 명시하여 전체 해제 반영
         starAttendees = Array.from(attendeeCbs).map(cb => ({
           name: cb.value,
           id: cb.dataset.id || undefined,
@@ -3468,7 +3496,9 @@
                   message: targetItem.message,
                   thumbnail: targetItem.thumbnail,
                   isOfficialYoutube: targetItem.isOfficialYoutube,
-                  linkedScheduleIds: tLinked
+                  starAttendees: targetItem.starAttendees,
+                  linkedScheduleIds: tLinked,
+                  isPrimary: Boolean(targetItem.isPrimary)
                 };
                 if (targetItem._isCustom) {
                   const cIdx = pendingOverrides.created.findIndex(c => (c.id && c.id === targetKey) || c._originKey === targetKey || getScheduleKey(c) === targetKey);
@@ -3498,6 +3528,7 @@
               message,
               thumbnail,
               isOfficialYoutube,
+              starAttendees,
               _isCustom: true,
               _originKey: stableKey,
               linkedScheduleIds: item.linkedScheduleIds || [],
@@ -3524,20 +3555,32 @@
               let rawTimeRaw = '';
               if (!rawItem.isAllday && rawItem.startTime) {
                 const rd = new Date(rawItem.startTime);
-                rawTimeRaw = `${String(rd.getHours()).padStart(2, '0')}:${String(rd.getMinutes()).padStart(2, '0')}`;
+                const kstH = (rd.getUTCHours() + 9) % 24;
+                const kstM = rd.getUTCMinutes();
+                rawTimeRaw = `${String(kstH).padStart(2, '0')}:${String(kstM).padStart(2, '0')}`;
               }
               const rawType = rawItem.typeText || resolveScheduleType(rawItem) || '기타';
               const isLinksSame = JSON.stringify(item.linkedScheduleIds || []) === JSON.stringify(rawItem.linkedScheduleIds || []);
+
+              // 참석 멤버 동등성 검증 (순서 독립적 비교 및 빈 배열 정밀 검사)
+              const curAttendees = Array.isArray(starAttendees) ? starAttendees.map(a => a?.name || '').filter(Boolean).sort() : [];
+              const rawAttendees = Array.isArray(rawItem.starAttendees) ? rawItem.starAttendees.map(a => a?.name || '').filter(Boolean).sort() : [];
+              const isAttendeesSame = JSON.stringify(curAttendees) === JSON.stringify(rawAttendees);
+              const isPrimarySame = Boolean(item.isPrimary) === Boolean(rawItem.isPrimary);
+              const isTypeIdSame = (item.typeId ?? '') === (rawItem.typeId ?? '');
 
               if (title === (rawItem.title || '') &&
                   dateStr === rawDateStr &&
                   timeRaw === rawTimeRaw &&
                   typeText === rawType &&
+                  isTypeIdSame &&
                   channel === (rawItem.channel || '') &&
                   url === (rawItem.url || rawItem.link || '') &&
                   location === (rawItem.location || '') &&
                   message === (rawItem.message || '') &&
-                  isLinksSame) {
+                  isLinksSame &&
+                  isAttendeesSame &&
+                  isPrimarySame) {
                 isIdenticalToRaw = true;
               }
             }
@@ -3560,6 +3603,7 @@
               message,
               thumbnail,
               isOfficialYoutube,
+              starAttendees,
               linkedScheduleIds: item.linkedScheduleIds || [],
               isPrimary: Boolean(item.isPrimary)
             };
@@ -4034,7 +4078,7 @@
         });
 
         Object.entries(mergedModified).forEach(([mKey, mVal]) => {
-          if (mVal && mVal._isCustom) {
+          if (mVal && (mVal._isCustom || (mKey && String(mKey).startsWith('custom_')))) {
             mergedCreatedMap.set(mKey, { ...mVal, _originKey: mKey, _isCustom: true });
             delete mergedModified[mKey];
           }
@@ -4081,16 +4125,65 @@
           sourceOverrides[dKey] = { isDeleted: true };
         });
 
-        // 2) 수정 일정 등록 (마스터와 비교하여 실제 달라진 속성만 diff로 추출, Falsy 및 공백 키 필터링)
+        // 2) 수정 일정 등록 (공식 불변 원본과 비교하여 실제 달라진 속성만 diff로 추출, Falsy 및 공백 키 필터링)
+        const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
         Object.entries(mergedModified).forEach(([mKey, mVal]) => {
           if (!mKey || typeof mKey !== 'string' || !mKey.trim()) return;
           if (!mVal || (sourceOverrides[mKey] && sourceOverrides[mKey].isDeleted)) return;
-          const baseItem = allSchedules.find(s => s && (s.id === mKey || getScheduleKey(s) === mKey));
+          const baseItem = rawList.find(s => s && (s.id === mKey || s._originKey === mKey || getScheduleKey(s) === mKey));
           const diff = computePureDiff(baseItem, mVal);
           if (diff) {
             sourceOverrides[mKey] = diff;
           }
         });
+
+        // [Circuit Breaker: 안전 차단기] 기존 원격 또는 로컬 기준선 대비 비정상 데이터/연결 급감 방어 가드 (Fail-Closed)
+        const baselineSourceCount = (remoteOverrides && remoteOverrides.sourceOverrides && typeof remoteOverrides.sourceOverrides === 'object')
+          ? Object.keys(remoteOverrides.sourceOverrides).length
+          : (appliedOverrides && appliedOverrides.modified)
+            ? (Object.keys(appliedOverrides.modified).length + (appliedOverrides.deleted ? appliedOverrides.deleted.size : 0))
+            : 0;
+
+        const baselineCustomCount = (remoteOverrides && remoteOverrides.customSchedules && typeof remoteOverrides.customSchedules === 'object')
+          ? Object.keys(remoteOverrides.customSchedules).length
+          : (appliedOverrides && Array.isArray(appliedOverrides.created))
+            ? appliedOverrides.created.length
+            : 0;
+
+        const newSourceCount = Object.keys(sourceOverrides).length;
+        const newCustomCount = Object.keys(customSchedules).length;
+
+        // 1) 대규모 데이터셋 (100건 이상) 보호: 30% 이상 급감 차단
+        if (baselineSourceCount >= 100 && newSourceCount < baselineSourceCount * 0.7) {
+          throw new Error(`[안전 차단기] 비정상적 데이터 급감 감지: 기존 기준 ${baselineSourceCount}건 중 ${newSourceCount}건만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
+        // 2) 중소규모 데이터셋 (10~99건) 보호: 50% 이상 급감 차단
+        if (baselineSourceCount >= 10 && baselineSourceCount < 100 && newSourceCount < baselineSourceCount * 0.5) {
+          throw new Error(`[안전 차단기] 비정상적 데이터 급감 감지: 기존 기준 ${baselineSourceCount}건 중 ${newSourceCount}건만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
+        // 3) 커스텀 일정 (10건 이상) 급감 차단
+        if (baselineCustomCount >= 10 && newCustomCount < baselineCustomCount * 0.5) {
+          throw new Error(`[안전 차단기] 커스텀 일정 급감 감지: 기존 기준 ${baselineCustomCount}건 중 ${newCustomCount}건만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
+
+        // 4) 연결 일정(linkedScheduleIds) 보유 건수 급감 차단
+        let baselineLinkCount = 0;
+        if (remoteOverrides && remoteOverrides.sourceOverrides && typeof remoteOverrides.sourceOverrides === 'object') {
+          Object.values(remoteOverrides.sourceOverrides).forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) baselineLinkCount++;
+          });
+        } else if (appliedOverrides && appliedOverrides.modified) {
+          Object.values(appliedOverrides.modified).forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) baselineLinkCount++;
+          });
+        }
+        let newLinkCount = 0;
+        Object.values(sourceOverrides).forEach(v => {
+          if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) newLinkCount++;
+        });
+        if (baselineLinkCount >= 30 && newLinkCount < baselineLinkCount * 0.7) {
+          throw new Error(`[안전 차단기] 연결 일정 급감 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
 
         const finalFilterRules = pendingFilterRules || currentFilterRules;
 

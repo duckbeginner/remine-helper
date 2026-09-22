@@ -445,7 +445,7 @@ export function generateCanonicalScheduleId(sourceOrItemOrId, maybeItem) {
   let item = null;
   if (typeof sourceOrItemOrId === 'string') {
     source = sourceOrItemOrId;
-    item = maybeItem;
+    item = typeof maybeItem === 'string' ? { id: maybeItem } : maybeItem;
   } else {
     item = sourceOrItemOrId;
     source = item?.source || '';
@@ -1280,7 +1280,7 @@ export { DEFAULT_EXCLUDE_KEYWORDS };
 
 export function isShortsSchedule(item) {
   if (!item) return false;
-  if (item._isShorts) return true;
+  if (item._isShorts || item.isShorts) return true;
   const raw = [item.url, item.link, item.title, item.message].filter(Boolean).join(' ');
   if (/youtube\.com\/shorts\//i.test(raw) || /#shorts\b|#쇼츠\b/i.test(raw)) return true;
   if (/(?:vt\.tiktok\.com\/|tiktok\.com\/@[^/]+\/video\/\d+)/i.test(raw)) return true;
@@ -1466,15 +1466,16 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
     }
 
     if (ov) {
-      ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'message', 'channel', 'thumbnail', 'isOfficialYoutube'].forEach(f => {
+      ['title', 'startTime', 'endTime', 'isAllday', 'url', 'location', 'typeText', 'typeId', 'message', 'channel', 'thumbnail', 'isOfficialYoutube', 'starAttendees', 'isPrimary'].forEach(f => {
         if (ov[f] !== undefined) {
           if (f === 'url') baseItem[f] = formatMediaUrl(ov[f]);
+          else if (f === 'starAttendees' && Array.isArray(ov[f])) baseItem[f] = [...ov[f]];
+          else if (f === 'isPrimary') baseItem[f] = Boolean(ov[f]);
           else baseItem[f] = ov[f];
         }
       });
-      if (ov.linkedScheduleIds) {
-        const mergedLinked = [...(baseItem.linkedScheduleIds || []), ...ov.linkedScheduleIds];
-        baseItem.linkedScheduleIds = normalizeLinkedScheduleIds(mergedLinked);
+      if (ov.linkedScheduleIds !== undefined) {
+        baseItem.linkedScheduleIds = normalizeLinkedScheduleIds(ov.linkedScheduleIds);
       }
       modCount++;
     }
