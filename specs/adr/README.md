@@ -24,6 +24,6 @@
 | 번호 | 제목 | 상태 | 핵심 제약 요약 |
 | :--- | :--- | :---: | :--- |
 | **0001** | [2계층 데이터 허브 및 Gist 1MB 제한 제약](./0001-two-tier-data-hub-and-gist-limits.md) | `ACCEPTED` | core.json(초경량), schedules.json(1MB 초과 truncate 방지) |
-| **0002** | [Canonical Key 네이밍 규칙 및 ID 불변 원칙](./0002-canonical-key-naming-convention.md) | `ACCEPTED` | blip_, mnet_, youtube_, custom_ 고정 prefix 및 raw hex 금지 |
+| **0002** | [Canonical Key 네이밍 규칙 및 ID 불변 원칙](./0002-canonical-key-naming-convention.md) | `ACCEPTED` | blip_, mnet_, yt_, custom_ 고정 prefix 및 raw hex 금지 |
 | **0003** | [Full URL 및 mediaIds 배열 분리 보존 원칙](./0003-url-and-mediaids-separation.md) | `ACCEPTED` | 배포본 url은 항상 Full URL 유지, 미디어 ID는 mediaIds 배열로 분리 |
 | **0004** | [최소 차분(Pure Diff) 오버라이드 모델](./0004-pure-diff-override-model.md) | `ACCEPTED` | 오버라이드 시 전체 덤프 금지, 수정된 속성만 최소 저장 |

@@ -14,10 +14,12 @@
     "package": "bash scripts/package.sh",
     "metadata:generate": "node scripts/generate-store-metadata.mjs",
     "assets:generate": "node scripts/generate_store_assets.mjs",
-    "lint": "npx oxlint",
-    "check": "node --check remine-helper/background.js remine-helper/sidepanel.js remine-helper/constants.js remine-helper/common/templates.js remine-helper/common/modules/*.js scripts/data-hub/*.js scripts/data-hub/collectors/*.js tests/**/*.js"
+    "lint": "oxlint",
+    "check": "node scripts/check-syntax.js",
+    "prepare": "bash scripts/git-hooks/install.sh"
   },
   "devDependencies": {
-    "@playwright/test": "^1.44.0"
+    "@playwright/test": "^1.44.0",
+    "oxlint": "^1.85.0"
   }
 }
