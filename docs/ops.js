@@ -115,6 +115,16 @@
         }
       }
 
+      if (Array.isArray(editedItem.linkedScheduleIds)) {
+        const baseLinked = (baseItem && Array.isArray(baseItem.linkedScheduleIds)) ? baseItem.linkedScheduleIds : [];
+        const s1 = [...editedItem.linkedScheduleIds].sort();
+        const s2 = [...baseLinked].sort();
+        if (JSON.stringify(s1) !== JSON.stringify(s2) || (editedItem.linkedScheduleIds.length > 0 && baseLinked.length === 0)) {
+          diff.linkedScheduleIds = [...editedItem.linkedScheduleIds];
+          hasDiff = true;
+        }
+      }
+
       return hasDiff ? diff : null;
     }
 

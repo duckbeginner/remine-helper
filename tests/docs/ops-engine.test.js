@@ -71,6 +71,12 @@ export async function run() {
       'GitHub API truncated 시 전송 성공 확정된 payload 폴백이 포함되어야 합니다.');
   });
 
+  runner.test('Diff Preservation: computePureDiff에서 linkedScheduleIds 단독 변경 및 연결 보존 검증', () => {
+    const diffFuncSection = opsHtml.slice(opsHtml.indexOf('function computePureDiff('));
+    const funcBody = diffFuncSection.slice(0, diffFuncSection.indexOf('function getMemberAttendeeBadgesHTML'));
+    assert(funcBody.includes('linkedScheduleIds'), 'computePureDiff 내에 linkedScheduleIds 보존 비교 로직이 반드시 포함되어야 합니다.');
+  });
+
   runner.test('Custom Schedules: customSchedules 병합 시 c.id 최우선 식별키 사용 (C-3, D-2)', () => {
     const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
     const payloadSection = saveFuncSection.slice(0, saveFuncSection.indexOf("method: 'PATCH'"));
