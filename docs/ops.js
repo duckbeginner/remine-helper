@@ -625,14 +625,33 @@
             });
             if (apiRes.ok) {
               const gistData = await apiRes.json();
-              if (gistData.files && gistData.files['core.json'] && gistData.files['core.json'].content) {
-                try {
-                  window.latestGistCoreData = JSON.parse(gistData.files['core.json'].content);
-                } catch (ce) { }
+              const coreFile = gistData.files && gistData.files['core.json'];
+              if (coreFile) {
+                if (coreFile.content) {
+                  try {
+                    window.latestGistCoreData = JSON.parse(coreFile.content);
+                  } catch (ce) { }
+                } else if (coreFile.raw_url) {
+                  try {
+                    const cRes = await fetch(`${coreFile.raw_url}${coreFile.raw_url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+                    if (cRes.ok) window.latestGistCoreData = await cRes.json();
+                  } catch (ce) { }
+                }
               }
               const overFile = gistData.files && gistData.files['schedule-overrides.json'];
-              if (overFile && overFile.content) {
-                overridesJson = JSON.parse(overFile.content);
+              if (overFile) {
+                if (overFile.content) {
+                  try {
+                    overridesJson = JSON.parse(overFile.content);
+                  } catch (pe) { }
+                } else if (overFile.raw_url) {
+                  try {
+                    const rawRes = await fetch(`${overFile.raw_url}${overFile.raw_url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+                    if (rawRes.ok) {
+                      overridesJson = await rawRes.json();
+                    }
+                  } catch (re) { }
+                }
               }
             }
           } catch (e) { }
@@ -3916,8 +3935,19 @@
           if (latestRes.ok) {
             const latestGist = await latestRes.json();
             const f = latestGist.files && latestGist.files['schedule-overrides.json'];
-            if (f && f.content) {
-              remoteOverrides = JSON.parse(f.content);
+            if (f) {
+              if (f.content) {
+                try {
+                  remoteOverrides = JSON.parse(f.content);
+                } catch (pe) { }
+              } else if (f.raw_url) {
+                try {
+                  const rawRes = await fetch(`${f.raw_url}${f.raw_url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+                  if (rawRes.ok) {
+                    remoteOverrides = await rawRes.json();
+                  }
+                } catch (re) { }
+              }
             }
           }
         } catch (fetchErr) {
@@ -4089,11 +4119,39 @@
         // [중요!] Gist 서버 응답 본문에서 실제 기록된 파일 내용을 직접 확인 & 검증!
         const savedGist = await res.json();
         const savedFile = savedGist.files && savedGist.files['schedule-overrides.json'];
-        if (!savedFile || !savedFile.content) {
+        if (!savedFile) {
           throw new Error('Gist에 파일이 생성되지 않았습니다.');
         }
 
-        const confirmedOverrides = JSON.parse(savedFile.content);
+        // GitHub Gist API는 파일 크기/수정 누적 시 truncated: true로 본문(content)을 생략할 수 있음
+        // 4계층 Fail-Safe: content -> raw_url -> 확정 전송된 payload Fallback
+        let confirmedOverrides = null;
+        if (savedFile.content) {
+          try {
+            confirmedOverrides = JSON.parse(savedFile.content);
+          } catch (parseErr) {
+            console.warn('savedFile.content 파싱 실패, raw_url/payload 폴백 시도:', parseErr);
+          }
+        }
+
+        if (!confirmedOverrides && savedFile.raw_url) {
+          try {
+            const rawRes = await fetch(`${savedFile.raw_url}${savedFile.raw_url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+            if (rawRes.ok) {
+              confirmedOverrides = await rawRes.json();
+            }
+          } catch (rawErr) {
+            console.warn('savedFile.raw_url 조회 실패, payload 폴백 시도:', rawErr);
+          }
+        }
+
+        if (!confirmedOverrides) {
+          try {
+            confirmedOverrides = JSON.parse(payload.files['schedule-overrides.json'].content);
+          } catch (payloadErr) {
+            throw new Error('저장된 오버라이드 데이터를 파싱할 수 없습니다.');
+          }
+        }
 
         // 2. Gist 반영이 확인된 데이터로 appliedOverrides 확정 (v2.0 정규 파서 적용) 및 기준 스냅샷 동기화
         appliedOverrides = parseOverridesV2IntoMemory(confirmedOverrides);

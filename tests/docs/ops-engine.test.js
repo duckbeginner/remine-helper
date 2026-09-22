@@ -56,12 +56,19 @@ export async function run() {
   // ─────────────────────────────────────────────────────────────
   runner.test('Post-Save Sync: Gist 저장 후 confirmedOverrides 파싱 시 v2.0 필드 동기화 (S-1, S-2)', () => {
     const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
-    const postSaveSection = saveFuncSection.slice(saveFuncSection.indexOf('const confirmedOverrides = JSON.parse(savedFile.content);'));
+    const postSaveSection = saveFuncSection.slice(saveFuncSection.indexOf('parseOverridesV2IntoMemory(confirmedOverrides)'));
 
     assert(!postSaveSection.includes('appliedOverrides.deleted = new Set(Array.isArray(confirmedOverrides.deleted) ? confirmedOverrides.deleted : []);'),
       'confirmedOverrides.deleted 레거시 파싱이 제거되어야 합니다.');
-    assert(postSaveSection.includes('parseOverridesV2IntoMemory(confirmedOverrides)') || postSaveSection.includes('sourceOverrides'),
+    assert(postSaveSection.includes('parseOverridesV2IntoMemory(confirmedOverrides)'),
       '저장 후 v2.0 파서(parseOverridesV2IntoMemory)를 통해 appliedOverrides에 동기화해야 합니다.');
+  });
+
+  runner.test('Truncated Gist Response: savedFile.content 부재 시 raw_url 및 payload fallback 처리 검증', () => {
+    const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
+    assert(saveFuncSection.includes('savedFile.raw_url'), 'savedFile.raw_url 폴백 조회가 포함되어야 합니다.');
+    assert(saveFuncSection.includes("payload.files['schedule-overrides.json'].content"),
+      'GitHub API truncated 시 전송 성공 확정된 payload 폴백이 포함되어야 합니다.');
   });
 
   runner.test('Custom Schedules: customSchedules 병합 시 c.id 최우선 식별키 사용 (C-3, D-2)', () => {
