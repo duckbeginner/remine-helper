@@ -35,6 +35,73 @@ function calculateHash(data, type) {
   return crypto.createHash('sha256').update(JSON.stringify(core)).digest('hex');
 }
 
+// High-Water Mark 검증 순수 함수 (Fail-Closed & 독립 가드)
+export function verifyHighWaterMark({
+  masterObj,
+  schedObj,
+  remoteMasterResult,
+  remoteSchedResult
+}) {
+  const newMasterCount = Array.isArray(masterObj?.items) ? masterObj.items.length : 0;
+  const newSchedCount = Array.isArray(schedObj?.items) ? schedObj.items.length : 0;
+
+  // 1. 절대 하한선 검증
+  if (newMasterCount < 500) {
+    throw new Error(`[High-Water Mark Guard] 신규 마스터 건수(${newMasterCount}건)가 절대 하한선(500건) 미만입니다.`);
+  }
+  if (newSchedCount < 400) {
+    throw new Error(`[High-Water Mark Guard] 신규 배포본 건수(${newSchedCount}건)가 절대 하한선(400건) 미만입니다.`);
+  }
+
+  // 2. master-schedules.json 가드 (Fail-Closed & 원격 오염 방어)
+  const remoteMasterCount = Array.isArray(remoteMasterResult?.data?.items) ? remoteMasterResult.data.items.length : 0;
+  if (remoteMasterResult?.ok && remoteMasterCount >= 500) {
+    if (newMasterCount < remoteMasterCount * 0.8) {
+      const dropRatio = (((remoteMasterCount - newMasterCount) / remoteMasterCount) * 100).toFixed(1);
+      throw new Error(`[High-Water Mark Guard] 마스터 일정 건수 비정상 급감 감지! 원격: ${remoteMasterCount}건 -> 신규: ${newMasterCount}건 (감소율: ${dropRatio}%)`);
+    }
+  } else {
+    // Fail-Closed: 원격 마스터 상태 확인 실패 또는 원격 건수 비정상(500건 미만) 시 신규 마스터가 1000건 미만이면 차단
+    if (newMasterCount < 1000) {
+      const reason = remoteMasterResult?.ok ? `원격 마스터 건수 비정상(${remoteMasterCount}건 < 500건)` : (remoteMasterResult?.error || 'Unknown Error');
+      throw new Error(`[High-Water Mark Guard Fail-Closed] 원격 마스터 상태 신뢰 불가 (${reason}) 상황에서 신규 마스터 건수(${newMasterCount}건)가 안전 기준(1000건) 미만입니다.`);
+    }
+  }
+
+  // 3. schedules.json 가드 (독립 검증 & Fail-Closed)
+  const remoteSchedCount = Array.isArray(remoteSchedResult?.data?.items) ? remoteSchedResult.data.items.length : 0;
+  if (remoteSchedResult?.ok && remoteSchedCount >= 400) {
+    if (newSchedCount < remoteSchedCount * 0.8) {
+      const dropRatio = (((remoteSchedCount - newSchedCount) / remoteSchedCount) * 100).toFixed(1);
+      throw new Error(`[High-Water Mark Guard] 배포용 schedules.json 건수 비정상 급감 감지! 원격: ${remoteSchedCount}건 -> 신규: ${newSchedCount}건 (감소율: ${dropRatio}%)`);
+    }
+  } else {
+    // Fail-Closed: 원격 배포본 상태 확인 실패 또는 원격 건수 비정상(400건 미만) 시 신규 배포본이 500건 미만이면 차단
+    if (newSchedCount < 500) {
+      const reason = remoteSchedResult?.ok ? `원격 배포본 건수 비정상(${remoteSchedCount}건 < 400건)` : (remoteSchedResult?.error || 'Unknown Error');
+      throw new Error(`[High-Water Mark Guard Fail-Closed] 원격 배포본 상태 신뢰 불가 (${reason}) 상황에서 신규 배포본 건수(${newSchedCount}건)가 안전 기준(500건) 미만입니다.`);
+    }
+  }
+
+  return true;
+}
+
+async function fetchRemoteJson(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'RemineHelper-DataHub/1.0' },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 async function updateGist() {
   console.log("==================================================");
   console.log("📤 [Gist Uploader] 2계층 GitHub Gist 스마트 압축 업데이트 시작");
@@ -46,14 +113,33 @@ async function updateGist() {
     process.exit(1);
   }
 
-  if (!fs.existsSync(CORE_FILE) || !fs.existsSync(SCHEDULES_FILE)) {
-    console.error("❌ 실패: 빌드된 json 파일들이 존재하지 않습니다.");
+  if (!fs.existsSync(CORE_FILE) || !fs.existsSync(SCHEDULES_FILE) || !fs.existsSync(MASTER_SCHEDULES_FILE)) {
+    console.error("❌ 실패: 필수 json 파일(core, schedules, master-schedules)이 존재하지 않습니다.");
     process.exit(1);
   }
 
   const coreObj = JSON.parse(fs.readFileSync(CORE_FILE, 'utf8'));
   const schedObj = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
-  const masterObj = fs.existsSync(MASTER_SCHEDULES_FILE) ? JSON.parse(fs.readFileSync(MASTER_SCHEDULES_FILE, 'utf8')) : null;
+  const masterObj = JSON.parse(fs.readFileSync(MASTER_SCHEDULES_FILE, 'utf8'));
+
+  // High-Water Mark 검증: Gist 기존 데이터 대비 비정상 급감(역행) 방지 가드 (Fail-Closed)
+  const nowTime = Date.now();
+  const [remoteMasterResult, remoteSchedResult] = await Promise.all([
+    fetchRemoteJson(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/master-schedules.json?t=${nowTime}`),
+    fetchRemoteJson(`https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/schedules.json?t=${nowTime}`)
+  ]);
+
+  try {
+    verifyHighWaterMark({
+      masterObj,
+      schedObj,
+      remoteMasterResult,
+      remoteSchedResult
+    });
+  } catch (err) {
+    console.error(`❌ ${err.message} 데이터 유실 방지를 위해 Gist 덮어쓰기를 강제 차단합니다.`);
+    process.exit(1);
+  }
 
   const currentHashes = {
     core: calculateHash(coreObj, 'core'),
@@ -145,4 +231,6 @@ async function updateGist() {
   }
 }
 
-updateGist();
+if (process.argv[1]?.endsWith('upload-gist.js')) {
+  updateGist();
+}

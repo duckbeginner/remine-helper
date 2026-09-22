@@ -36,6 +36,8 @@ import { run as runUrlCleanerAndIdTest } from './data-hub/url-cleaner-and-id.tes
 import { run as runDataPayloadSlimmingTest } from './data-hub/data-payload-slimming.test.js';
 import { run as runSquashAndConfigTest } from './data-hub/squash-and-config.test.js';
 import { run as runPipelineModeTest } from './data-hub/pipeline-mode.test.js';
+import { run as runLosslessMasterHydrationTest } from './data-hub/lossless-master-hydration.test.js';
+import { run as runUploadGistGuardTest } from './data-hub/upload-gist-guard.test.js';
 
 // 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM & 검수 격리)
 import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
@@ -127,7 +129,9 @@ async function main() {
     runUrlCleanerAndIdTest,
     runDataPayloadSlimmingTest,
     runSquashAndConfigTest,
-    runPipelineModeTest
+    runPipelineModeTest,
+    runLosslessMasterHydrationTest,
+    runUploadGistGuardTest
   ];
 
   for (const suite of hubSuites) {

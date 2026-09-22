@@ -179,10 +179,13 @@ export function normalizeLinkedScheduleIds(linkedIds) {
 }
 
 // 크롤링 대상 월 계산 (기본: 과거 1개월 ~ 미래 3개월 패스트트랙, isFull=true: 2024년~내년 말 전수)
+// UTC 러너 환경에서도 한국 시각(KST) 기준으로 월을 계산하여 매월 말일 9시간 시차 불일치 해소
 export function getMonthsToFetch(baseDate = new Date(), isFull = false) {
   const months = [];
-  const curYear = baseDate.getFullYear();
-  const curMonth = baseDate.getMonth() + 1; // 1 ~ 12
+  // KST (UTC + 9시간) 변환
+  const kstTime = new Date(baseDate.getTime() + 9 * 60 * 60 * 1000);
+  const curYear = kstTime.getUTCFullYear();
+  const curMonth = kstTime.getUTCMonth() + 1; // 1 ~ 12
 
   if (isFull) {
     const startYear = 2024;
@@ -195,8 +198,8 @@ export function getMonthsToFetch(baseDate = new Date(), isFull = false) {
   } else {
     // 과거 1개월 ~ 미래 3개월 (총 5개월)
     for (let offset = -1; offset <= 3; offset++) {
-      const d = new Date(curYear, curMonth - 1 + offset, 1);
-      months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+      const d = new Date(Date.UTC(curYear, curMonth - 1 + offset, 1));
+      months.push({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
     }
   }
 
@@ -499,6 +502,11 @@ export function generateCanonicalScheduleId(sourceOrItemOrId, maybeItem) {
 // 소스별 불변 고유 ID 생성기 (v2.0 하위 호환)
 export function generateScheduleId(source, item) {
   if (!item) return null;
+
+  // 이미 표준 규격 Canonical ID가 부여되어 있는 경우 영구 불변 보존 (ADR-0002)
+  if (item.id && /^(blip_|mnet_|yt_|custom_)[a-zA-Z0-9_-]+$/.test(String(item.id).trim())) {
+    return String(item.id).trim();
+  }
 
   const s = source || item.source;
 
@@ -1106,6 +1114,91 @@ async function fetchMonthRawSchedules(year, month) {
   return [...mnetList, ...blipList];
 }
 
+// 레코드 유효성 검증 헬퍼 (오염 데이터 채택 방지)
+function countValidScheduleItems(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.filter(i => {
+    if (!i || !i.id || !i.title || !i.startTime) return false;
+    const d = parseSafeDate(i.startTime);
+    return d instanceof Date && !isNaN(d.getTime());
+  }).length;
+}
+
+// 델타 병합을 위한 기존 마스터 로드 (Gist Hydration & 로컬 폴백)
+export async function loadBaseMasterSchedules(isFull = false, monthsToFetch = [], options = {}) {
+  if (isFull) return [];
+
+  let masterData = null;
+  const MASTER_FILE = path.resolve(__dirname, '../../../docs/api/v1/master-schedules.json');
+  const FALLBACK_FILE = path.resolve(__dirname, '../../../docs/api/v1/schedules.json');
+  const MASTER_SCHEDULES_FILE = fs.existsSync(MASTER_FILE) ? MASTER_FILE : FALLBACK_FILE;
+
+  // 1. 로컬 디스크 파일 로드 (모의 옵션 지원)
+  let localData = options.mockLocal || null;
+  if (!localData && fs.existsSync(MASTER_SCHEDULES_FILE)) {
+    try {
+      localData = JSON.parse(fs.readFileSync(MASTER_SCHEDULES_FILE, 'utf8'));
+    } catch (e) {
+      console.warn(`  ⚠️ 로컬 마스터 파일 읽기 실패: ${e.message}`);
+    }
+  }
+
+  // 2. 원격 Gist 백업 로드 (Fastly CDN 300초 캐시 무효화 쿼리 포함)
+  let remoteData = options.mockRemote || null;
+  if (!remoteData && options.fetchRemote !== false) {
+    if (options.mockRemoteError) {
+      console.warn(`  ⚠️ [Gist Hydration] 원격 마스터 로드 실패 (모의): ${options.mockRemoteError.message}`);
+    } else {
+      try {
+        const gistMasterUrl = `https://gist.githubusercontent.com/duckbeginner/${GIST_ID}/raw/master-schedules.json?t=${Date.now()}`;
+        const res = await fetch(gistMasterUrl, {
+          headers: { 'User-Agent': 'RemineHelper-DataHub/1.0' },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (res.ok) {
+          remoteData = await res.json();
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ [Gist Hydration] 원격 마스터 로드 실패 (로컬 폴백 사용): ${e.message}`);
+      }
+    }
+  }
+
+  // 3. 정상 레코드 유효 건수 기준 비교 (오염 데이터 주입 방지: 유효율 90% 이상 검증)
+  const localItems = Array.isArray(localData?.items) ? localData.items : [];
+  const remoteItems = Array.isArray(remoteData?.items) ? remoteData.items : [];
+
+  const localValidCount = countValidScheduleItems(localItems);
+  const remoteValidCount = countValidScheduleItems(remoteItems);
+  const remoteValidRatio = remoteItems.length > 0 ? remoteValidCount / remoteItems.length : 0;
+
+  if (remoteValidCount > localValidCount && remoteValidRatio >= 0.9) {
+    console.log(`  🌐 [Gist Hydration] 원격 Gist 마스터 채택 (유효 ${remoteValidCount}건 / 전체 ${remoteItems.length}건 > 로컬 유효 ${localValidCount}건)`);
+    masterData = remoteData;
+  } else if (localValidCount > 0) {
+    console.log(`  💾 [Local Master] 로컬 마스터 채택 (유효 ${localValidCount}건 >= 원격 유효 ${remoteValidCount}건, 원격 유효율: ${(remoteValidRatio * 100).toFixed(1)}%)`);
+    masterData = localData;
+  } else {
+    masterData = (remoteValidRatio >= 0.9 ? remoteData : null) || localData || { items: [] };
+  }
+
+  // 4. 수집 대상 월을 제외한 비수집 기간 과거/미래 일정 보존
+  const items = Array.isArray(masterData.items) ? masterData.items : [];
+  const activeMonthKeys = new Set(monthsToFetch.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`));
+
+  const archivedItems = items.filter(item => {
+    if (!item.startTime) return false;
+    const d = parseSafeDate(item.startTime);
+    if (!d || isNaN(d.getTime())) return false;
+    const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const key = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}`;
+    return !activeMonthKeys.has(key);
+  });
+
+  console.log(`  💾 [Delta Cache] 비수집 기간 과거/미래 마스터 일정 ${archivedItems.length}건 보존 (기준 총계: ${items.length}건)`);
+  return archivedItems;
+}
+
 // 전체 스케줄 수집 & 병합 진입점
 export async function collectScheduleData(allYtVideos = []) {
   const isFull = process.argv.includes('--full');
@@ -1115,29 +1208,8 @@ export async function collectScheduleData(allYtVideos = []) {
   const monthsToFetch = getMonthsToFetch(now, isFull);
   console.log(`  📅 수집 대상 월: ${monthsToFetch.map(m => `${m.year}.${m.month}`).join(', ')}`);
 
-  // 델타 병합을 위한 기존 마스터 일정 로드 (패스트트랙 시 비수집 기간 보존: master-schedules.json 우선)
-  const MASTER_FILE = path.resolve(__dirname, '../../../docs/api/v1/master-schedules.json');
-  const FALLBACK_FILE = path.resolve(__dirname, '../../../docs/api/v1/schedules.json');
-  const MASTER_SCHEDULES_FILE = fs.existsSync(MASTER_FILE) ? MASTER_FILE : FALLBACK_FILE;
-  let archivedItems = [];
-  if (!isFull && fs.existsSync(MASTER_SCHEDULES_FILE)) {
-    try {
-      const masterData = JSON.parse(fs.readFileSync(MASTER_SCHEDULES_FILE, 'utf8'));
-      if (Array.isArray(masterData.items)) {
-        const activeMonthKeys = new Set(monthsToFetch.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`));
-        archivedItems = masterData.items.filter(item => {
-          if (!item.startTime) return false;
-          const d = parseSafeDate(item.startTime);
-          const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-          const key = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}`;
-          return !activeMonthKeys.has(key);
-        });
-        console.log(`  💾 [Delta Cache] 비수집 기간 과거/미래 마스터 일정 ${archivedItems.length}건 보존`);
-      }
-    } catch (e) {
-      console.warn(`  ⚠️ 기존 마스터 파일 로드 실패: ${e.message}`);
-    }
-  }
+  // 델타 병합을 위한 기존 마스터 일정 로드 (Gist Hydration & 로컬 폴백)
+  const archivedItems = await loadBaseMasterSchedules(isFull, monthsToFetch);
 
   // 6개월 단위 청크로 병렬 수집
   const CHUNK_SIZE = 6;

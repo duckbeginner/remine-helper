@@ -1,5 +1,9 @@
 name: Central Data Hub Sync
 
+concurrency:
+  group: data-hub-pipeline
+  cancel-in-progress: false
+
 on:
   schedule:
     # 15분마다 자동 실행 (UTC 기준)

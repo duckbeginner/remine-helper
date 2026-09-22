@@ -33,7 +33,20 @@ export async function run() {
 
     assert(content.includes('schedule:'), '정기 스케줄 트리거가 선언되어야 합니다.');
     assert(content.includes('cron:'), 'cron 스케줄이 선언되어야 합니다.');
+    assert(content.includes('concurrency:'), '동시성 락 concurrency가 선언되어야 합니다.');
     assert(content.includes('fetch-all.js') || content.includes('fetch-data'), '데이터 수집 스크립트가 호출되어야 합니다.');
+  });
+
+  runner.test('data-hub-daily-snapshot.yml: 데일리 전체 수집 및 Git 스냅샷 워크플로우 검증', () => {
+    const dailyWorkflow = path.join(WORKFLOWS_DIR, 'data-hub-daily-snapshot.yml');
+    assert(fs.existsSync(dailyWorkflow), 'data-hub-daily-snapshot.yml 파일이 존재해야 합니다.');
+    const content = fs.readFileSync(dailyWorkflow, 'utf8');
+
+    assert(content.includes("cron: '10 19 * * *'"), '매일 UTC 19:10 (충돌 방지 오프셋) cron이 선언되어야 합니다.');
+    assert(content.includes('concurrency:'), '동시성 락 concurrency가 선언되어야 합니다.');
+    assert(content.includes('--full'), '--full 옵션으로 전체 수집이 실행되어야 합니다.');
+    assert(content.includes('git pull --rebase'), '동시성 충돌 방지를 위한 rebase가 포함되어야 합니다.');
+    assert(content.includes('PUSH_SUCCESS'), '푸시 실패 시 명시적 실패 처리를 위한 PUSH_SUCCESS 플래그가 포함되어야 합니다.');
   });
 
   return runner.summary();

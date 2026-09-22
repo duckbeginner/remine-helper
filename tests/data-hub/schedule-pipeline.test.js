@@ -18,8 +18,8 @@ export async function run() {
   // 1. 소스별 결정론적 고유 ID 생성 및 불변성 (실제 모듈 계약 검증)
   // ─────────────────────────────────────────────────────────────
   runner.test('ID Generation: 소스별 고유 ID 결정론적 생성 및 최초 수집 ID 영구 불변성 검증', () => {
-    // 1) 기존 ID가 이미 부여된 경우, 어떤 소스나 속성이 와도 기존 ID가 100% 영구 불변이어야 함
-    const existingIds = ['1103438', 'blip_custom_999', 'yt_vid_abc', 'custom_240803_123456'];
+    // 1) 기존 Canonical ID가 이미 부여된 경우, 어떤 소스나 속성이 와도 기존 ID가 100% 영구 불변이어야 함 (ADR-0002)
+    const existingIds = ['blip_1103438', 'mnet_custom_999', 'yt_vid_abc', 'custom_240803_123456'];
     existingIds.forEach(id => {
       assert.strictEqual(generateScheduleId('blip', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
       assert.strictEqual(generateScheduleId('mnet', { id }), id, '기존 ID는 절대 변조/재발급되지 않아야 함');
@@ -88,7 +88,7 @@ export async function run() {
   runner.test('mergeSchedulesV2: 동일 YouTube Video ID를 갖는 Mnet과 Blip 일정이 1건으로 자동 합성되고 starAttendees 병합', () => {
     const rawItems = [
       {
-        id: 'mnet-yt-01',
+        id: 'mnet_yt_01',
         title: '[RESCENE] 신곡 MV 프리미어 공개',
         startTime: '2026-09-20T09:00:00.000Z',
         url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -96,7 +96,7 @@ export async function run() {
         source: 'mnet'
       },
       {
-        id: 'blip-yt-02',
+        id: 'blip_yt_02',
         title: '신곡 뮤직비디오 온에어',
         startTime: '2026-09-20T09:00:00.000Z',
         url: 'https://youtu.be/dQw4w9WgXcQ',
@@ -110,8 +110,8 @@ export async function run() {
     const item = merged[0];
     assert(item.url.includes('dQw4w9WgXcQ'));
     assert.strictEqual(item.starAttendees.length, 2);
-    assert(item.linkedScheduleIds.includes('mnet-yt-01'));
-    assert(item.linkedScheduleIds.includes('blip-yt-02'));
+    assert(item.linkedScheduleIds.includes('mnet_yt_01'));
+    assert(item.linkedScheduleIds.includes('blip_yt_02'));
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export async function run() {
   runner.test('mergeSchedulesV2: 동일 날짜에 정규화 제목이 중복 판정된 Mnet과 Blip 일정이 1건으로 자동 합성되고 상호 linkedScheduleIds 보유', () => {
     const rawItems = [
       {
-        id: 'mnet-festival-01',
+        id: 'mnet_festival_01',
         title: '2026 영주 시원나잇 페스타',
         startTime: '2026-08-02T10:00:00.000Z',
         source: 'mnet',
@@ -153,7 +153,7 @@ export async function run() {
         location: '서천둔치 특설무대'
       },
       {
-        id: 'blip-festival-02',
+        id: 'blip_festival_02',
         title: '<2026영주 시원나잇 페스타>',
         startTime: '2026-08-02T10:00:00.000Z',
         source: 'blip',
@@ -169,8 +169,8 @@ export async function run() {
     assert.strictEqual(item.location, '서천둔치 특설무대', 'Mnet의 위치 정보가 합성 보존되어야 함');
     assert.strictEqual(item.url, 'https://example.com/festival', 'Blip의 URL 정보가 합성 보존되어야 함');
     assert.strictEqual(item.starAttendees.length, 2, 'Blip의 starAttendees가 합성 보존되어야 함');
-    assert(item.linkedScheduleIds.includes('mnet-festival-01'), 'Mnet ID가 linkedScheduleIds에 포함되어야 함');
-    assert(item.linkedScheduleIds.includes('blip-festival-02'), 'Blip ID가 linkedScheduleIds에 포함되어야 함');
+    assert(item.linkedScheduleIds.includes('mnet_festival_01'), 'Mnet ID가 linkedScheduleIds에 포함되어야 함');
+    assert(item.linkedScheduleIds.includes('blip_festival_02'), 'Blip ID가 linkedScheduleIds에 포함되어야 함');
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -179,14 +179,14 @@ export async function run() {
   runner.test('mergeSchedulesV2: 동일 Instagram/SNS 링크를 공유하는 일정 간 자동 인접 엣지 형성 및 합성', () => {
     const rawItems = [
       {
-        id: 'mnet-sns-01',
+        id: 'mnet_sns_01',
         title: '2026 대학교 축제 무대',
         startTime: '2026-09-18T00:00:00+09:00',
         url: 'https://www.instagram.com/p/DcyH0jMH0c1/?utm_source=ig_web_copy_link',
         source: 'mnet'
       },
       {
-        id: 'blip-sns-02',
+        id: 'blip_sns_02',
         title: '대학교 가을 비룡제',
         startTime: '2026-09-17T15:00:00.000Z',
         url: 'https://instagram.com/p/DcyH0jMH0c1',
@@ -198,8 +198,8 @@ export async function run() {
     const merged = mergeSchedulesV2(rawItems, {});
     assert.strictEqual(merged.length, 1, '동일 Instagram 포스트를 공유하는 2개 일정이 1건으로 자동 합성되어야 함');
     const item = merged[0];
-    assert(item.linkedScheduleIds.includes('mnet-sns-01'));
-    assert(item.linkedScheduleIds.includes('blip-sns-02'));
+    assert(item.linkedScheduleIds.includes('mnet_sns_01'));
+    assert(item.linkedScheduleIds.includes('blip_sns_02'));
     assert.strictEqual(item.channel, '대학축제');
   });
 
