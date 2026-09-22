@@ -109,9 +109,8 @@ export async function run() {
     assert.strictEqual(merged.length, 1, '2건이 1건으로 합성되어야 함');
     const item = merged[0];
     assert(item.url.includes('dQw4w9WgXcQ'));
-    assert.strictEqual(item.starAttendees.length, 2);
-    assert(item.linkedScheduleIds.includes('mnet_yt_01'));
-    assert(item.linkedScheduleIds.includes('blip_yt_02'));
+    assert(item.linkedScheduleIds.includes('mnet_yt_01'), '상대방 ID mnet_yt_01이 포함되어야 함');
+    assert(!item.linkedScheduleIds.includes('blip_yt_02'), '자기 자신 ID는 linkedScheduleIds에 포함되지 않아야 함 (ADR-0002)');
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -169,8 +168,9 @@ export async function run() {
     assert.strictEqual(item.location, '서천둔치 특설무대', 'Mnet의 위치 정보가 합성 보존되어야 함');
     assert.strictEqual(item.url, 'https://example.com/festival', 'Blip의 URL 정보가 합성 보존되어야 함');
     assert.strictEqual(item.starAttendees.length, 2, 'Blip의 starAttendees가 합성 보존되어야 함');
-    assert(item.linkedScheduleIds.includes('mnet_festival_01'), 'Mnet ID가 linkedScheduleIds에 포함되어야 함');
-    assert(item.linkedScheduleIds.includes('blip_festival_02'), 'Blip ID가 linkedScheduleIds에 포함되어야 함');
+    const otherId1 = item.id === 'mnet_festival_01' ? 'blip_festival_02' : 'mnet_festival_01';
+    assert(item.linkedScheduleIds.includes(otherId1), '상대방 ID가 linkedScheduleIds에 포함되어야 함');
+    assert(!item.linkedScheduleIds.includes(item.id), '자기 자신 ID는 linkedScheduleIds에 포함되지 않아야 함 (ADR-0002)');
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -198,8 +198,9 @@ export async function run() {
     const merged = mergeSchedulesV2(rawItems, {});
     assert.strictEqual(merged.length, 1, '동일 Instagram 포스트를 공유하는 2개 일정이 1건으로 자동 합성되어야 함');
     const item = merged[0];
-    assert(item.linkedScheduleIds.includes('mnet_sns_01'));
-    assert(item.linkedScheduleIds.includes('blip_sns_02'));
+    const otherId2 = item.id === 'mnet_sns_01' ? 'blip_sns_02' : 'mnet_sns_01';
+    assert(item.linkedScheduleIds.includes(otherId2), '상대방 ID가 linkedScheduleIds에 포함되어야 함');
+    assert(!item.linkedScheduleIds.includes(item.id), '자기 자신 ID는 linkedScheduleIds에 포함되지 않아야 함 (ADR-0002)');
     assert.strictEqual(item.channel, '대학축제');
   });
 

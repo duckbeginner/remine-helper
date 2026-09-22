@@ -256,6 +256,119 @@ export async function run() {
     assert.strictEqual(resolvedItem.source, 'blip', '출처가 유지되어야 합니다.');
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // 6. 마스터 원본(SSOT) vs allSchedules 1:1 대조 diff 추출 및 linkedScheduleIds 무손실 보존
+  // ─────────────────────────────────────────────────────────────
+  runner.test('SSOT 1:1 Diff Engine: onSaveToGistClick에서 파편이 아닌 allSchedules 실체와 rawBaseSchedules 1:1 대조 확인', () => {
+    const saveFuncSection = opsHtml.slice(opsHtml.indexOf('async function onSaveToGistClick'));
+    const patchCallIndex = saveFuncSection.indexOf("method: 'PATCH'");
+    const diffSection = saveFuncSection.slice(0, patchCallIndex);
+
+    assert(diffSection.includes('allSchedules.find') || diffSection.includes('allList.find'),
+      'onSaveToGistClick 내에서 allSchedules 실체를 직접 조회해야 합니다.');
+    assert(diffSection.includes('computePureDiff(baseItem, currentItem)') || diffSection.includes('computePureDiff(baseItem, targetItem)'),
+      'computePureDiff 호출 시 불완전한 파편이 아닌 allSchedules의 currentItem 실체를 마스터와 직접 대조해야 합니다.');
+  });
+
+  runner.test('SSOT 1:1 Diff Simulation: 제목만 수정하거나 링크만 수정해도 linkedScheduleIds와 수정 필드가 온전히 diff로 보존되는지 검증', () => {
+    // ops.js의 computePureDiff 순수 로직 시뮬레이션
+    function computePureDiff(baseItem, editedItem) {
+      if (!editedItem) return null;
+      if (editedItem.isDeleted) return { isDeleted: true };
+
+      const diff = {};
+      let hasDiff = false;
+      const compareFields = [
+        'title', 'startTime', 'endTime', 'isAllday', 'typeId', 'typeText',
+        'channel', 'location', 'url', 'thumbnail', 'isOfficialYoutube', 'message',
+        'isPrimary'
+      ];
+
+      for (const field of compareFields) {
+        const editVal = editedItem[field];
+        const baseVal = baseItem ? baseItem[field] : undefined;
+        if (editVal === undefined || editVal === null) continue;
+
+        if (field === 'isPrimary') {
+          const editPrimary = Boolean(editVal);
+          const basePrimary = Boolean(baseVal);
+          if (editPrimary !== basePrimary) {
+            diff.isPrimary = editPrimary;
+            hasDiff = true;
+          }
+          continue;
+        }
+
+        const isBaseEmpty = baseVal === undefined || baseVal === null || baseVal === '' || baseVal === false;
+        const isEditEmpty = editVal === '' || editVal === false;
+        if (isBaseEmpty && isEditEmpty) continue;
+
+        if (JSON.stringify(editVal) !== JSON.stringify(baseVal)) {
+          diff[field] = editVal;
+          hasDiff = true;
+        }
+      }
+
+      if (editedItem.linkedScheduleIds !== undefined) {
+        const editLinked = Array.isArray(editedItem.linkedScheduleIds) ? editedItem.linkedScheduleIds : [];
+        const baseLinked = (baseItem && Array.isArray(baseItem.linkedScheduleIds)) ? baseItem.linkedScheduleIds : [];
+        const s1 = [...editLinked].sort();
+        const s2 = [...baseLinked].sort();
+        if (JSON.stringify(s1) !== JSON.stringify(s2) || (editLinked.length === 0 && baseLinked.length > 0)) {
+          diff.linkedScheduleIds = [...editLinked];
+          hasDiff = true;
+        }
+      }
+
+      return hasDiff ? diff : null;
+    }
+
+    // 마스터 원본
+    const rawMaster = {
+      id: 'blip_1113040',
+      title: '<2026 대전 동구동락 축제>',
+      startTime: '2026-10-09T15:00:00.000Z',
+      linkedScheduleIds: undefined
+    };
+
+    // Case 1: 제목 수정 + 링크 연결된 현재 allSchedules 실체
+    const currentItem1 = {
+      id: 'blip_1113040',
+      title: '2026 대전 동구동락 축제', // 제목 수정
+      startTime: '2026-10-09T15:00:00.000Z',
+      linkedScheduleIds: ['mnet_6a98f7a94563ce4caf466391'] // 링크 연결
+    };
+
+    const diff1 = computePureDiff(rawMaster, currentItem1);
+    assert(diff1 !== null, 'diff가 산출되어야 합니다.');
+    assert.strictEqual(diff1.title, '2026 대전 동구동락 축제', '수정된 제목이 diff에 포함되어야 합니다.');
+    assert.deepStrictEqual(diff1.linkedScheduleIds, ['mnet_6a98f7a94563ce4caf466391'], 'linkedScheduleIds가 diff에 온전히 보존되어야 합니다.');
+
+    // Case 2: 링크만 연결되고 제목/시간은 마스터와 동일한 실체
+    const currentItem2 = {
+      id: 'blip_1113040',
+      title: '<2026 대전 동구동락 축제>', // 마스터와 동일
+      startTime: '2026-10-09T15:00:00.000Z',
+      linkedScheduleIds: ['mnet_6a98f7a94563ce4caf466391']
+    };
+
+    const diff2 = computePureDiff(rawMaster, currentItem2);
+    assert(diff2 !== null, 'diff가 산출되어야 합니다.');
+    assert.strictEqual(diff2.title, undefined, '제목은 마스터와 동일하므로 diff에서 제외되어야 합니다.');
+    assert.deepStrictEqual(diff2.linkedScheduleIds, ['mnet_6a98f7a94563ce4caf466391'], '링크만 diff에 정확히 산출되어야 합니다.');
+
+    // Case 3: 마스터 상태로 100% 원상 복구된 실체
+    const currentItem3 = {
+      id: 'blip_1113040',
+      title: '<2026 대전 동구동락 축제>',
+      startTime: '2026-10-09T15:00:00.000Z',
+      linkedScheduleIds: [] // 빈 링크
+    };
+
+    const diff3 = computePureDiff(rawMaster, currentItem3);
+    assert.strictEqual(diff3, null, '마스터와 100% 동일하면 diff가 null이어야 합니다 (Clean Reset).');
+  });
+
   return runner.summary();
 }
 

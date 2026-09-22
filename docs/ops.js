@@ -4125,13 +4125,29 @@
           sourceOverrides[dKey] = { isDeleted: true };
         });
 
-        // 2) 수정 일정 등록 (공식 불변 원본과 비교하여 실제 달라진 속성만 diff로 추출, Falsy 및 공백 키 필터링)
+        // 2) 수정 일정 등록 (공식 불변 원본과 비교하여 실제 달라진 속성만 diff로 추출)
+        // ⚠️ [SSOT 원칙]: 비교 대상은 과거 오버라이드 조각이나 부분 수정 내역이 아니라,
+        // 해당 일정 ID 기준 allSchedules의 현재 최종 실체(Full Entity)와 마스터 크롤링 원본(baseItem)을 1:1 대조!
         const rawList = (Array.isArray(rawBaseSchedules) && rawBaseSchedules.length > 0) ? rawBaseSchedules : (window.rawBaseSchedules || []);
+        
+        // mergedModified 내 각 항목을 allSchedules의 최신 실체로 온전히 채움 (파편 비교 원천 차단)
+        Object.keys(mergedModified).forEach(key => {
+          const liveItem = allSchedules.find(item => item && (item.id === key || item._originKey === key || getScheduleKey(item) === key));
+          if (liveItem) {
+            mergedModified[key] = { ...liveItem };
+          }
+        });
+
         Object.entries(mergedModified).forEach(([mKey, mVal]) => {
           if (!mKey || typeof mKey !== 'string' || !mKey.trim()) return;
-          if (!mVal || (sourceOverrides[mKey] && sourceOverrides[mKey].isDeleted)) return;
+          if (sourceOverrides[mKey] && sourceOverrides[mKey].isDeleted) return;
+
+          // 기준 객체: 순수 마스터 크롤링 원본 (DEFECT-01 불변성 준수)
           const baseItem = rawList.find(s => s && (s.id === mKey || s._originKey === mKey || getScheduleKey(s) === mKey));
-          const diff = computePureDiff(baseItem, mVal);
+          // 비교 대상: allSchedules의 온전한 최종 실체
+          const targetItem = mVal;
+
+          const diff = computePureDiff(baseItem, targetItem);
           if (diff) {
             sourceOverrides[mKey] = diff;
           }

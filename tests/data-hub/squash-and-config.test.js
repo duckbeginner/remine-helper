@@ -59,7 +59,7 @@ export async function run() {
     const overrides = {
       sourceOverrides: {
         'item_3': { title: '수정 완료된 일정 3', channel: 'MBC' },
-        'item_2': { _isDeleted: true }
+        'item_2': { isDeleted: true }
       },
       customSchedules: {
         'custom_1': { id: 'custom_1', title: '신규 수동 등록 일정', startTime: '2026-09-18T18:00:00+09:00' }

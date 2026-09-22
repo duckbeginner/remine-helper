@@ -1671,8 +1671,14 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
       if (!synthetic.extField && sec.extField) synthetic.extField = sec.extField;
     });
 
-    // 상호 등록: 연결된 모든 ID를 linkedScheduleIds에 상호 반영
-    synthetic.linkedScheduleIds = Array.from(new Set(cluster.flatMap(c => [c.id, ...(c.linkedScheduleIds || [])])));
+    // 상호 등록: 연결된 모든 ID를 linkedScheduleIds에 상호 반영 (자기 자신 제외 및 순환 링크 방지)
+    const linkedIds = Array.from(new Set(cluster.flatMap(c => [c.id, ...(c.linkedScheduleIds || [])])))
+      .filter(id => id && id !== synthetic.id);
+    if (linkedIds.length > 0) {
+      synthetic.linkedScheduleIds = linkedIds;
+    } else {
+      delete synthetic.linkedScheduleIds;
+    }
     finalResults.push(synthetic);
   });
 
@@ -1745,10 +1751,12 @@ export function migrateOverridesV1toV2(v1Data, sampleRawItems = []) {
       return (mVal && mVal.id && r.id === mVal.id) || rKey === mKey || r.title === (mVal && mVal.title);
     });
 
-    // ID 불변성 원칙: 기존 고유 ID 최우선 보존 (신규 mod_ 파편 발급 방지)
+    // ID 불변성 원칙: 기존 고유 ID 최우선 보존 (Canonical 규격 custom_ 유지, mod_ 금지)
+    const datePrefix = (mVal && mVal.startTime ? mVal.startTime.slice(2, 10).replace(/-/g, '') : new Date().toISOString().slice(2, 10).replace(/-/g, ''));
+    const randHash = crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8);
     const targetId = (mVal && mVal.id && typeof mVal.id === 'string' && mVal.id.trim())
       ? mVal.id.trim()
-      : (matchedRaw ? matchedRaw.id : (v2.legacyAliases[mKey] || `mod_${crypto.createHash('sha256').update(mKey).digest('hex').slice(0, 8)}`));
+      : (matchedRaw ? matchedRaw.id : (v2.legacyAliases[mKey] || `custom_${datePrefix}_${randHash}`));
 
     v2.sourceOverrides[targetId] = {
       ...v2.sourceOverrides[targetId],

@@ -44,7 +44,7 @@ export function squashOverrides(baseItems = [], overrides = {}) {
   // 3-1. sourceOverrides 순회
   Object.entries(srcOverrides).forEach(([id, patch]) => {
     if (!itemMap.has(id)) return;
-    if (patch._isDeleted) {
+    if (patch.isDeleted || patch._isDeleted) {
       itemMap.delete(id);
       deletedCount++;
     } else {
