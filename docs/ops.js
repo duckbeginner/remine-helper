@@ -128,11 +128,12 @@
       }
 
       if (editedItem.linkedScheduleIds !== undefined) {
-        const editLinked = Array.isArray(editedItem.linkedScheduleIds) ? editedItem.linkedScheduleIds : [];
-        const baseLinked = (baseItem && Array.isArray(baseItem.linkedScheduleIds)) ? baseItem.linkedScheduleIds : [];
+        const editLinked = Array.isArray(editedItem.linkedScheduleIds) ? editedItem.linkedScheduleIds.filter(Boolean) : [];
+        const baseLinked = (baseItem && Array.isArray(baseItem.linkedScheduleIds)) ? baseItem.linkedScheduleIds.filter(Boolean) : [];
         const s1 = [...editLinked].sort();
         const s2 = [...baseLinked].sort();
-        if (JSON.stringify(s1) !== JSON.stringify(s2) || (editLinked.length === 0 && baseLinked.length > 0)) {
+        // ⚠️ 방어적 2중 안전망: 편집본에 1개 이상의 링크가 존재하면 마스터 상태와 무관하게 무조건 오버라이드에 보존!
+        if (editLinked.length > 0 || JSON.stringify(s1) !== JSON.stringify(s2) || (editLinked.length === 0 && baseLinked.length > 0)) {
           diff.linkedScheduleIds = [...editLinked];
           hasDiff = true;
         }
@@ -625,10 +626,17 @@
         }
 
         const baseItems = (data.items || []).filter(isValidScheduleItem).map(item => {
-          if (item && item.id && String(item.id).startsWith('custom_')) {
-            item._isCustom = true;
+          const pure = { ...item };
+          if (pure && pure.id && String(pure.id).startsWith('custom_')) {
+            pure._isCustom = true;
+          } else {
+            // 공식 크롤링 원본 일정: 오버라이드 잔류 필드 일체 박멸 (Pure Raw Master SSOT)
+            delete pure.linkedScheduleIds;
+            delete pure.isDeleted;
+            delete pure._isDeleted;
+            delete pure._isModified;
           }
-          return item;
+          return pure;
         });
         rawBaseSchedules = JSON.parse(JSON.stringify(baseItems));
         window.rawBaseSchedules = rawBaseSchedules;
@@ -4119,9 +4127,14 @@
         });
 
         const sourceOverrides = {};
-        // 1) 삭제 일정 등록 (Falsy 및 공백 키 필터링)
+        // 1) 삭제 일정 등록 (Canonical 접두사 검증 가드 및 Falsy 필터링 - SEC-03)
+        const validIdPrefixRegex = /^(custom_|blip_|mnet_|yt_)/;
         mergedDeleted.forEach(dKey => {
           if (!dKey || typeof dKey !== 'string' || !dKey.trim()) return;
+          if (!validIdPrefixRegex.test(dKey)) {
+            console.warn(`[SEC-03] 비표준 삭제 키 제외: ${dKey}`);
+            return;
+          }
           sourceOverrides[dKey] = { isDeleted: true };
         });
 
@@ -4182,23 +4195,54 @@
           throw new Error(`[안전 차단기] 커스텀 일정 급감 감지: 기존 기준 ${baselineCustomCount}건 중 ${newCustomCount}건만 감지되어 저장이 긴급 차단되었습니다.`);
         }
 
-        // 4) 연결 일정(linkedScheduleIds) 보유 건수 급감 차단
-        let baselineLinkCount = 0;
-        if (remoteOverrides && remoteOverrides.sourceOverrides && typeof remoteOverrides.sourceOverrides === 'object') {
-          Object.values(remoteOverrides.sourceOverrides).forEach(v => {
-            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) baselineLinkCount++;
-          });
-        } else if (appliedOverrides && appliedOverrides.modified) {
-          Object.values(appliedOverrides.modified).forEach(v => {
-            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) baselineLinkCount++;
-          });
+        // 4) 연결 일정(linkedScheduleIds) 보유 건수 급감 차단 (DEF-02: sourceOverrides + customSchedules 통합 집계)
+        let remoteLinkCount = 0;
+        if (remoteOverrides && typeof remoteOverrides === 'object') {
+          if (remoteOverrides.sourceOverrides && typeof remoteOverrides.sourceOverrides === 'object') {
+            Object.values(remoteOverrides.sourceOverrides).forEach(v => {
+              if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) remoteLinkCount++;
+            });
+          }
+          if (remoteOverrides.customSchedules && typeof remoteOverrides.customSchedules === 'object') {
+            Object.values(remoteOverrides.customSchedules).forEach(v => {
+              if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) remoteLinkCount++;
+            });
+          }
         }
+
+        let localLinkCount = 0;
+        if (appliedOverrides) {
+          if (appliedOverrides.modified) {
+            Object.values(appliedOverrides.modified).forEach(v => {
+              if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) localLinkCount++;
+            });
+          }
+          if (Array.isArray(appliedOverrides.created)) {
+            appliedOverrides.created.forEach(v => {
+              if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) localLinkCount++;
+            });
+          }
+        }
+
+        const baselineLinkCount = Math.max(remoteLinkCount, localLinkCount);
+
         let newLinkCount = 0;
         Object.values(sourceOverrides).forEach(v => {
           if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) newLinkCount++;
         });
+        Object.values(customSchedules).forEach(v => {
+          if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) newLinkCount++;
+        });
+
+        // 4) 연결 일정(linkedScheduleIds) 보유 건수 급감 차단 (SEC-02 전 구간 방어)
         if (baselineLinkCount >= 30 && newLinkCount < baselineLinkCount * 0.7) {
           throw new Error(`[안전 차단기] 연결 일정 급감 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
+        if (baselineLinkCount >= 10 && baselineLinkCount < 30 && newLinkCount < baselineLinkCount * 0.5) {
+          throw new Error(`[안전 차단기] 연결 일정 소규모 급감 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+        }
+        if (baselineLinkCount >= 5 && baselineLinkCount < 10 && newLinkCount < 3) {
+          throw new Error(`[안전 차단기] 연결 일정 전멸 위험 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
         }
 
         const finalFilterRules = pendingFilterRules || currentFilterRules;

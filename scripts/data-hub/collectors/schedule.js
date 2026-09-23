@@ -1188,14 +1188,24 @@ export async function loadBaseMasterSchedules(isFull = false, monthsToFetch = []
 
   const archivedItems = items.filter(item => {
     if (!item.startTime) return false;
+    // ⚠️ 커스텀 일정은 오직 customSchedules에만 존재해야 하므로 마스터 아카이브 로드 시 영구 배제 (DEF-05)
+    if (item._isCustom || (item.id && String(item.id).startsWith('custom_'))) return false;
     const d = parseSafeDate(item.startTime);
     if (!d || isNaN(d.getTime())) return false;
     const kstD = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const key = `${kstD.getUTCFullYear()}-${String(kstD.getUTCMonth() + 1).padStart(2, '0')}`;
     return !activeMonthKeys.has(key);
+  }).map(item => {
+    // ⚠️ 과거 오염된 마스터로부터 오버라이드 속성이 재유입되지 않도록 원천 스트립 (Pure Raw SSOT)
+    const pure = { ...item };
+    delete pure.linkedScheduleIds;
+    delete pure.isDeleted;
+    delete pure._isDeleted;
+    delete pure._isModified;
+    return pure;
   });
 
-  console.log(`  💾 [Delta Cache] 비수집 기간 과거/미래 마스터 일정 ${archivedItems.length}건 보존 (기준 총계: ${items.length}건)`);
+  console.log(`  💾 [Delta Cache] 비수집 기간 과거/미래 순수 마스터 일정 ${archivedItems.length}건 보존 (기준 총계: ${items.length}건)`);
   return archivedItems;
 }
 
@@ -1254,15 +1264,18 @@ export async function collectScheduleData(allYtVideos = []) {
   // [초강력 데이터 다이어트 & starAttendees 복원]
   const slimmedList = overriddenList.map(item => slimScheduleItem(item)).filter(Boolean);
 
-  // [2트랙 마스터 아카이브 슬림화]
+  // [2트랙 마스터 아카이브 슬림화 - Pure Raw Master SSOT]
   const masterRaw = overriddenList.masterItems || [];
   masterRaw.sort((a, b) => (parseSafeDate(a.startTime)?.getTime() || 0) - (parseSafeDate(b.startTime)?.getTime() || 0));
   const slimmedMaster = masterRaw.map(item => {
     const slim = slimScheduleItem(item);
     if (!slim) return null;
+    delete slim.linkedScheduleIds;
+    delete slim.isDeleted;
+    delete slim._isDeleted;
+    delete slim._isModified;
     if (item._filterReason) slim._filterReason = item._filterReason;
     if (item._isPendingReview) slim._isPendingReview = true;
-    if (item.isDeleted) slim.isDeleted = true;
     return slim;
   }).filter(Boolean);
 
@@ -1510,18 +1523,29 @@ export function mergeSchedulesV2(rawItems, overridesV2) {
 
     // 관리자가 직접 작성한 커스텀 일정이거나 명시적 오버라이드 또는 승인 목록에 있는 항목은 필터링에서 100% 보호
     const isProtected = item._isCustom || Boolean(ov && Object.keys(ov).length > 0) || effectiveApprovedSet.has(item.id);
-
-    // [트랙 1: Ops 포털 전수 마스터에 수록]
-    const masterEntry = { ...baseItem };
-    if (filterReason && !isProtected) {
-      masterEntry._filterReason = filterReason;
-    }
-    // 관리자 검수 모드일 때 미승인 신규 일정 표시 (연관 서브 일정까지 지능형 연쇄 승인 반영)
     const isApprovedOrExempt = isProtected || effectiveApprovedSet.has(item.id);
-    if (mode === 'review' && !isApprovedOrExempt) {
-      masterEntry._isPendingReview = true;
+
+    // [트랙 1: Ops 포털 전수 마스터에 수록 - Pure Raw Master SSOT]
+    // ⚠️ 마스터는 순수 공식 크롤링 원본(blip, mnet, youtube)만 보존하며, custom_ 일정, ov 필드, 링크, 삭제 플래그는 일체 포함하지 않음
+    if (!item._isCustom && !String(item.id).startsWith('custom_')) {
+      const masterEntry = { ...item };
+      if (masterEntry.url) {
+        masterEntry.url = formatMediaUrl(masterEntry.url);
+      }
+      delete masterEntry.linkedScheduleIds;
+      delete masterEntry.isDeleted;
+      delete masterEntry._isDeleted;
+      delete masterEntry._isModified;
+
+      if (filterReason && !isProtected) {
+        masterEntry._filterReason = filterReason;
+      }
+      // 관리자 검수 모드일 때 미승인 신규 일정 표시 (연관 서브 일정까지 지능형 연쇄 승인 반영)
+      if (mode === 'review' && !isApprovedOrExempt) {
+        masterEntry._isPendingReview = true;
+      }
+      masterItems.push(masterEntry);
     }
-    masterItems.push(masterEntry);
 
     // [트랙 2: 확장 프로그램 배포용 activeItems 판정]
     if (isDeleted) return; // 삭제 일정 배제

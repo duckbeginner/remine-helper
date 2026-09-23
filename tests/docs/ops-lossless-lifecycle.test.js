@@ -212,6 +212,55 @@ export async function run() {
       if (baselineCustomCount >= 10 && newCustomCount < baselineCustomCount * 0.5) {
         throw new Error(`[안전 차단기] 커스텀 일정 급감 감지: 기존 기준 ${baselineCustomCount}건 중 ${newCustomCount}건만 감지되어 저장이 긴급 차단되었습니다.`);
       }
+
+      // 4) 연결 일정(linkedScheduleIds) 보유 건수 급감 차단 (DEF-02: sourceOverrides + customSchedules 통합 집계)
+      let remoteLinkCount = 0;
+      if (remoteOverrides && typeof remoteOverrides === 'object') {
+        if (remoteOverrides.sourceOverrides && typeof remoteOverrides.sourceOverrides === 'object') {
+          Object.values(remoteOverrides.sourceOverrides).forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) remoteLinkCount++;
+          });
+        }
+        if (remoteOverrides.customSchedules && typeof remoteOverrides.customSchedules === 'object') {
+          Object.values(remoteOverrides.customSchedules).forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) remoteLinkCount++;
+          });
+        }
+      }
+
+      let localLinkCount = 0;
+      if (appliedOverrides) {
+        if (appliedOverrides.modified) {
+          Object.values(appliedOverrides.modified).forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) localLinkCount++;
+          });
+        }
+        if (Array.isArray(appliedOverrides.created)) {
+          appliedOverrides.created.forEach(v => {
+            if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) localLinkCount++;
+          });
+        }
+      }
+
+      const baselineLinkCount = Math.max(remoteLinkCount, localLinkCount);
+
+      let newLinkCount = 0;
+      Object.values(sourceOverrides).forEach(v => {
+        if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) newLinkCount++;
+      });
+      Object.values(customSchedules).forEach(v => {
+        if (v && Array.isArray(v.linkedScheduleIds) && v.linkedScheduleIds.length > 0) newLinkCount++;
+      });
+
+      if (baselineLinkCount >= 30 && newLinkCount < baselineLinkCount * 0.7) {
+        throw new Error(`[안전 차단기] 연결 일정 급감 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+      }
+      if (baselineLinkCount >= 10 && baselineLinkCount < 30 && newLinkCount < baselineLinkCount * 0.5) {
+        throw new Error(`[안전 차단기] 연결 일정 소규모 급감 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+      }
+      if (baselineLinkCount >= 5 && baselineLinkCount < 10 && newLinkCount < 3) {
+        throw new Error(`[안전 차단기] 연결 일정 전멸 위험 감지: 기존 ${baselineLinkCount}개 연결 중 ${newLinkCount}개만 감지되어 저장이 긴급 차단되었습니다.`);
+      }
       return true;
     }
 
@@ -256,6 +305,63 @@ export async function run() {
       if (e.message.includes('안전 차단기')) blocked3 = true;
     }
     assert(blocked3, '커스텀 일정이 20건 중 5건으로 급감할 때 차단되어야 합니다.');
+
+    // 시나리오 4 (SEC-02 & DEF-01): evaluateCircuitBreaker 호출로 연결 일정 소규모(10~29건) 구간 급감 차단 실질 검증
+    let blocked4 = false;
+    try {
+      const mockApplied = {
+        modified: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`item_${i}`, { linkedScheduleIds: ['sub_1'] }])),
+        deleted: new Set()
+      };
+      // 전체 소스 건수는 20건 유지하되, 링크만 20개 중 5개로 급감한 경우 -> 50% 미만이므로 차단되어야 함
+      const newSource = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [
+        `item_${i}`,
+        i < 5 ? { linkedScheduleIds: ['sub_1'] } : { title: '제목만 수정' }
+      ]));
+      evaluateCircuitBreaker(null, mockApplied, newSource, {});
+    } catch (e) {
+      if (e.message.includes('안전 차단기') && e.message.includes('연결 일정')) blocked4 = true;
+    }
+    assert(blocked4, '20건 중 5건으로 급감하는 소규모 링크 구간에서도 evaluateCircuitBreaker가 차단해야 합니다. (SEC-02 실질 검증)');
+
+    // 시나리오 5 (DEF-02): customSchedules 내 링크도 서킷 브레이커 감시 대상에 포함되는지 검증
+    let blocked5 = false;
+    try {
+      const mockRemote = {
+        sourceOverrides: {},
+        customSchedules: Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`custom_${i}`, { linkedScheduleIds: ['sub_1'] }]))
+      };
+      // 커스텀 일정 건수는 15건 유지하되, 링크만 15개 중 3개로 급감한 경우 -> 50% 미만이므로 차단되어야 함!
+      const newCustom = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [
+        `custom_${i}`,
+        i < 3 ? { linkedScheduleIds: ['sub_1'] } : { id: `custom_${i}` }
+      ]));
+      evaluateCircuitBreaker(mockRemote, null, {}, newCustom);
+    } catch (e) {
+      if (e.message.includes('안전 차단기') && e.message.includes('연결 일정')) blocked5 = true;
+    }
+    assert(blocked5, 'customSchedules에만 정의된 링크 급감 시에도 서킷 브레이커가 차단해야 합니다. (DEF-02 실질 검증)');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 6. [SEC-01 & SEC-03 방어 검증] Pure Diff 링크 무조건 보존 & Canonical 접두사 가드
+  // ─────────────────────────────────────────────────────────────
+  runner.test('SEC-01 & SEC-03 Guard: computePureDiff 링크 무조건 보존 및 mergedDeleted 접두사 가드 정적 검증', () => {
+    // 1) computePureDiff 함수 바디 추출
+    const diffMatch = opsCode.match(/function computePureDiff\(baseItem, editedItem\)[\s\S]*?^    \}/m);
+    assert(diffMatch, 'computePureDiff 함수가 존재해야 합니다.');
+    const diffBody = diffMatch[0];
+
+    assert(
+      diffBody.includes('editLinked.length > 0'),
+      'computePureDiff에서 editLinked.length > 0일 때 무조건 diff에 보존하는 방어적 2중 안전망이 존재해야 합니다. (SEC-01)'
+    );
+
+    // 2) mergedDeleted Canonical 접두사 가드 검증 (SEC-03)
+    assert(
+      opsCode.includes('validIdPrefixRegex') && opsCode.includes('/^(custom_|blip_|mnet_|yt_)/'),
+      'mergedDeleted 순회 시 Canonical 접두사(/^(custom_|blip_|mnet_|yt_)/) 검증 가드가 존재해야 합니다. (SEC-03)'
+    );
   });
 
   return runner.summary();
