@@ -39,6 +39,7 @@ import { run as runPipelineModeTest } from './data-hub/pipeline-mode.test.js';
 import { run as runLosslessMasterHydrationTest } from './data-hub/lossless-master-hydration.test.js';
 import { run as runUploadGistGuardTest } from './data-hub/upload-gist-guard.test.js';
 import { run as runPureRawMasterTest } from './data-hub/pure-raw-master.test.js';
+import { run as runLosslessOverridesRestoreTest } from './data-hub/lossless-overrides-restore.test.js';
 
 // 4. 웹 배포 문서 및 Ops 포털 테스트 (통합 엔진 & UI/DOM & 검수 격리)
 import { run as runOpsEngineTest } from './docs/ops-engine.test.js';
@@ -136,7 +137,8 @@ async function main() {
     runPipelineModeTest,
     runLosslessMasterHydrationTest,
     runUploadGistGuardTest,
-    runPureRawMasterTest
+    runPureRawMasterTest,
+    runLosslessOverridesRestoreTest
   ];
 
   for (const suite of hubSuites) {
